@@ -15,11 +15,11 @@ process.options = cms.untracked.PSet(wantSummary = cms.untracked.bool(True))
 # Define the input source
 process.source = cms.Source("PoolSource",
     #fileNames = cms.untracked.vstring("file:/eos/cms/store/group/phys_heavyions/dileptons/Data2023/MINIAOD/HIPhysicsRawPrime0/Run375064/7ed5766f-6b1d-415e-8916-e62825a6347f.root"),
-    #fileNames = cms.untracked.vstring("file:step4.root"),
-    fileNames = cms.untracked.vstring(
+    fileNames = cms.untracked.vstring("file:step4.root"),
+   # fileNames = cms.untracked.vstring(
         # '/store/user/junseok/Genproduction/RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_081924_v1/DStarKpipiPU/crab_RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_081924_v1/240819_054039/0001/step4_1619.root',
-        'file:/afs/cern.ch/work/s/soohwan/private/Analysis/DmesonAna/MCGen/CMSSW_13_2_11/src/step3PAT_PAT.root',
-        ),
+#        '/store/user/junseok/Genproduction/RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_082724_v1/DStarKpipiPU/crab_RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_082724_v1/240827_082226/0000/step4_105.root',
+        #),
 )
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(2000))
 
@@ -102,10 +102,11 @@ process.generalD0CandidatesNew.mPiKCutMax = cms.double(2.00)
 process.load("VertexCompositeAnalysis.VertexCompositeProducer.generalDStarCandidates_cff")
 process.generalDStarCandidatesNew = process.generalDStarCandidates.clone()
 process.generalDStarCandidatesNew.trkPtSumCut = cms.double(0.0)
+process.generalDStarCandidatesNew.tkChi2Cut = cms.double(999.0)
 process.generalDStarCandidatesNew.trkEtaDiffCut = cms.double(10.0)
 process.generalDStarCandidatesNew.tkNhitsCut = cms.int32(0)
-process.generalDStarCandidatesNew.tkPtErrCut = cms.double(0.1)
-process.generalDStarCandidatesNew.tkPtCut = cms.double(0.4)
+process.generalDStarCandidatesNew.tkPtErrCut = cms.double(9999.0)
+process.generalDStarCandidatesNew.tkPtCut = cms.double(0.0)
 process.generalDStarCandidatesNew.alphaCut = cms.double(999.0)
 process.generalDStarCandidatesNew.alpha2DCut = cms.double(999.0)
 process.generalDStarCandidatesNew.dPtCut = cms.double(0.0)
@@ -233,7 +234,7 @@ for P in eventFilterPaths:
     process.schedule.insert(0, P)
 
 changeToMiniAOD(process)
-process.options.numberOfThreads = 8
+process.options.numberOfThreads = 1
 
 #process.output = cms.OutputModule("PoolOutputModule",
 #    outputCommands = cms.untracked.vstring("keep *_*_*_ANASKIM"),

@@ -1,6 +1,6 @@
 #include "VertexCompositeAnalysis/VertexCompositeAnalyzer/plugins/VertexCompositeTreeProducer2.h"
 
-//#define DEBUG false
+#define DEBUG true
 
 
 #define PI 3.1416
@@ -301,6 +301,8 @@ VertexCompositeTreeProducer2::fillRECO(const edm::Event& iEvent, const edm::Even
         eta[it] = trk.eta();
         y[it] = trk.rapidity();
         pt[it] = trk.pt();
+        #ifdef DEBUG
+        #endif
         phi[it] = trk.phi();
         flavor[it] = trk.pdgId()/abs(trk.pdgId());
 
@@ -359,7 +361,7 @@ VertexCompositeTreeProducer2::fillRECO(const edm::Event& iEvent, const edm::Even
   cout << "match Pion : " << matchHadron(recoPi, *theGenPion,false) << endl;
   #endif
 
-             if(debug_ ) std::cout << "nGenDau: " << nGenDau<< std::endl;
+             //if(debug_ ) std::cout << "nGenDau: " << nGenDau<< std::endl;
 
               matchGEN[it] += (matchHadron(recoD1, *theGenD0,true) && matchHadron(recoPi, *theGenPion,false));
               #ifdef DEBUG

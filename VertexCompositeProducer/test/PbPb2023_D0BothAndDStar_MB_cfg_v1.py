@@ -14,10 +14,11 @@ process.options = cms.untracked.PSet(wantSummary = cms.untracked.bool(True))
 
 # Define the input source
 process.source = cms.Source("PoolSource",
-    #fileNames = cms.untracked.vstring("file:/eos/cms/store/group/phys_heavyions/dileptons/Data2023/MINIAOD/HIPhysicsRawPrime0/Run375064/7ed5766f-6b1d-415e-8916-e62825a6347f.root"),
-    fileNames = cms.untracked.vstring("file:step4.root"),
+    fileNames = cms.untracked.vstring("file:/eos/cms/store/group/phys_heavyions/dileptons/Data2023/MINIAOD/HIPhysicsRawPrime0/Run375064/7ed5766f-6b1d-415e-8916-e62825a6347f.root"),
+    #fileNames = cms.untracked.vstring("file:step4.root"),
+    #fileNames = cms.untracked.vstring("/store/user/junseok/Genproduction/RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_081924_v1/DStarKpipiPU/crab_RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_081924_v1/240819_054039/0001/step4_1619.root"),
 )
-process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(300))
+process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(100))
 
 # Set the global tag
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
@@ -105,6 +106,8 @@ process.generalDStarCandidatesNew.tkPtCut = cms.double(0.4)
 process.generalDStarCandidatesNew.alphaCut = cms.double(0.4)
 process.generalDStarCandidatesNew.alpha2DCut = cms.double(0.4)
 process.generalDStarCandidatesNew.dPtCut = cms.double(0.0)
+# process.generalDStarCandidatesNew.useAnyMVA=cms.bool(True)
+# process.generalDStarCandidatesNew.GBRForestFileName=cms.string('GBRForestfile_XGBDT_PromptDstarInPbPb_default_MB_OnlyMC.root')
 
 
 process.d0rereco_step = cms.Path( process.eventFilter_HM * process.generalD0CandidatesNew)
@@ -115,7 +118,7 @@ process.d0rereco_step = cms.Path( process.eventFilter_HM * process.generalD0Cand
 # produce D0 trees
 process.load("VertexCompositeAnalysis.VertexCompositeAnalyzer.d0selector_cff")
 process.load("VertexCompositeAnalysis.VertexCompositeAnalyzer.d0analyzer_tree_cff")
-#process.load("VertexCompositeAnalysis.VertexCompositeAnalyzer.dStarselector_cff")
+process.load("VertexCompositeAnalysis.VertexCompositeAnalyzer.dStarselector_cfi")
 process.load("VertexCompositeAnalysis.VertexCompositeAnalyzer.dStaranalyzer_tree_cff")
 process.load("VertexCompositeAnalysis.VertexCompositeAnalyzer.eventinfotree_cff")
 
@@ -155,6 +158,17 @@ process.d0selectorNewReduced.cand3DDecayLengthSigMin = cms.untracked.double(3.)
 process.d0selectorNewReduced.cand3DPointingAngleMax = cms.untracked.double(0.2)
 
 process.generalDStarCandidatesNew.d0Collection = cms.InputTag("d0selectorNewReduced:D0")
+process.dStarselectorNewReduced = process.dStarselector.clone()
+# process.dStarselectorNewReduced.GBRForestFileName = cms.string('GBRForestfile_BDT_PromptdStarInpPb_default_HLT185_WS_Pt1p5MassPeak_NoPtErrNHitDLAngle2D_v3.root')
+process.dStarselectorNewReduced.DCAValCollection = cms.InputTag("generaldStarCandidatesNew:DCAValuesdStar")
+process.dStarselectorNewReduced.DCAErrCollection = cms.InputTag("generaldStarCandidatesNew:DCAErrorsdStar")
+process.dStarselectorNewReduced.useAnyMVA=cms.bool(True)
+process.dStarselectorNewReduced.GBRForestFileName=cms.string('GBRForestfile_XGBDT_PromptDstarInPbPb_default_MB_OnlyMC_v2.root')
+# process.dStarselectorNewReduced.mvaMin = cms.untracked.double(0.3)
+#process.dStarselectorNewReduced.cand3DDecayLengthSigMin = cms.untracked.double(3.)
+#process.dStarselectorNewReduced.cand3DPointingAngleMax = cms.untracked.double(0.2)
+
+process.generalDStarCandidatesNew.d0Collection = cms.InputTag("d0selectorNewReduced:D0")
 
 process.d0selectorWSNewReduced = process.d0selectorWS.clone()
 # process.d0selectorWSNewReduced.GBRForestFileName = cms.string('GBRForestfile_BDT_PromptD0InpPb_default_HLT185_WS_Pt1p5MassPeak_NoPtErrNHitDLAngle2D_v3.root')
@@ -166,6 +180,8 @@ process.d0ana_newreduced.VertexCompositeCollection = cms.untracked.InputTag("d0s
 # process.d0ana_newreduced.MVACollection = cms.InputTag("d0selectorNewReduced:MVAValuesNewD0")
 process.d0ana_newreduced.DCAValCollection = cms.InputTag("d0selectorNewReduced:DCAValuesNewD0")
 process.d0ana_newreduced.DCAErrCollection = cms.InputTag("d0selectorNewReduced:DCAErrorsNewD0")
+process.dStarana.useAnyMVA = cms.bool(True)
+process.dStarana.MVACollection = cms.InputTag("dStarselectorNewReduced:MVAValuesNewDStar")
 
 #process.d0ana_wrongsign_newreduced = process.d0ana_wrongsign.clone()
 #process.d0ana_wrongsign_newreduced.VertexCompositeCollection = cms.untracked.InputTag("d0selectorWSNewReduced:D0")
@@ -174,7 +190,7 @@ process.d0ana_newreduced.DCAErrCollection = cms.InputTag("d0selectorNewReduced:D
 #process.d0ana_wrongsign_newreduced.DCAErrCollection = cms.InputTag("d0selectorWSNewReduced:DCAErrorsNewD0")
 
 
-process.d0ana_seq2 = cms.Sequence(process.eventFilter_HM * process.d0selectorNewReduced * process.d0ana_newreduced * process.generalDStarCandidatesNew * process.dStarana_mc)
+process.d0ana_seq2 = cms.Sequence(process.eventFilter_HM * process.d0selectorNewReduced * process.d0ana_newreduced * process.generalDStarCandidatesNew *process.dStarselectorNewReduced *process.dStarana )
 # process.d0ana_wrongsign_seq2 = cms.Sequence(process.eventFilter_HM * process.d0selectorWSNewReduced * process.d0ana_wrongsign_newreduced)
 
 # eventinfoana must be in EndPath, and process.eventinfoana.selectEvents must be the name of eventFilter_HM Path
