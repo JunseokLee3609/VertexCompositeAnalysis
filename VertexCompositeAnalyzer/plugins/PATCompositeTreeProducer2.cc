@@ -405,8 +405,8 @@ PATCompositeTreeProducer2::fillRECO(const edm::Event& iEvent, const edm::EventSe
                   matchGen_D0charge_[it] = theGenD0->charge();
                   matchGen_D0pdgId_[it] = theGenD0->pdgId();
 
-                  genDecayLength(*theGenD0, matchGen_D1decayLength2D_[it], matchGen_D1decayLength3D_[it], matchGen_D1angle2D_[it], matchGen_D1angle3D_[it] );
-                  getAncestorId(*theGenD0, matchGen_D1ancestorId_[it], matchGen_D1ancestorFlavor_[it] );
+                  genDecayLength(*theGenDStar, matchGen_D1decayLength2D_[it], matchGen_D1decayLength3D_[it], matchGen_D1angle2D_[it], matchGen_D1angle3D_[it] );
+                  getAncestorId(*theGenDStar, matchGen_D1ancestorId_[it], matchGen_D1ancestorFlavor_[it] );
 
                   const auto* genDau0 = theGenD0->daughter(0);
                   const auto* genDau1 = theGenD0->daughter(1);
@@ -1252,6 +1252,7 @@ PATCompositeTreeProducer2::fillRECO(const edm::Event& iEvent, const edm::EventSe
               auto Dd2 = trk.daughter( permutations.at(1) );
               if (abs(Dd1->pdgId()) == PID_dau1_ && abs(Dd2->pdgId()) == PID_dau2_) {
                 if(twoLayerDecay_){
+                  if (Dd1->numberOfDaughters() != 2) continue;
                   // Magic numbers, _permutations -> number of D0 daughters;
                   std::vector<unsigned int> _permutations(2);
                   std::iota(_permutations.begin(), _permutations.end(), 0);

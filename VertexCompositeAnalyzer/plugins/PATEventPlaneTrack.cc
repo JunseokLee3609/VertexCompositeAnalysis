@@ -370,7 +370,6 @@ PATEventPlaneTrack::fillRECO(const edm::Event& iEvent, const edm::EventSetup& iS
   trkQy_v3_afterw = -1;
 
 
-  std::cout << "Track coll original size : " << trackColl->size() << std::endl;
   uint subt = 0;
   for(unsigned it=0; it<trackColl->size(); ++it){
 	DauTrk = false;
@@ -443,7 +442,6 @@ PATEventPlaneTrack::fillRECO(const edm::Event& iEvent, const edm::EventSetup& iS
 	}
 
   }
-  std::cout << "After subtraction : " << trackColl->size() - subt << std::endl;
   trkQx = trkqx/trkPt;
   trkQy = trkqy/trkPt;
   all_trkQx = all_trkqx/all_trkPt;

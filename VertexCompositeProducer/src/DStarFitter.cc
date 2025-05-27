@@ -14,6 +14,7 @@
 //
 //
 
+#define DEBUG
 #include "VertexCompositeAnalysis/VertexCompositeProducer/interface/DStarFitter.h"
 #include "CommonTools/CandUtils/interface/AddFourMomenta.h"
 
@@ -377,12 +378,17 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
        
        // For D*+: K- pi+ followed by slow pi+
        // For D*-: K+ pi- followed by slow pi-
+       if(!isWrongSign){
        if (slowPionCharge > 0) { 
          if (kaonCand->charge() > 0) continue;
        } else { 
          if (kaonCand->charge() < 0) continue;
        }
-
+       }
+       else{
+        if(!(abs(pionCand->charge()+kaonCand->charge()+slowPionCharge)==1)) continue;
+       }
+       int a =0; 
        reco::TransientTrack ttk0(*dau0->bestTrack(), magField);
        reco::TransientTrack ttk1(*dau1->bestTrack(), magField);
        float dau0mass =  dau0->mass();
@@ -393,6 +399,10 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
        KinematicParticleVertexFitter kpvFitter;
        RefCountedKinematicTree d0Tree =  kpvFitter.fit(d0Daus);
       if( !d0Tree->isValid() ) continue;
+       #ifdef DEBUG
+      cout << a++ << endl;
+        #endif
+
 
        d0Tree->movePointerToTheTop();
 
@@ -405,16 +415,28 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
        dStarVertex = dStarFitter.fit(dStarParticles);
 
        if( !dStarVertex->isValid() ) continue;
+       #ifdef DEBUG
+      cout << a++ << endl;
+        #endif
 
        dStarVertex->movePointerToTheTop();
        RefCountedKinematicParticle dStarCand = dStarVertex->currentParticle();
        if (!dStarCand->currentState().isValid()) continue;
+       #ifdef DEBUG
+      cout << a++ << endl;
+        #endif
 
        RefCountedKinematicVertex dStarDecayVertex = dStarVertex->currentDecayVertex();
        if (!dStarDecayVertex->vertexIsValid()) continue;
+       #ifdef DEBUG
+      cout << a++ << endl;
+        #endif
 
 	     float dStarC2Prob = TMath::Prob(dStarDecayVertex->chiSquared(),dStarDecayVertex->degreesOfFreedom());
 	     if (dStarC2Prob < VtxChiProbCut) continue;
+       #ifdef DEBUG
+      cout << a++ << endl;
+        #endif
 
        dStarVertex->movePointerToTheFirstChild();
        RefCountedKinematicParticle posCand = dStarVertex->currentParticle();
@@ -422,6 +444,9 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
        RefCountedKinematicParticle negCand = dStarVertex->currentParticle();
 
        if(!posCand->currentState().isValid() || !negCand->currentState().isValid()) continue;
+       #ifdef DEBUG
+      cout << a++ << endl;
+        #endif
 
        KinematicParameters posCandKP = posCand->currentState().kinematicParameters();
        KinematicParameters negCandKP = negCand->currentState().kinematicParameters();
@@ -509,6 +534,7 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
        GlobalError vertexPositionErr = RecoVertex::convertError(vtxPrimary->error());
        cur3DIP =  (a3d.distance(VertexState(vertexPosition,vertexPositionErr), VertexState(refPoint, refPointErr)));
 
+
        if( dStarNormalizedChi2 > chi2Cut ||
            rVtxMag < rVtxCut ||
            rVtxMag / sigmaRvtxMag < rVtxSigCut ||
@@ -517,6 +543,9 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
            cos(dStarAngle3D) < collinCut3D || cos(dStarAngle2D) < collinCut2D || dStarAngle3D > alphaCut || dStarAngle2D > alpha2DCut
        ) continue;
 
+       #ifdef DEBUG
+      cout << a++ << endl;
+        #endif
 
 
        CC* theDStar = 0;
