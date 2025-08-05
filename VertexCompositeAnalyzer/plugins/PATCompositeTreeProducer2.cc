@@ -155,31 +155,103 @@ PATCompositeTreeProducer2::fillRECO(const edm::Event& iEvent, const edm::EventSe
       edm::Handle<reco::EvtPlaneCollection> eventplanes;
       iEvent.getByToken(tok_eventplaneSrc_,eventplanes);
 
-      const reco::EvtPlane & ephfp1 = (*eventplanes)[0];
-      const reco::EvtPlane & ephfm1 = (*eventplanes)[1];
-      const reco::EvtPlane & ephfp2 = (*eventplanes)[6];
-      const reco::EvtPlane & ephfm2 = (*eventplanes)[7];
-      const reco::EvtPlane & ephfp3 = (*eventplanes)[13];
-      const reco::EvtPlane & ephfm3 = (*eventplanes)[14];
-     
-      ephfpAngle[0] = ephfp1.angle(2);
-      ephfpAngle[1] = ephfp2.angle(2);
-      ephfpAngle[2] = ephfp3.angle(2);
+    // Event plane angles
+    ephfmAngle[0] = (eventplanes.isValid() ? (*eventplanes)[0].angle(2) : -99.);
+    ephfmAngle[1] = (eventplanes.isValid() ? (*eventplanes)[6].angle(2) : -99.);
+    // ephfmAngle[2] = (eventplanes.isValid() ? (*eventplanes)[13].angle(2) : -99.);
 
-      ephfmAngle[0] = ephfm1.angle(2);
-      ephfmAngle[1] = ephfm2.angle(2);
-      ephfmAngle[2] = ephfm3.angle(2);
+    ephfpAngle[0] = (eventplanes.isValid() ? (*eventplanes)[1].angle(2) : -99.);
+    ephfpAngle[1] = (eventplanes.isValid() ? (*eventplanes)[7].angle(2) : -99.);
+    // ephfpAngle[2] = (eventplanes.isValid() ? (*eventplanes)[14].angle(2) : -99.);
 
-      ephfpQ[0] = ephfp1.q(2);
-      ephfpQ[1] = ephfp2.q(2);
-      ephfpQ[2] = ephfp3.q(2);
+    // eptrackmidAngle[0] = -99.9;
+    // eptrackmidAngle[1] = (eventplanes.isValid() ? (*eventplanes)[9].angle(2) : -99.);
+    // eptrackmidAngle[2] = (eventplanes.isValid() ? (*eventplanes)[16].angle(2) : -99.);
 
-      ephfmQ[0] = ephfm1.q(2);
-      ephfmQ[1] = ephfm2.q(2);
-      ephfmQ[2] = ephfm3.q(2);
+    ephfAngle[0] = (eventplanes.isValid() ? (*eventplanes)[2].angle(2) : -99.);
+    ephfAngle[1] = (eventplanes.isValid() ? (*eventplanes)[8].angle(2) : -99.);
 
-      ephfpSumW = ephfp2.sumw();
-      ephfmSumW = ephfm2.sumw();
+    //for off
+    ephfAngleoff[0] = (eventplanes.isValid() ? (*eventplanes)[2].angle(1) : -99.);
+    ephfAngleoff[1] = (eventplanes.isValid() ? (*eventplanes)[8].angle(1) : -99.);
+
+    ephfmAngleoff[0] = (eventplanes.isValid() ? (*eventplanes)[0].angle(1) : -99.);
+    ephfmAngleoff[1] = (eventplanes.isValid() ? (*eventplanes)[6].angle(1) : -99.);
+    // ephfmAngleoff[2] = (eventplanes.isValid() ? (*eventplanes)[13].angle(1) : -99.);
+
+
+    ephfpAngleoff[0] = (eventplanes.isValid() ? (*eventplanes)[1].angle(1) : -99.);
+    ephfpAngleoff[1] = (eventplanes.isValid() ? (*eventplanes)[7].angle(1) : -99.);
+    // ephfpAngleoff[2] = (eventplanes.isValid() ? (*eventplanes)[14].angle(1) : -99.);
+
+    // eptrackmidAngleoff[0] = -99.9;
+    // eptrackmidAngleoff[1] = (eventplanes.isValid() ? (*eventplanes)[9].angle(1) : -99.);
+    // eptrackmidAngleoff[2] = (eventplanes.isValid() ? (*eventplanes)[16].angle(1) : -99.);
+
+    //for RAW
+    ephfAngleRaw[0] = (eventplanes.isValid() ? (*eventplanes)[2].angle(0) : -99.);
+    ephfAngleRaw[1] = (eventplanes.isValid() ? (*eventplanes)[8].angle(0) : -99.);
+
+    ephfmAngleRaw[0] = (eventplanes.isValid() ? (*eventplanes)[0].angle(0) : -99.);
+    ephfmAngleRaw[1] = (eventplanes.isValid() ? (*eventplanes)[6].angle(0) : -99.);
+    // ephfmAngleRaw[2] = (eventplanes.isValid() ? (*eventplanes)[13].angle(0) : -99.);
+
+
+    ephfpAngleRaw[0] = (eventplanes.isValid() ? (*eventplanes)[1].angle(0) : -99.);
+    ephfpAngleRaw[1] = (eventplanes.isValid() ? (*eventplanes)[7].angle(0) : -99.);
+    // ephfpAngleRaw[2] = (eventplanes.isValid() ? (*eventplanes)[14].angle(0) : -99.);
+
+    //Q
+
+    ephfmQ[0] = (eventplanes.isValid() ? (*eventplanes)[0].q(2) : -99.);
+    ephfmQ[1] = (eventplanes.isValid() ? (*eventplanes)[6].q(2) : -99.);
+    // ephfmQ[2] = (eventplanes.isValid() ? (*eventplanes)[13].q(2) : -99.);
+
+
+    ephfpQ[0] = (eventplanes.isValid() ? (*eventplanes)[1].q(2) : -99.);
+    ephfpQ[1] = (eventplanes.isValid() ? (*eventplanes)[7].q(2) : -99.);
+    // ephfpQ[2] = (eventplanes.isValid() ? (*eventplanes)[14].q(2) : -99.);
+
+    ephfQ[0] = (eventplanes.isValid() ? (*eventplanes)[2].q(2) : -99.);
+    ephfQ[1] = (eventplanes.isValid() ? (*eventplanes)[8].q(2) : -99.);
+
+    // eptrackmidQ[0] = -99.9;
+    // eptrackmidQ[1] = (eventplanes.isValid() ? (*eventplanes)[9].q(2) : -99.);
+    // eptrackmidQ[2] = (eventplanes.isValid() ? (*eventplanes)[16].q(2) : -99.);
+
+
+    ephfmSumW = (eventplanes.isValid() ? (*eventplanes)[6].sumw() : -99.);
+    ephfpSumW = (eventplanes.isValid() ? (*eventplanes)[7].sumw() : -99.);
+    ephfSumW = (eventplanes.isValid() ? (*eventplanes)[8].sumw() : -99.);
+
+    // eptrackmidSumW = (eventplanes.isValid() ? (*eventplanes)[9].sumw() : -99.);
+
+
+    ephfmsumCosRaw[0] = (eventplanes.isValid() ? (*eventplanes)[0].sumCos(0) : -99.);
+    ephfmsumCosRaw[1] = (eventplanes.isValid() ? (*eventplanes)[6].sumCos(0) : -99.);
+    ephfmsumSinRaw[0] = (eventplanes.isValid() ? (*eventplanes)[0].sumSin(0) : -99.);
+    ephfmsumSinRaw[1] = (eventplanes.isValid() ? (*eventplanes)[6].sumSin(0) : -99.);
+    ephfmsumPtOrEt[0] = (eventplanes.isValid() ? (*eventplanes)[0].sumPtOrEt() : -99.);
+    ephfmsumPtOrEt[1] = (eventplanes.isValid() ? (*eventplanes)[6].sumPtOrEt() : -99.);
+
+    ephfpsumCosRaw[0] = (eventplanes.isValid() ? (*eventplanes)[1].sumCos(0) : -99.);
+    ephfpsumCosRaw[1] = (eventplanes.isValid() ? (*eventplanes)[7].sumCos(0) : -99.);
+    ephfpsumSinRaw[0] = (eventplanes.isValid() ? (*eventplanes)[1].sumSin(0) : -99.);
+    ephfpsumSinRaw[1] = (eventplanes.isValid() ? (*eventplanes)[7].sumSin(0) : -99.);
+    ephfpsumPtOrEt[0] = (eventplanes.isValid() ? (*eventplanes)[1].sumPtOrEt() : -99.);
+    ephfpsumPtOrEt[1] = (eventplanes.isValid() ? (*eventplanes)[7].sumPtOrEt() : -99.);
+
+    ephfsumCosRaw[0] = (eventplanes.isValid() ? (*eventplanes)[2].sumCos(0) : -99.);
+    ephfsumCosRaw[1] = (eventplanes.isValid() ? (*eventplanes)[8].sumCos(0) : -99.);
+    ephfsumSinRaw[0] = (eventplanes.isValid() ? (*eventplanes)[2].sumSin(0) : -99.);
+    ephfsumSinRaw[1] = (eventplanes.isValid() ? (*eventplanes)[8].sumSin(0) : -99.);
+    ephfsumSin[0] = (eventplanes.isValid() ? (*eventplanes)[2].sumSin(2) : -99.);
+    ephfsumSin[1] = (eventplanes.isValid() ? (*eventplanes)[8].sumSin(2) : -99.);
+    ephfsumCos[0] = (eventplanes.isValid() ? (*eventplanes)[2].sumCos(2) : -99.);
+    ephfsumCos[1] = (eventplanes.isValid() ? (*eventplanes)[8].sumCos(2) : -99.);
+    ephfsumPtOrEt[0] = (eventplanes.isValid() ? (*eventplanes)[2].sumPtOrEt() : -99.);
+    ephfsumPtOrEt[1] = (eventplanes.isValid() ? (*eventplanes)[8].sumPtOrEt() : -99.);
+
     }
 
     //best vertex
@@ -1546,6 +1618,26 @@ PATCompositeTreeProducer2::fillRECO(const edm::Event& iEvent, const edm::EventSe
         PATCompositeNtuple->Branch("ephfmQ",&ephfmQ,"ephfmQ[3]/F");
         PATCompositeNtuple->Branch("ephfpSumW",&ephfpSumW,"ephfpSumW/F");
         PATCompositeNtuple->Branch("ephfmSumW",&ephfmSumW,"ephfmSumW/F");
+        PATCompositeNtuple->Branch("ephfAngle",&ephfAngle,"ephfAngle[2]/F");
+        PATCompositeNtuple->Branch("ephfAngleoff",&ephfAngleoff,"ephfAngleoff[2]/F");
+        PATCompositeNtuple->Branch("ephfmAngleoff",&ephfmAngleoff,"ephfmAngleoff[2]/F");
+        PATCompositeNtuple->Branch("ephfpAngleoff",&ephfpAngleoff,"ephfpAngleoff[2]/F");
+        PATCompositeNtuple->Branch("ephfAngleRaw",&ephfAngleRaw,"ephfAngleRaw[2]/F");
+        PATCompositeNtuple->Branch("ephfmAngleRaw",&ephfmAngleRaw,"ephfmAngleRaw[2]/F");
+        PATCompositeNtuple->Branch("ephfpAngleRaw",&ephfpAngleRaw,"ephfpAngleRaw[2]/F");
+        PATCompositeNtuple->Branch("ephfQ",&ephfQ,"ephfQ[2]/F");
+        PATCompositeNtuple->Branch("ephfSumW",&ephfSumW,"ephfSumW/F");
+        PATCompositeNtuple->Branch("ephfmsumCosRaw",&ephfmsumCosRaw,"ephfmsumCosRaw[2]/F");
+        PATCompositeNtuple->Branch("ephfmsumSinRaw",&ephfmsumSinRaw,"ephfmsumSinRaw[2]/F");
+        PATCompositeNtuple->Branch("ephfmsumPtOrEt",&ephfmsumPtOrEt,"ephfmsumPtOrEt[2]/F");
+        PATCompositeNtuple->Branch("ephfpsumCosRaw",&ephfpsumCosRaw,"ephfpsumCosRaw[2]/F");
+        PATCompositeNtuple->Branch("ephfpsumSinRaw",&ephfpsumSinRaw,"ephfpsumSinRaw[2]/F");
+        PATCompositeNtuple->Branch("ephfpsumPtOrEt",&ephfpsumPtOrEt,"ephfpsumPtOrEt[2]/F");
+        PATCompositeNtuple->Branch("ephfsumCosRaw",&ephfsumCosRaw,"ephfsumCosRaw[2]/F");
+        PATCompositeNtuple->Branch("ephfsumSinRaw",&ephfsumSinRaw,"ephfsumSinRaw[2]/F");
+        PATCompositeNtuple->Branch("ephfsumSin",&ephfsumSin,"ephfsumSin[2]/F");
+        PATCompositeNtuple->Branch("ephfsumCos",&ephfsumCos,"ephfsumCos[2]/F");
+        PATCompositeNtuple->Branch("ephfsumPtOrEt",&ephfsumPtOrEt,"ephfsumPtOrEt[2]/F");
       }
 
       // particle info

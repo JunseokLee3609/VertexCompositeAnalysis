@@ -27,8 +27,9 @@ process.source = cms.Source("PoolSource",
     #fileNames= cms.untracked.vstring("file:bf4f838b-571d-4570-805c-cd3cb84839c2.root"),
     #fileNames= cms.untracked.vstring("file:071045a5-fddb-4ca6-9df1-82e2a7321dfd.root"),
    fileNames = cms.untracked.vstring(
-        #  '/store/user/junseok/Genproduction/RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_081924_v1/DStarKpipiPU/crab_RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_081924_v1/240819_054039/0001/step4_1619.root',
-         'file:073a4e72-8032-4fca-9531-6ab49903449d.root',
+          #'/store/user/junseok/Genproduction/RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_081924_v1/DStarKpipiPU/crab_RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_081924_v1/240819_054039/0001/step4_1619.root',
+          'root://xrootd-cms.infn.it//store/mc/HINPbPbSpring23MiniAOD/promptD0ToKPi_PT-1_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/2560000/51425c83-3b0f-4c4f-85de-961c0b3af5fb.root',
+        # 'file:073a4e72-8032-4fca-9531-6ab49903449d.root',
 #        '/store/user/junseok/Genproduction/RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_082724_v1/DStarKpipiPU/crab_RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_082724_v1/240827_082226/0000/step4_105.root',
         ),
 )
@@ -102,7 +103,7 @@ process.generalD0CandidatesNew.tkChi2Cut = cms.double(5)
 process.generalD0CandidatesNew.tkNhitsCut = cms.int32(0)
 process.generalD0CandidatesNew.tkPtErrCut = cms.double(0.1)
 # process.generalD0CandidatesNew.tkPtCut = cms.double(0.8)
-process.generalD0CandidatesNew.tkPtCut = cms.double(1.0)
+process.generalD0CandidatesNew.tkPtCut = cms.double(1.5)
 process.generalD0CandidatesNew.tkEtaCut = cms.double(2.4)
 process.generalD0CandidatesNew.tkPtSumCut = cms.double(0.0)
 process.generalD0CandidatesNew.tkEtaDiffCut = cms.double(1.0)
@@ -120,17 +121,17 @@ process.generalD0CandidatesNew.lVtxCut = cms.double(0.0)
 process.generalD0CandidatesNew.vtxSignificance2DCut = cms.double(0.0)
 process.generalD0CandidatesNew.vtxSignificance3DCut = cms.double(0.0)
 process.generalD0CandidatesNew.d0MassCut = cms.double(0.14)
-process.generalD0CandidatesNew.d0AbsYCut = cms.double(1.2)
+process.generalD0CandidatesNew.d0AbsYCut = cms.double(1.1)
 process.generalD0CandidatesNew.dPtCut = cms.double(0.0)
 
 process.generalD0CandidatesNew.useAnyMVA = cms.bool(True)
-process.generalD0CandidatesNew.mvaCut = cms.double(0.4)
+process.generalD0CandidatesNew.mvaCut = cms.double(-1)
 # process.generalD0CandidatesNew.GBRForestLabel = cms.string('D0InPbPbXGB')
 # #process.generalD0CandidatesNew.GBRForestFileName = cms.string('GBRForestfile_XGBDT_PromptD0InPbPb_15Params_v1_08Mar.root')
 # process.generalD0CandidatesNew.GBRForestFileName = cms.string('GBRForestfile_XGBDT_PromptD0InPbPb_pT_y_cBIN_19Params_v1_25Mar.root')
 process.generalD0CandidatesNew.input_names = cms.vstring('input')
 process.generalD0CandidatesNew.output_names = cms.vstring('probabilities')
-process.generalD0CandidatesNew.onnxModelFileName = cms.string("XGBoost_Model_0324_27.onnx")
+process.generalD0CandidatesNew.onnxModelFileName = cms.string("XGBoost_Model_0428_0_OnlyPrompt.onnx")
 
 
 #process.generalD0CandidatesNew.tkPtErrCut = cms.double(0.1)
@@ -151,7 +152,7 @@ process.generalDStarCandidatesNew = process.generalDStarCandidates.clone()
 process.generalDStarCandidatesNew.tkChi2Cut = cms.double(999)
 process.generalDStarCandidatesNew.tkNhitsCut = cms.int32(0)
 process.generalDStarCandidatesNew.tkPtErrCut = cms.double(9999.0)
-process.generalDStarCandidatesNew.tkPtCut = cms.double(0.4)
+process.generalDStarCandidatesNew.tkPtCut = cms.double(0.3)
 process.generalDStarCandidatesNew.tkEtaCut = cms.double(999.0)
 process.generalDStarCandidatesNew.tkPtSumCut = cms.double(0.0)
 process.generalDStarCandidatesNew.tkEtaDiffCut = cms.double(999.0)

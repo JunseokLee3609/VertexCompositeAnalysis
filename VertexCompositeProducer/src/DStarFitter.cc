@@ -14,7 +14,7 @@
 //
 //
 
-#define DEBUG
+//#define DEBUG
 #include "VertexCompositeAnalysis/VertexCompositeProducer/interface/DStarFitter.h"
 #include "CommonTools/CandUtils/interface/AddFourMomenta.h"
 

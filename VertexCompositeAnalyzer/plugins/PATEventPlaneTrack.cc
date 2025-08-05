@@ -299,7 +299,7 @@ PATEventPlaneTrack::fillRECO(const edm::Event& iEvent, const edm::EventSetup& iS
   //RECO Candidate info
   candSize = v0candidates->size();
   if(candSize>MAXCAN) throw cms::Exception("PATEventPlaneTrack") << "Number of candidates (" << candSize << ") exceeds limit!" << std::endl; 
-  float cohJpsiMassMin = 1.6;
+  float cohJpsiMassMin = 1.7;
   float cohJpsiMassMax = 2.1;
 
   dauEta.clear();
@@ -411,7 +411,7 @@ PATEventPlaneTrack::fillRECO(const edm::Event& iEvent, const edm::EventSetup& iS
 
     	if (DauTrk == true) {
 	    //cout << "it = " << it << "; DauTrk = "<< DauTrk << endl;
-            //cout << "Matched track Pt Eta Phi = " << track->pt() <<' '<< track->eta()<<' '<<track->phi()<<endl;
+           // cout << "Matched track Pt Eta Phi = " << track->pt() <<' '<< track->eta()<<' '<<track->phi()<<endl;
             subt++;
       	    continue;
             
