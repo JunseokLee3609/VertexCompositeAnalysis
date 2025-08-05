@@ -30,18 +30,45 @@ For reconstruction of $D^{0}, D^{*+}$ with 2023 PbPb data
 ```bash 
 #LXplus, bash, cmssw-el8 apptainer
 
+mkdir  <your_directory>
+cd <your_directpry>
+
 cmsrel CMSSW_13_2_11
 
 cd CMSSW_13_2_11/src
 cmsenv
-git cms-init
 
-git clone git@github.com:vince502/VertexCompositeAnalysis.git
+git clone git@github.com:JunseokLee3609/VertexCompositeAnalysis.git -b junseok
+
+cd VertexCompositeAnalysis
+
 scram b -j8
-cd VertexCompositeAnalysis/VertexCompositeProducer/test
-
-cmsRun PbPb2023_D0BothAndDStar_MB_cfg_v1.py
-
+cd VertexCompositeProducer/test
 ```
+-------
+# How to submit Crab Job
+edit crabConfig_MB_DataStep2MVA.py
+* replace 'junseok' with your storage
+* replace Prime0 with the dataset you are gonna process
+crab submit crabConfig_MB_DataStep2MVA.py
+## Run bulk of data file 
+if you want to process bulk of file from PDs at once
+``` bash 
+#!/bin/bash -x
+
+rm files2023MB.txt;
+
+for i in {0..7}
+do
+    dasgoclient --query="file dataset=/HIPhysicsRawPrime$i/HIRun2023A-PromptReco-v2/MINIAOD" >> files2023MB.txt
+done
+```
+* replace idx of dataset with  what you woudld like to process
+* Open crabConfig_MB_DataStep2MVA.py and comment out config.Data.inputDataset, and Add config.Data.userInputFiles = open('files2023MB.txt').readlines()
+crab submit crabConfig_MB_Step2MVA.py
+~
+
+
+
 
 Multi crab configuration in ```jobCfg``` to submit multiple jobs to PD's.
