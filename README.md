@@ -38,7 +38,7 @@ cmsrel CMSSW_13_2_11
 cd CMSSW_13_2_11/src
 cmsenv
 
-git clone git@github.com:JunseokLee3609/VertexCompositeAnalysis.git -b junseok
+git clone git@github.com:JunseokLee3609/VertexCompositeAnalysis.git -b test
 
 cd VertexCompositeAnalysis
 
@@ -52,7 +52,7 @@ edit crabConfig_MB_DataStep2MVA.py
 * replace Prime0 with the dataset you are gonna process
 crab submit crabConfig_MB_DataStep2MVA.py
 ## Run bulk of data file 
-if you want to process bulk of file from PDs at once
+if you want to process bulk of file from PDs at once, make shell file.
 ``` bash 
 #!/bin/bash -x
 
@@ -64,9 +64,12 @@ do
 done
 ```
 * replace idx of dataset with  what you woudld like to process
-* Open crabConfig_MB_DataStep2MVA.py and comment out config.Data.inputDataset, and Add config.Data.userInputFiles = open('files2023MB.txt').readlines()
+* Open crabConfig_MB_DataStep2MVA.py
+```python  
+#comment out config.Data.inputDataset and Add 
+config.Data.userInputFiles = open('files2023MB.txt').readlines()
+```
 crab submit crabConfig_MB_Step2MVA.py
-~
 
 
 
