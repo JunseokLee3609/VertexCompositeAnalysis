@@ -75,7 +75,7 @@
 #include <Math/SMatrix.h>
 
 // Validation utility for debugging and testing
-#include "ValidationUtility.h"
+//#include "ValidationUtility.h"
 
 //#define DEBUG true
 
@@ -166,7 +166,7 @@ private:
   bool isValidDStarDecayChain(const reco::Candidate* Dd1, const reco::Candidate* Dd2) const;
   
   // Validation and debugging functions (delegated to ValidationUtility)
-  void performSelfDiagnostics() const;
+  //void performSelfDiagnostics() const;
 
   void genDecayLength(const uint&, const reco::GenParticle&) const;
 
@@ -277,10 +277,35 @@ private:
     int candSize;
     float ephfpAngle[3];
     float ephfmAngle[3];
+    float eptrackmidAngle[3];
     float ephfpQ[3];
     float ephfmQ[3];
+    float eptrackmidQ[3];
     float ephfpSumW;
     float ephfmSumW;
+    float eptrackmidSumW;
+    
+    // Additional event plane variables
+    float ephfAngle[2];
+    float ephfAngleoff[2];
+    float ephfmAngleoff[2];
+    float ephfpAngleoff[2];
+    float ephfAngleRaw[2];
+    float ephfmAngleRaw[2];
+    float ephfpAngleRaw[2];
+    float ephfQ[2];
+    float ephfSumW;
+    float ephfmsumCosRaw[2];
+    float ephfmsumSinRaw[2];
+    float ephfmsumPtOrEt[2];
+    float ephfpsumCosRaw[2];
+    float ephfpsumSinRaw[2];
+    float ephfpsumPtOrEt[2];
+    float ephfsumCosRaw[2];
+    float ephfsumSinRaw[2];
+    float ephfsumSin[2];
+    float ephfsumCos[2];
+    float ephfsumPtOrEt[2];
     
     //Composite candidate info
     float mva[MAXCAN];
