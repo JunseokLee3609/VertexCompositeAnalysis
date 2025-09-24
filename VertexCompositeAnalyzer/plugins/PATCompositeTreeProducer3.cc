@@ -1853,6 +1853,7 @@ std::vector<reco::GenParticleRef> PATCompositeTreeProducer3::processGenMatching(
     int finalAccepted = 0;
     
     for(unsigned int it = 0; it < genpars->size(); ++it) {
+        edm::LogInfo("GenSize") << "Gen Particle collection size : " << genpars->size() ;
         const reco::GenParticle & trk = (*genpars)[it];
         int id = trk.pdgId();
         
