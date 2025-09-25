@@ -6,6 +6,7 @@
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 #include "VertexCompositeAnalysis/VertexCompositeAnalyzer/plugins/PATCompositeTreeProducer3.h"
+#include <limits>
 
 // Debugging macros for better control
 #ifdef DEBUG_GEN_MATCHING
@@ -53,7 +54,7 @@ PATCompositeTreeProducer3::PATCompositeTreeProducer3(const edm::ParameterSet& iC
 
     multMax_ = iConfig.getUntrackedParameter<double>("multMax", -1);
     multMin_ = iConfig.getUntrackedParameter<double>("multMin", -1);
-    deltaR_ = iConfig.getUntrackedParameter<double>("deltaR", 0.03);
+    deltaR_ = iConfig.getUntrackedParameter<double>("deltaR", 0.1);
     
     // Debug control parameters (runtime configurable)
     debugGenMatching_ = iConfig.getUntrackedParameter<bool>("debugGenMatching", false);
@@ -469,9 +470,18 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
 
           pid1[it] = -99999;
           pid2[it] = -99999;
+          pid3[it] = -99999;
+          matchDeltaR1[it] = INVALID_VALUE;
+          matchDeltaR2[it] = INVALID_VALUE;
+          matchDeltaR3[it] = INVALID_VALUE;
           
           if(doGenMatchingTOF_)
           {
+            const double maxDouble = std::numeric_limits<double>::max();
+            double bestDeltaR1 = maxDouble;
+            double bestDeltaR2 = maxDouble;
+            double bestDeltaR3 = maxDouble;
+
             for(unsigned igen=0; igen<genpars->size(); ++igen){
 
                 const reco::GenParticle & trk = (*genpars)[igen];
@@ -484,15 +494,30 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
                 if(fabs(id)!=PID_ && trk.charge())
                 {
                   double deltaR = trkvect.DeltaR(dauvec1);
+                  if(trk.charge()==charge1[it] && deltaR < bestDeltaR1) bestDeltaR1 = deltaR;
                   if(deltaR < deltaR_ && fabs((trk.pt()-pt1[it])/pt1[it]) < 0.5 && trk.charge()==charge1[it] && pid1[it]==-99999)
                   {
                     pid1[it] = id;
-                  } 
+                    matchDeltaR1[it] = deltaR;
+                  }
 
                   deltaR = trkvect.DeltaR(dauvec2);
+                  if(trk.charge()==charge2[it] && deltaR < bestDeltaR2) bestDeltaR2 = deltaR;
                   if(deltaR < deltaR_ && fabs((trk.pt()-pt2[it])/pt2[it]) < 0.5 && trk.charge()==charge2[it] && pid2[it]==-99999)
                   {
                     pid2[it] = id;
+                    matchDeltaR2[it] = deltaR;
+                  }
+
+                  if(threeProngDecay_ && d3)
+                  {
+                    double deltaR3 = trkvect.DeltaR(dauvec3);
+                    if(trk.charge()==charge3[it] && deltaR3 < bestDeltaR3) bestDeltaR3 = deltaR3;
+                    if(deltaR3 < deltaR_ && fabs((trk.pt()-pt3[it])/pt3[it]) < 0.5 && trk.charge()==charge3[it] && pid3[it]==-99999)
+                    {
+                      pid3[it] = id;
+                      matchDeltaR3[it] = deltaR3;
+                    }
                   }
                 }
 
@@ -504,32 +529,47 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
                   TVector3 d2vect(Dd2->px(),Dd2->py(),Dd2->pz());
                   int id1 = Dd1->pdgId();
                   int id2 = Dd2->pdgId();
-                
+
                   double deltaR = d1vect.DeltaR(dauvec1);
+                  if(Dd1->charge()==charge1[it] && deltaR < bestDeltaR1) bestDeltaR1 = deltaR;
                   if(deltaR < deltaR_ && fabs((Dd1->pt()-pt1[it])/pt1[it]) < 0.5 && Dd1->charge()==charge1[it] && pid1[it]==-99999)
                   {
                     pid1[it] = id1;
+                    matchDeltaR1[it] = deltaR;
                   }
                   deltaR = d2vect.DeltaR(dauvec1);
+                  if(Dd2->charge()==charge1[it] && deltaR < bestDeltaR1) bestDeltaR1 = deltaR;
                   if(deltaR < deltaR_ && fabs((Dd2->pt()-pt1[it])/pt1[it]) < 0.5 && Dd2->charge()==charge1[it] && pid1[it]==-99999)
                   {
                     pid1[it] = id1;
+                    matchDeltaR1[it] = deltaR;
                   }
 
                   deltaR = d1vect.DeltaR(dauvec2);
+                  if(Dd1->charge()==charge2[it] && deltaR < bestDeltaR2) bestDeltaR2 = deltaR;
                   if(deltaR < deltaR_ && fabs((Dd1->pt()-pt2[it])/pt2[it]) < 0.5 && Dd1->charge()==charge2[it] && pid2[it]==-99999)
                   {
                     pid2[it] = id2;
+                    matchDeltaR2[it] = deltaR;
                   }
                   deltaR = d2vect.DeltaR(dauvec2);
+                  if(Dd2->charge()==charge2[it] && deltaR < bestDeltaR2) bestDeltaR2 = deltaR;
                   if(deltaR < deltaR_ && fabs((Dd2->pt()-pt2[it])/pt2[it]) < 0.5 && Dd2->charge()==charge2[it] && pid2[it]==-99999)
                   {
                     pid2[it] = id2;
+                    matchDeltaR2[it] = deltaR;
                   }
                 }
 
-                if(pid1[it]!=-99999 && pid2[it]!=-99999) break;
+                if(pid1[it]!=-99999 && pid2[it]!=-99999 && (!threeProngDecay_ || pid3[it]!=-99999)) break;
             }
+
+            if(matchDeltaR1[it] == INVALID_VALUE && bestDeltaR1 < maxDouble)
+              matchDeltaR1[it] = bestDeltaR1;
+            if(matchDeltaR2[it] == INVALID_VALUE && bestDeltaR2 < maxDouble)
+              matchDeltaR2[it] = bestDeltaR2;
+            if(threeProngDecay_ && matchDeltaR3[it] == INVALID_VALUE && bestDeltaR3 < maxDouble)
+              matchDeltaR3[it] = bestDeltaR3;
           }
 
           vtxChi2[it] = trk.userFloat("VtxChi2");
@@ -1440,6 +1480,9 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
           PATCompositeNtuple->Branch("dca3D",&dca3D,"dca3D[candSize]/F");
           PATCompositeNtuple->Branch("dca3DErr",&dca3DErr,"dca3DErr[candSize]/F");
           PATCompositeNtuple->Branch("dca2D",&dca2D,"dca2D[candSize]/F");
+          PATCompositeNtuple->Branch("matchDeltaR1",&matchDeltaR1,"matchDeltaR1[candSize]/F");
+          PATCompositeNtuple->Branch("matchDeltaR2",&matchDeltaR2,"matchDeltaR2[candSize]/F");
+          PATCompositeNtuple->Branch("matchDeltaR3",&matchDeltaR3,"matchDeltaR3[candSize]/F");
       
           if(doGenMatching_)
           {

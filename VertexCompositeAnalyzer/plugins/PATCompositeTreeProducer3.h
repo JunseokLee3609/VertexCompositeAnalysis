@@ -371,6 +371,9 @@ private:
     int pid1[MAXCAN];
     int pid2[MAXCAN];
     int pid3[MAXCAN];
+    float matchDeltaR1[MAXCAN];
+    float matchDeltaR2[MAXCAN];
+    float matchDeltaR3[MAXCAN];
     float tof1[MAXCAN];
     float tof2[MAXCAN];
     float tof3[MAXCAN];
