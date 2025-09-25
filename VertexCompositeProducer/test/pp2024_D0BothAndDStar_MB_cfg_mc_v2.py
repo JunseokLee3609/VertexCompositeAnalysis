@@ -262,6 +262,7 @@ process.d0rereco_step = cms.Path( process.eventFilter_HM * process.generalD0Cand
 process.load("VertexCompositeAnalysis.VertexCompositeAnalyzer.d0selector_cff")
 process.load("VertexCompositeAnalysis.VertexCompositeAnalyzer.d0analyzer_tree_cff")
 process.load("VertexCompositeAnalysis.VertexCompositeAnalyzer.dStaranalyzer_tree_cff")
+process.load("VertexCompositeAnalysis.VertexCompositeAnalyzer.dStarGrandDauGenMatchProducer_cfi")
 process.load("VertexCompositeAnalysis.VertexCompositeAnalyzer.eventinfotree_cff")
 process.load("VertexCompositeAnalysis.VertexCompositeAnalyzer.eventplaneanalyzer_cfi")
 
@@ -289,6 +290,7 @@ process.dStarana_mc.debugGenMatching = cms.untracked.bool(True)
 process.dStarana_mc.verboseDebug = cms.untracked.bool(True)
 #process.dStarana_mc.doRecoNtuple= cms.untracked.bool(False)
 process.generalDStarCandidatesNew.d0Collection = cms.InputTag("generalD0CandidatesNew:D0")
+process.dStarGrandDauGenMatchProducer.dStarCollection = cms.InputTag("generalDStarCandidatesNew", "DStar")
 
 
 # process.d0ana_newreduced.MVACollection = cms.InputTag("generalD0CandidatesNew:MVAValuesNewD0")
@@ -297,7 +299,14 @@ process.generalDStarCandidatesNew.d0Collection = cms.InputTag("generalD0Candidat
 
 
 #process.dStarAna_step = cms.Path( process.eventFilter_HM * process.generalD0CandidatesNew* process.generalDStarCandidatesNew *process.dStarana_mc)
-process.dStarAna_step = cms.Path( process.eventFilter_HM * process.generalD0CandidatesNew*process.generalDStarCandidatesNew * process.d0ana_newreduced*process.dStarana_mc)
+process.dStarAna_step = cms.Path(
+    process.eventFilter_HM
+    * process.generalD0CandidatesNew
+    * process.generalDStarCandidatesNew
+    * process.d0ana_newreduced
+    * process.dStarana_mc
+    * process.dStarGrandDauGenMatchProducer
+)
 #process.dStarAna_step = cms.Path( process.eventFilter_HM *  process.dStarana_mc)
 #*process.eventplane)
 
