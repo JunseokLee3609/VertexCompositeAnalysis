@@ -14,7 +14,8 @@ DStarGrandDauGenMatchProducer::DStarGrandDauGenMatchProducer(const edm::Paramete
       genToken_(consumes<reco::GenParticleCollection>(
           cfg.getParameter<edm::InputTag>("genParticleCollection"))),
       maxDeltaR_(cfg.getUntrackedParameter<double>("maxDeltaR", 0.05)),
-      keepChargeMismatch_(cfg.getUntrackedParameter<bool>("keepChargeMismatch", false)) {
+      keepChargeMismatch_(cfg.getUntrackedParameter<bool>("keepChargeMismatch", false)),
+      strictDecayChain_(cfg.getUntrackedParameter<bool>("strictDecayChain", true)) {
   usesResource("TFileService");
 }
 
@@ -68,6 +69,8 @@ void DStarGrandDauGenMatchProducer::beginJob() {
   tree_->Branch("slow_hasMatch", &slow_hasMatch_);
   tree_->Branch("slow_match_dr", &slow_match_dr_);
   tree_->Branch("slow_match_pdgId", &slow_match_pdgId_);
+  tree_->Branch("d0_decayMask", &d0_decayMask_);
+  tree_->Branch("dstar_decayMask", &dstar_decayMask_);
 }
 
 void DStarGrandDauGenMatchProducer::resetBranches() {
@@ -118,6 +121,8 @@ void DStarGrandDauGenMatchProducer::resetBranches() {
   slow_hasMatch_.clear();
   slow_match_dr_.clear();
   slow_match_pdgId_.clear();
+  d0_decayMask_.clear();
+  dstar_decayMask_.clear();
 }
 
 DStarGrandDauGenMatchProducer::MatchResult DStarGrandDauGenMatchProducer::findBestMatch(
@@ -163,6 +168,148 @@ const reco::GenParticle* DStarGrandDauGenMatchProducer::findAncestor(
     }
   }
   return nullptr;
+}
+
+bool DStarGrandDauGenMatchProducer::hasAcceptableSubdecay(const reco::GenParticle* particle,
+                                                          unsigned int maxSubDaughters) const {
+  if (!particle) {
+    return false;
+  }
+  const unsigned int nDau = particle->numberOfDaughters();
+  if (nDau == 0) {
+    return true;
+  }
+  if (nDau > maxSubDaughters) {
+    return false;
+  }
+  return true;
+}
+
+bool DStarGrandDauGenMatchProducer::isValidD0Decay(const reco::GenParticle* genD0,
+                                                   unsigned int* maskOut) const {
+  unsigned int mask = 0;
+  if (genD0) {
+    mask |= kD0ExistsBit;
+    if (std::abs(genD0->pdgId()) == 421) {
+      mask |= kD0PdgBit;
+    }
+    if (genD0->numberOfDaughters() == 2) {
+      mask |= kD0TwoDaughtersBit;
+    }
+
+    const auto* dau0 = (genD0->numberOfDaughters() > 0)
+                           ? dynamic_cast<const reco::GenParticle*>(genD0->daughter(0))
+                           : nullptr;
+    const auto* dau1 = (genD0->numberOfDaughters() > 1)
+                           ? dynamic_cast<const reco::GenParticle*>(genD0->daughter(1))
+                           : nullptr;
+    if (dau0 && dau1) {
+      mask |= kD0DaughterPtrBit;
+      const auto fillDaughterBits = [&](const reco::GenParticle* dau) {
+        if (!dau) {
+          return;
+        }
+        const int absId = std::abs(dau->pdgId());
+        if (absId == 321) {
+          mask |= kD0HasKaonBit;
+          if (hasAcceptableSubdecay(dau, 2)) {
+            mask |= kD0KaonSubDecayBit;
+          }
+        } else if (absId == 211) {
+          mask |= kD0HasPionBit;
+          if (hasAcceptableSubdecay(dau, 2)) {
+            mask |= kD0PionSubDecayBit;
+          }
+        }
+      };
+      fillDaughterBits(dau0);
+      fillDaughterBits(dau1);
+    }
+  }
+
+  if (maskOut) {
+    *maskOut = mask;
+  }
+  return (mask & kD0RequiredMask) == kD0RequiredMask;
+}
+
+bool DStarGrandDauGenMatchProducer::isValidDStarDecayChain(const reco::GenParticle* genDStar,
+                                                           const reco::GenParticle* genD0,
+                                                           const reco::GenParticle* slowPion,
+                                                           bool slowConsistent,
+                                                           unsigned int* maskOut) const {
+  unsigned int mask = 0;
+  const reco::GenParticle* d0FromStar = nullptr;
+  const reco::GenParticle* pionFromStar = nullptr;
+
+  if (genDStar) {
+    mask |= kDStarExistsBit;
+    if (std::abs(genDStar->pdgId()) == 413) {
+      mask |= kDStarPdgBit;
+    }
+    if (genDStar->numberOfDaughters() == 2) {
+      mask |= kDStarTwoDaughtersBit;
+    }
+
+    const auto* first = (genDStar->numberOfDaughters() > 0)
+                            ? dynamic_cast<const reco::GenParticle*>(genDStar->daughter(0))
+                            : nullptr;
+    const auto* second = (genDStar->numberOfDaughters() > 1)
+                             ? dynamic_cast<const reco::GenParticle*>(genDStar->daughter(1))
+                             : nullptr;
+    if (first && second) {
+      mask |= kDStarDaughterPtrBit;
+      if (std::abs(first->pdgId()) == 421 && std::abs(second->pdgId()) == 211) {
+        d0FromStar = first;
+        pionFromStar = second;
+      } else if (std::abs(first->pdgId()) == 211 && std::abs(second->pdgId()) == 421) {
+        d0FromStar = second;
+        pionFromStar = first;
+      }
+    }
+  }
+
+  if (d0FromStar && genD0 && d0FromStar == genD0) {
+    mask |= kDStarHasD0Bit;
+  }
+
+  if (slowPion) {
+    const bool directMatch = (pionFromStar && slowPion == pionFromStar);
+    bool ancestorMatch = false;
+    if (!directMatch && pionFromStar) {
+      const reco::GenParticle* current = slowPion;
+      while (current) {
+        if (current == pionFromStar) {
+          ancestorMatch = true;
+          break;
+        }
+        current = dynamic_cast<const reco::GenParticle*>(current->mother());
+      }
+    }
+    if (directMatch || ancestorMatch) {
+      mask |= kDStarHasSlowPionBit;
+    }
+    if (hasAcceptableSubdecay(slowPion, 2)) {
+      mask |= kDStarSlowSubDecayBit;
+    }
+  }
+
+  if (slowConsistent) {
+    mask |= kDStarSlowLineageBit;
+  }
+
+  if (maskOut) {
+    *maskOut = mask;
+  }
+
+  const bool hasRequiredBits = (mask & kDStarRequiredMask) == kDStarRequiredMask;
+  if (!genD0 || !genDStar || !slowPion) {
+    return false;
+  }
+  if (!hasRequiredBits) {
+    return false;
+  }
+  return true;
 }
 
 void DStarGrandDauGenMatchProducer::analyze(const edm::Event& event, const edm::EventSetup&) {
@@ -392,8 +539,23 @@ void DStarGrandDauGenMatchProducer::analyze(const edm::Event& event, const edm::
       slowConsistent = (dstarFromSlow && dstarFromSlow == genDStar);
     }
 
-    const bool validD0Chain = (genD0 != nullptr);
-    const bool validDStarChain = validD0Chain && matchedSlow && genDStar && slowConsistent;
+    unsigned int d0Mask = 0;
+    const bool d0StrictOk = isValidD0Decay(genD0, &d0Mask);
+    d0_decayMask_.push_back(d0Mask);
+
+    unsigned int dstarMask = 0;
+    const bool dstarStrictOk = isValidDStarDecayChain(genDStar, genD0, matchedSlow, slowConsistent, &dstarMask);
+    dstar_decayMask_.push_back(dstarMask);
+
+    bool validD0Chain = (genD0 != nullptr);
+    if (strictDecayChain_) {
+      validD0Chain = validD0Chain && d0StrictOk;
+    }
+
+    bool validDStarChain = validD0Chain && matchedSlow && genDStar && slowConsistent;
+    if (strictDecayChain_) {
+      validDStarChain = validDStarChain && dstarStrictOk;
+    }
 
     if (validDStarChain) {
       dstar_hasGenMatch_[candIndex] = 1;

@@ -37,13 +37,47 @@ private:
                             const std::vector<const reco::GenParticle*>& genTracks,
                             const std::vector<bool>& usedFlags) const;
   const reco::GenParticle* findAncestor(const reco::GenParticle* particle, int absPdgId) const;
+  bool hasAcceptableSubdecay(const reco::GenParticle* particle, unsigned int maxSubDaughters) const;
+  bool isValidD0Decay(const reco::GenParticle* genD0, unsigned int* maskOut = nullptr) const;
+  bool isValidDStarDecayChain(const reco::GenParticle* genDStar,
+                              const reco::GenParticle* genD0,
+                              const reco::GenParticle* slowPion,
+                              bool slowConsistent,
+                              unsigned int* maskOut = nullptr) const;
   void resetBranches();
+
+  static constexpr unsigned int kD0ExistsBit = 1u << 0;
+  static constexpr unsigned int kD0PdgBit = 1u << 1;
+  static constexpr unsigned int kD0TwoDaughtersBit = 1u << 2;
+  static constexpr unsigned int kD0DaughterPtrBit = 1u << 3;
+  static constexpr unsigned int kD0HasKaonBit = 1u << 4;
+  static constexpr unsigned int kD0HasPionBit = 1u << 5;
+  static constexpr unsigned int kD0KaonSubDecayBit = 1u << 6;
+  static constexpr unsigned int kD0PionSubDecayBit = 1u << 7;
+  static constexpr unsigned int kD0RequiredMask = kD0ExistsBit | kD0PdgBit |
+                                                  kD0TwoDaughtersBit | kD0DaughterPtrBit |
+                                                  kD0HasKaonBit | kD0HasPionBit |
+                                                  kD0KaonSubDecayBit | kD0PionSubDecayBit;
+
+  static constexpr unsigned int kDStarExistsBit = 1u << 8;
+  static constexpr unsigned int kDStarPdgBit = 1u << 9;
+  static constexpr unsigned int kDStarTwoDaughtersBit = 1u << 10;
+  static constexpr unsigned int kDStarDaughterPtrBit = 1u << 11;
+  static constexpr unsigned int kDStarHasD0Bit = 1u << 12;
+  static constexpr unsigned int kDStarHasSlowPionBit = 1u << 13;
+  static constexpr unsigned int kDStarSlowLineageBit = 1u << 14;
+  static constexpr unsigned int kDStarSlowSubDecayBit = 1u << 15;
+  static constexpr unsigned int kDStarRequiredMask = kDStarExistsBit | kDStarPdgBit |
+                                                     kDStarTwoDaughtersBit | kDStarDaughterPtrBit |
+                                                     kDStarHasD0Bit | kDStarHasSlowPionBit |
+                                                     kDStarSlowLineageBit | kDStarSlowSubDecayBit;
 
   edm::EDGetTokenT<pat::CompositeCandidateCollection> dstarToken_;
   edm::EDGetTokenT<reco::GenParticleCollection> genToken_;
 
   double maxDeltaR_;
   bool keepChargeMismatch_;
+  bool strictDecayChain_;
   static constexpr float kInvalidFloat_ = -999.f;
   static constexpr int kInvalidInt_ = -999;
 
@@ -100,6 +134,9 @@ private:
   std::vector<int> slow_hasMatch_;
   std::vector<float> slow_match_dr_;
   std::vector<int> slow_match_pdgId_;
+
+  std::vector<unsigned int> d0_decayMask_;
+  std::vector<unsigned int> dstar_decayMask_;
 };
 
 #endif
