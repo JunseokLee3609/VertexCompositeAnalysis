@@ -105,11 +105,17 @@ private:
   std::vector<float> d0_match_phi_;
   std::vector<float> d0_match_mass_;
 
+  std::vector<float> d0_reco_pt_;
+  std::vector<float> d0_reco_eta_;
+  std::vector<float> d0_reco_phi_;
+  std::vector<float> d0_reco_mass_;
+
   std::vector<int> gdau1_reco_pdgId_;
   std::vector<int> gdau1_reco_charge_;
   std::vector<float> gdau1_reco_pt_;
   std::vector<float> gdau1_reco_eta_;
   std::vector<float> gdau1_reco_phi_;
+  std::vector<float> gdau1_reco_mass_;
 
   std::vector<int> gdau1_hasMatch_;
   std::vector<float> gdau1_match_dr_;
@@ -120,6 +126,7 @@ private:
   std::vector<float> gdau2_reco_pt_;
   std::vector<float> gdau2_reco_eta_;
   std::vector<float> gdau2_reco_phi_;
+  std::vector<float> gdau2_reco_mass_;
 
   std::vector<int> gdau2_hasMatch_;
   std::vector<float> gdau2_match_dr_;
@@ -130,6 +137,7 @@ private:
   std::vector<float> slow_reco_pt_;
   std::vector<float> slow_reco_eta_;
   std::vector<float> slow_reco_phi_;
+  std::vector<float> slow_reco_mass_;
 
   std::vector<int> slow_hasMatch_;
   std::vector<float> slow_match_dr_;

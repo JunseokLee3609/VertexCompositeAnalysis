@@ -43,12 +43,17 @@ void DStarGrandDauGenMatchProducer::beginJob() {
   tree_->Branch("d0_match_eta", &d0_match_eta_);
   tree_->Branch("d0_match_phi", &d0_match_phi_);
   tree_->Branch("d0_match_mass", &d0_match_mass_);
+  tree_->Branch("d0_reco_pt", &d0_reco_pt_);
+  tree_->Branch("d0_reco_eta", &d0_reco_eta_);
+  tree_->Branch("d0_reco_phi", &d0_reco_phi_);
+  tree_->Branch("d0_reco_mass", &d0_reco_mass_);
 
   tree_->Branch("gdau1_reco_pdgId", &gdau1_reco_pdgId_);
   tree_->Branch("gdau1_reco_charge", &gdau1_reco_charge_);
   tree_->Branch("gdau1_reco_pt", &gdau1_reco_pt_);
   tree_->Branch("gdau1_reco_eta", &gdau1_reco_eta_);
   tree_->Branch("gdau1_reco_phi", &gdau1_reco_phi_);
+  tree_->Branch("gdau1_reco_mass", &gdau1_reco_mass_);
   tree_->Branch("gdau1_hasMatch", &gdau1_hasMatch_);
   tree_->Branch("gdau1_match_dr", &gdau1_match_dr_);
   tree_->Branch("gdau1_match_pdgId", &gdau1_match_pdgId_);
@@ -58,6 +63,7 @@ void DStarGrandDauGenMatchProducer::beginJob() {
   tree_->Branch("gdau2_reco_pt", &gdau2_reco_pt_);
   tree_->Branch("gdau2_reco_eta", &gdau2_reco_eta_);
   tree_->Branch("gdau2_reco_phi", &gdau2_reco_phi_);
+  tree_->Branch("gdau2_reco_mass", &gdau2_reco_mass_);
   tree_->Branch("gdau2_hasMatch", &gdau2_hasMatch_);
   tree_->Branch("gdau2_match_dr", &gdau2_match_dr_);
   tree_->Branch("gdau2_match_pdgId", &gdau2_match_pdgId_);
@@ -66,6 +72,7 @@ void DStarGrandDauGenMatchProducer::beginJob() {
   tree_->Branch("slow_reco_pt", &slow_reco_pt_);
   tree_->Branch("slow_reco_eta", &slow_reco_eta_);
   tree_->Branch("slow_reco_phi", &slow_reco_phi_);
+  tree_->Branch("slow_reco_mass", &slow_reco_mass_);
   tree_->Branch("slow_hasMatch", &slow_hasMatch_);
   tree_->Branch("slow_match_dr", &slow_match_dr_);
   tree_->Branch("slow_match_pdgId", &slow_match_pdgId_);
@@ -95,12 +102,17 @@ void DStarGrandDauGenMatchProducer::resetBranches() {
   d0_match_eta_.clear();
   d0_match_phi_.clear();
   d0_match_mass_.clear();
+  d0_reco_pt_.clear();
+  d0_reco_eta_.clear();
+  d0_reco_phi_.clear();
+  d0_reco_mass_.clear();
 
   gdau1_reco_pdgId_.clear();
   gdau1_reco_charge_.clear();
   gdau1_reco_pt_.clear();
   gdau1_reco_eta_.clear();
   gdau1_reco_phi_.clear();
+  gdau1_reco_mass_.clear();
   gdau1_hasMatch_.clear();
   gdau1_match_dr_.clear();
   gdau1_match_pdgId_.clear();
@@ -110,6 +122,7 @@ void DStarGrandDauGenMatchProducer::resetBranches() {
   gdau2_reco_pt_.clear();
   gdau2_reco_eta_.clear();
   gdau2_reco_phi_.clear();
+  gdau2_reco_mass_.clear();
   gdau2_hasMatch_.clear();
   gdau2_match_dr_.clear();
   gdau2_match_pdgId_.clear();
@@ -118,6 +131,7 @@ void DStarGrandDauGenMatchProducer::resetBranches() {
   slow_reco_pt_.clear();
   slow_reco_eta_.clear();
   slow_reco_phi_.clear();
+  slow_reco_mass_.clear();
   slow_hasMatch_.clear();
   slow_match_dr_.clear();
   slow_match_pdgId_.clear();
@@ -377,10 +391,22 @@ void DStarGrandDauGenMatchProducer::analyze(const edm::Event& event, const edm::
       if (!dau) {
         continue;
       }
-      if (std::abs(dau->pdgId()) == 421) {
-        d0 = dau;
-        break;
-      }
+    if (std::abs(dau->pdgId()) == 421) {
+      d0 = dau;
+      break;
+    }
+  }
+
+    if (!d0) {
+      d0_reco_pt_.push_back(kInvalidFloat_);
+      d0_reco_eta_.push_back(kInvalidFloat_);
+      d0_reco_phi_.push_back(kInvalidFloat_);
+      d0_reco_mass_.push_back(kInvalidFloat_);
+    } else {
+      d0_reco_pt_.push_back(d0->pt());
+      d0_reco_eta_.push_back(d0->eta());
+      d0_reco_phi_.push_back(d0->phi());
+      d0_reco_mass_.push_back(d0->mass());
     }
 
     const reco::Candidate* gd1 = nullptr;
@@ -411,6 +437,7 @@ void DStarGrandDauGenMatchProducer::analyze(const edm::Event& event, const edm::
       gdau1_reco_pt_.push_back(kInvalidFloat_);
       gdau1_reco_eta_.push_back(kInvalidFloat_);
       gdau1_reco_phi_.push_back(kInvalidFloat_);
+      gdau1_reco_mass_.push_back(kInvalidFloat_);
       gdau1_hasMatch_.push_back(0);
       gdau1_match_dr_.push_back(kInvalidFloat_);
       gdau1_match_pdgId_.push_back(kInvalidInt_);
@@ -420,6 +447,7 @@ void DStarGrandDauGenMatchProducer::analyze(const edm::Event& event, const edm::
       gdau1_reco_pt_.push_back(gd1->pt());
       gdau1_reco_eta_.push_back(gd1->eta());
       gdau1_reco_phi_.push_back(gd1->phi());
+      gdau1_reco_mass_.push_back(gd1->mass());
 
       MatchResult match = findBestMatch(*gd1, selectedGenTracks, usedGen);
       if (match.particle) {
@@ -443,6 +471,7 @@ void DStarGrandDauGenMatchProducer::analyze(const edm::Event& event, const edm::
       gdau2_reco_pt_.push_back(kInvalidFloat_);
       gdau2_reco_eta_.push_back(kInvalidFloat_);
       gdau2_reco_phi_.push_back(kInvalidFloat_);
+      gdau2_reco_mass_.push_back(kInvalidFloat_);
       gdau2_hasMatch_.push_back(0);
       gdau2_match_dr_.push_back(kInvalidFloat_);
       gdau2_match_pdgId_.push_back(kInvalidInt_);
@@ -452,6 +481,7 @@ void DStarGrandDauGenMatchProducer::analyze(const edm::Event& event, const edm::
       gdau2_reco_pt_.push_back(gd2->pt());
       gdau2_reco_eta_.push_back(gd2->eta());
       gdau2_reco_phi_.push_back(gd2->phi());
+      gdau2_reco_mass_.push_back(gd2->mass());
 
       MatchResult match = findBestMatch(*gd2, selectedGenTracks, usedGen);
       if (match.particle) {
@@ -475,6 +505,7 @@ void DStarGrandDauGenMatchProducer::analyze(const edm::Event& event, const edm::
       slow_reco_pt_.push_back(kInvalidFloat_);
       slow_reco_eta_.push_back(kInvalidFloat_);
       slow_reco_phi_.push_back(kInvalidFloat_);
+      slow_reco_mass_.push_back(kInvalidFloat_);
       slow_hasMatch_.push_back(0);
       slow_match_dr_.push_back(kInvalidFloat_);
       slow_match_pdgId_.push_back(kInvalidInt_);
@@ -484,6 +515,7 @@ void DStarGrandDauGenMatchProducer::analyze(const edm::Event& event, const edm::
       slow_reco_pt_.push_back(slowPion->pt());
       slow_reco_eta_.push_back(slowPion->eta());
       slow_reco_phi_.push_back(slowPion->phi());
+      slow_reco_mass_.push_back(slowPion->mass());
 
       MatchResult match = findBestMatch(*slowPion, selectedGenTracks, usedGen);
       if (match.particle) {
