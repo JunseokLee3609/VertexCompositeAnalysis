@@ -26,16 +26,6 @@ using namespace edm;
 using namespace reco;
 
 namespace {
-constexpr int kD0MaskGenExists = 0x001;
-constexpr int kD0MaskPdg = 0x002;
-constexpr int kD0MaskTwoDaughters = 0x004;
-constexpr int kD0MaskValidPointers = 0x008;
-constexpr int kD0MaskKaonPresent = 0x010;
-constexpr int kD0MaskPionPresent = 0x020;
-constexpr int kD0MaskRecoHasExtras = 0x040;
-constexpr int kD0MaskRecoPairMatched = 0x080;
-constexpr int kDStarMaskSlowMatched = 0x100;
-constexpr double kInvalidValue = -999.0;
 }
 
 PATCompositeTreeProducer3::PATCompositeTreeProducer3(const edm::ParameterSet& iConfig)
@@ -226,9 +216,6 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
         const reco::Candidate * d3 = 0;        
         if(threeProngDecay_) d3 = trk.daughter(2);
 
-        matchMaskAll_[it] = 0;
-        matchMaskD0_[it] = 0;
-
         if(doGenMatching_ )
         {
           if(debugGenMatching_) {
@@ -245,8 +232,6 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
             isSwap[it] = false;
             idmom_reco[it] = -77;
             idBAnc_reco[it] = -77;
-            int selectedD0Mask = 0;
-            bool selectedSlowMatch = false;
 
             for( unsigned int igen=0; igen<nGen; igen++){
               auto const theGenDStar = genRefs.at(igen);
@@ -262,18 +247,9 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
               else if (abs(trk.daughter(1)->pdgId())== 421) idxRecoD0 = 1;
               recoD1 = trk.daughter(idxRecoD0);
               recoPi = trk.daughter(1-idxRecoD0);
-              int candidateMask = 0;
               const reco::Candidate* genKaon = nullptr;
               const reco::Candidate* genPion = nullptr;
               if(theGenD0) {
-                candidateMask |= kD0MaskGenExists;
-                if(std::abs(theGenD0->pdgId()) == 421) candidateMask |= kD0MaskPdg;
-                if(theGenD0->numberOfDaughters() == 2) candidateMask |= kD0MaskTwoDaughters;
-                if(theGenD0->numberOfDaughters() > 0 && theGenD0->daughter(0) &&
-                   theGenD0->numberOfDaughters() > 1 && theGenD0->daughter(1)) {
-                  candidateMask |= kD0MaskValidPointers;
-                }
-
                 if(theGenD0->numberOfDaughters() > 0) {
                   const auto* genDau = theGenD0->daughter(0);
                   if(genDau) {
@@ -288,8 +264,6 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
                     else if(!genPion && std::abs(genDau->pdgId()) == 211) genPion = genDau;
                   }
                 }
-                if(genKaon) candidateMask |= kD0MaskKaonPresent;
-                if(genPion) candidateMask |= kD0MaskPionPresent;
               }
 
               std::vector<const reco::Candidate*> recoDaughters;
@@ -300,9 +274,6 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
                     recoDaughters.push_back(recoDau);
                   }
                 }
-                if (recoDaughters.size() > 2) {
-                  candidateMask |= kD0MaskRecoHasExtras;
-                }
               }
 
               // DEBUG: Calculate deltaR for gen matching verification
@@ -310,9 +281,6 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
               double deltaR_Pion = -999.0;
               bool d0Match = matchHadron(recoD1, *theGenD0,true);
               bool pionMatch = matchHadron(recoPi, *theGenPion,false);
-
-              bool kaonRecoMatched = false;
-              bool pionRecoMatched = false;
 
               if(genKaon && genPion && recoDaughters.size() >= 2) {
                 double bestSum = std::numeric_limits<double>::max();
@@ -342,9 +310,6 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
                 }
 
                 if (bestKaonIdx >= 0 && bestPionIdx >= 0) {
-                  kaonRecoMatched = true;
-                  pionRecoMatched = true;
-                  candidateMask |= kD0MaskRecoPairMatched;
                   if (!d0Match) {
                     d0Match = true;
                   }
@@ -371,9 +336,6 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
                     LogInfo("PATCompositeTreeProducer") << "DStar gen matching SUCCESS for candidate " << it;
                     DEBUG_GEN("DStar gen matching SUCCESS for candidate " << it);
                   }
-
-                  selectedD0Mask = candidateMask;
-                  if(pionMatch) selectedSlowMatch = true;
 
                   isSwap[it] = checkSwap(recoD1, *theGenD0);
                   auto mom_ref = findMother(theGenDStar);
@@ -1591,8 +1553,6 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
               PATCompositeNtuple->Branch("idmom_reco",&idmom_reco,"idmom_reco[candSize]/I");
               PATCompositeNtuple->Branch("idBAnc_reco",&idBAnc_reco,"idBAnc_reco[candSize]/I");
               PATCompositeNtuple->Branch("matchGEN",&matchGEN,"matchGEN[candSize]/O");
-              PATCompositeNtuple->Branch("matchMaskAll",&matchMaskAll_,"matchMaskAll[candSize]/I");
-              PATCompositeNtuple->Branch("matchMaskD0",&matchMaskD0_,"matchMaskD0[candSize]/I");
               PATCompositeNtuple->Branch("matchGen3DPointingAngle",&gen_agl_abs,"gen3DPointingAngle[candSize]/F");
               PATCompositeNtuple->Branch("matchGen2DPointingAngle",&gen_agl2D_abs,"gen2DPointingAngle[candSize]/F");
               PATCompositeNtuple->Branch("matchGen3DDecayLength",&gen_dl,"gen3DDecayLength[candSize]/F");
