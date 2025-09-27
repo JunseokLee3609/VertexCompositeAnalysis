@@ -215,6 +215,8 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
 
         if(doGenMatching_ )
         {
+          matchMaskAll_[it] = 0;
+          matchMaskD0_[it] = 0;
           if(debugGenMatching_) {
             LogDebug("PATCompositeTreeProducer") << "Starting gen matching for candidate " << it;
             DEBUG_GEN("Starting gen matching for candidate " << it);
@@ -244,13 +246,43 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
               else if (abs(trk.daughter(1)->pdgId())== 421) idxRecoD0 = 1;
               recoD1 = trk.daughter(idxRecoD0);
               recoPi = trk.daughter(1-idxRecoD0);
-              const auto nGenDau = theGenD0->numberOfDaughters();
-
               // DEBUG: Calculate deltaR for gen matching verification
               double deltaR_D0 = -999.0;
               double deltaR_Pion = -999.0;
               bool d0Match = matchHadron(recoD1, *theGenD0,true);
               bool pionMatch = matchHadron(recoPi, *theGenPion,false);
+
+              bool kaonMatch = false;
+              bool pionFromD0Match = false;
+
+              if(recoD1 && recoD1->numberOfDaughters() >= 2 && theGenD0 && theGenD0->numberOfDaughters() >= 2){
+                const reco::Candidate* recoD0Dau0 = recoD1->daughter(0);
+                const reco::Candidate* recoD0Dau1 = recoD1->daughter(1);
+                const reco::Candidate* genD0Dau0 = theGenD0->daughter(0);
+                const reco::Candidate* genD0Dau1 = theGenD0->daughter(1);
+
+                const reco::Candidate* genKaon = nullptr;
+                const reco::Candidate* genPion = nullptr;
+
+                if(genD0Dau0){
+                  if(std::abs(genD0Dau0->pdgId()) == 321) genKaon = genD0Dau0;
+                  else if(std::abs(genD0Dau0->pdgId()) == 211) genPion = genD0Dau0;
+                }
+                if(genD0Dau1){
+                  if(!genKaon && std::abs(genD0Dau1->pdgId()) == 321) genKaon = genD0Dau1;
+                  else if(!genPion && std::abs(genD0Dau1->pdgId()) == 211) genPion = genD0Dau1;
+                }
+
+                if(recoD0Dau0 && recoD0Dau1 && genKaon && genPion){
+                  const bool reco0Kaon = matchTrackdR(recoD0Dau0, genKaon, true);
+                  const bool reco1Kaon = matchTrackdR(recoD0Dau1, genKaon, true);
+                  const bool reco0Pion = matchTrackdR(recoD0Dau0, genPion, true);
+                  const bool reco1Pion = matchTrackdR(recoD0Dau1, genPion, true);
+
+                  kaonMatch = reco0Kaon || reco1Kaon;
+                  pionFromD0Match = reco0Pion || reco1Pion;
+                }
+              }
               
               if(d0Match) {
                 deltaR_D0 = sqrt(pow(recoD1->eta() - theGenD0->eta(), 2) + pow(recoD1->phi() - theGenD0->phi(), 2));
@@ -268,6 +300,13 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
                         << " | Pion match: " << pionMatch << " (dR=" << deltaR_Pion << ")");
               }
               
+              matchMaskD0_[it] = 0;
+              if(kaonMatch) matchMaskD0_[it] |= 0x1;
+              if(pionFromD0Match) matchMaskD0_[it] |= 0x2;
+
+              matchMaskAll_[it] = matchMaskD0_[it];
+              if(pionMatch) matchMaskAll_[it] |= 0x4;
+
               matchGEN[it] = matchGEN[it] || (d0Match && pionMatch);
                 if(matchGEN[it]){
                   if(debugGenMatching_) {
@@ -1490,6 +1529,8 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
               PATCompositeNtuple->Branch("idmom_reco",&idmom_reco,"idmom_reco[candSize]/I");
               PATCompositeNtuple->Branch("idBAnc_reco",&idBAnc_reco,"idBAnc_reco[candSize]/I");
               PATCompositeNtuple->Branch("matchGEN",&matchGEN,"matchGEN[candSize]/O");
+              PATCompositeNtuple->Branch("matchMaskAll",&matchMaskAll_,"matchMaskAll[candSize]/I");
+              PATCompositeNtuple->Branch("matchMaskD0",&matchMaskD0_,"matchMaskD0[candSize]/I");
               PATCompositeNtuple->Branch("matchGen3DPointingAngle",&gen_agl_abs,"gen3DPointingAngle[candSize]/F");
               PATCompositeNtuple->Branch("matchGen2DPointingAngle",&gen_agl2D_abs,"gen2DPointingAngle[candSize]/F");
               PATCompositeNtuple->Branch("matchGen3DDecayLength",&gen_dl,"gen3DDecayLength[candSize]/F");

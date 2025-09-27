@@ -309,6 +309,8 @@ private:
     float dca2D[MAXCAN];
     bool isSwap[MAXCAN];
     bool matchGEN[MAXCAN];
+    int matchMaskAll_[MAXCAN];
+    int matchMaskD0_[MAXCAN];
     int idBAnc_reco[MAXCAN];
     int pionFlavor[MAXCAN];
     int idmom_reco[MAXCAN];
