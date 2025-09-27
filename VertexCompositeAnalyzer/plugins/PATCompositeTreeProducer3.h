@@ -600,58 +600,72 @@ private:
 
 
 bool PATCompositeTreeProducer3::matchHadron(const reco::Candidate* _dmeson_, const reco::GenParticle& _gen_, bool isMatchD0) const {
-  bool match = false;
   if(isMatchD0){
-    reco::Candidate const* reco_trk1 = _dmeson_->daughter(0);
-    reco::Candidate const* reco_trk2 = _dmeson_->daughter(1);
+    if(!_dmeson_ || _dmeson_->numberOfDaughters() < 2) {
+      return false;
+    }
+    const auto* gen_trk1 = _gen_.numberOfDaughters() > 0 ? _gen_.daughter(0) : nullptr;
+    const auto* gen_trk2 = _gen_.numberOfDaughters() > 1 ? _gen_.daughter(1) : nullptr;
+    if(!gen_trk1 || !gen_trk2) {
+      return false;
+    }
 
-    reco::Candidate const* gen_trk1 = _gen_.daughter(0);
-    reco::Candidate const* gen_trk2 = _gen_.daughter(1);
-
-    if( matchTrackdR(reco_trk1, gen_trk1, true)){
-        if( matchTrackdR(reco_trk2, gen_trk2,true)) {
-            match = true;
-            return match;
+    const unsigned int nReco = _dmeson_->numberOfDaughters();
+    for(unsigned int i = 0; i < nReco; ++i) {
+      const auto* reco_i = _dmeson_->daughter(i);
+      if(!reco_i) continue;
+      for(unsigned int j = 0; j < nReco; ++j) {
+        if(i == j) continue;
+        const auto* reco_j = _dmeson_->daughter(j);
+        if(!reco_j) continue;
+        if(matchTrackdR(reco_i, gen_trk1, true) && matchTrackdR(reco_j, gen_trk2, true)) {
+          return true;
         }
-    }    
-    if( matchTrackdR(reco_trk2, gen_trk1, true)){
-        if( matchTrackdR(reco_trk1, gen_trk2,true)) {
-            match = true;
-            return match;
+        if(matchTrackdR(reco_i, gen_trk2, true) && matchTrackdR(reco_j, gen_trk1, true)) {
+          return true;
         }
-    }    
+      }
+    }
+    return false;
   }
   if(!isMatchD0){
-    if(matchTrackdR(_dmeson_, &_gen_,true)) match = true;
+    return matchTrackdR(_dmeson_, &_gen_, true);
   }
-  return match;
+  return false;
 };
 bool PATCompositeTreeProducer3::matchHadron(const reco::Candidate* _dmeson_, const reco::Candidate& _gen_, bool isMatchD0) const {
-  bool match = false;
   if(isMatchD0){
-    reco::Candidate const* reco_trk1 = _dmeson_->daughter(0);
-    reco::Candidate const* reco_trk2 = _dmeson_->daughter(1);
+    if(!_dmeson_ || _dmeson_->numberOfDaughters() < 2) {
+      return false;
+    }
+    const auto* gen_trk1 = _gen_.numberOfDaughters() > 0 ? _gen_.daughter(0) : nullptr;
+    const auto* gen_trk2 = _gen_.numberOfDaughters() > 1 ? _gen_.daughter(1) : nullptr;
+    if(!gen_trk1 || !gen_trk2) {
+      return false;
+    }
 
-    reco::Candidate const* gen_trk1 = _gen_.daughter(0);
-    reco::Candidate const* gen_trk2 = _gen_.daughter(1);
-
-    if( matchTrackdR(reco_trk1, gen_trk1, true)){
-        if( matchTrackdR(reco_trk2, gen_trk2,true)) {
-            match = true;
-            return match;
+    const unsigned int nReco = _dmeson_->numberOfDaughters();
+    for(unsigned int i = 0; i < nReco; ++i) {
+      const auto* reco_i = _dmeson_->daughter(i);
+      if(!reco_i) continue;
+      for(unsigned int j = 0; j < nReco; ++j) {
+        if(i == j) continue;
+        const auto* reco_j = _dmeson_->daughter(j);
+        if(!reco_j) continue;
+        if(matchTrackdR(reco_i, gen_trk1, true) && matchTrackdR(reco_j, gen_trk2, true)) {
+          return true;
         }
-    }    
-    if( matchTrackdR(reco_trk2, gen_trk1, true)){
-        if( matchTrackdR(reco_trk1, gen_trk2,true)) {
-            match = true;
-            return match;
+        if(matchTrackdR(reco_i, gen_trk2, true) && matchTrackdR(reco_j, gen_trk1, true)) {
+          return true;
         }
-    }    
+      }
+    }
+    return false;
   }
   if(!isMatchD0){
-    if(matchTrackdR(_dmeson_, &_gen_,true)) match = true;
+    return matchTrackdR(_dmeson_, &_gen_, true);
   }
-  return match;
+  return false;
 };
 
 bool PATCompositeTreeProducer3::checkSwap(const reco::Candidate* _dmeson_, const reco::GenParticle& _gen_) const {

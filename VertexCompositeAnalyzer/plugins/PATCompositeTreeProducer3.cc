@@ -25,6 +25,19 @@ using namespace std;
 using namespace edm;
 using namespace reco;
 
+namespace {
+constexpr int kD0MaskGenExists = 0x001;
+constexpr int kD0MaskPdg = 0x002;
+constexpr int kD0MaskTwoDaughters = 0x004;
+constexpr int kD0MaskValidPointers = 0x008;
+constexpr int kD0MaskKaonPresent = 0x010;
+constexpr int kD0MaskPionPresent = 0x020;
+constexpr int kD0MaskRecoHasExtras = 0x040;
+constexpr int kD0MaskRecoPairMatched = 0x080;
+constexpr int kDStarMaskSlowMatched = 0x100;
+constexpr double kInvalidValue = -999.0;
+}
+
 PATCompositeTreeProducer3::PATCompositeTreeProducer3(const edm::ParameterSet& iConfig)
 {
     doRecoNtuple_ = iConfig.getUntrackedParameter<bool>("doRecoNtuple");
@@ -213,10 +226,11 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
         const reco::Candidate * d3 = 0;        
         if(threeProngDecay_) d3 = trk.daughter(2);
 
+        matchMaskAll_[it] = 0;
+        matchMaskD0_[it] = 0;
+
         if(doGenMatching_ )
         {
-          matchMaskAll_[it] = 0;
-          matchMaskD0_[it] = 0;
           if(debugGenMatching_) {
             LogDebug("PATCompositeTreeProducer") << "Starting gen matching for candidate " << it;
             DEBUG_GEN("Starting gen matching for candidate " << it);
@@ -231,6 +245,8 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
             isSwap[it] = false;
             idmom_reco[it] = -77;
             idBAnc_reco[it] = -77;
+            int selectedD0Mask = 0;
+            bool selectedSlowMatch = false;
 
             for( unsigned int igen=0; igen<nGen; igen++){
               auto const theGenDStar = genRefs.at(igen);
@@ -246,42 +262,97 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
               else if (abs(trk.daughter(1)->pdgId())== 421) idxRecoD0 = 1;
               recoD1 = trk.daughter(idxRecoD0);
               recoPi = trk.daughter(1-idxRecoD0);
+              int candidateMask = 0;
+              const reco::Candidate* genKaon = nullptr;
+              const reco::Candidate* genPion = nullptr;
+              if(theGenD0) {
+                candidateMask |= kD0MaskGenExists;
+                if(std::abs(theGenD0->pdgId()) == 421) candidateMask |= kD0MaskPdg;
+                if(theGenD0->numberOfDaughters() == 2) candidateMask |= kD0MaskTwoDaughters;
+                if(theGenD0->numberOfDaughters() > 0 && theGenD0->daughter(0) &&
+                   theGenD0->numberOfDaughters() > 1 && theGenD0->daughter(1)) {
+                  candidateMask |= kD0MaskValidPointers;
+                }
+
+                if(theGenD0->numberOfDaughters() > 0) {
+                  const auto* genDau = theGenD0->daughter(0);
+                  if(genDau) {
+                    if(std::abs(genDau->pdgId()) == 321) genKaon = genDau;
+                    else if(std::abs(genDau->pdgId()) == 211) genPion = genDau;
+                  }
+                }
+                if(theGenD0->numberOfDaughters() > 1) {
+                  const auto* genDau = theGenD0->daughter(1);
+                  if(genDau) {
+                    if(!genKaon && std::abs(genDau->pdgId()) == 321) genKaon = genDau;
+                    else if(!genPion && std::abs(genDau->pdgId()) == 211) genPion = genDau;
+                  }
+                }
+                if(genKaon) candidateMask |= kD0MaskKaonPresent;
+                if(genPion) candidateMask |= kD0MaskPionPresent;
+              }
+
+              std::vector<const reco::Candidate*> recoDaughters;
+              if(recoD1) {
+                for (unsigned int dauIdx = 0; dauIdx < recoD1->numberOfDaughters(); ++dauIdx) {
+                  const auto* recoDau = recoD1->daughter(dauIdx);
+                  if (recoDau) {
+                    recoDaughters.push_back(recoDau);
+                  }
+                }
+                if (recoDaughters.size() > 2) {
+                  candidateMask |= kD0MaskRecoHasExtras;
+                }
+              }
+
               // DEBUG: Calculate deltaR for gen matching verification
               double deltaR_D0 = -999.0;
               double deltaR_Pion = -999.0;
               bool d0Match = matchHadron(recoD1, *theGenD0,true);
               bool pionMatch = matchHadron(recoPi, *theGenPion,false);
 
-              bool kaonMatch = false;
-              bool pionFromD0Match = false;
+              bool kaonRecoMatched = false;
+              bool pionRecoMatched = false;
 
-              if(recoD1 && recoD1->numberOfDaughters() >= 2 && theGenD0 && theGenD0->numberOfDaughters() >= 2){
-                const reco::Candidate* recoD0Dau0 = recoD1->daughter(0);
-                const reco::Candidate* recoD0Dau1 = recoD1->daughter(1);
-                const reco::Candidate* genD0Dau0 = theGenD0->daughter(0);
-                const reco::Candidate* genD0Dau1 = theGenD0->daughter(1);
+              if(genKaon && genPion && recoDaughters.size() >= 2) {
+                double bestSum = std::numeric_limits<double>::max();
+                int bestKaonIdx = -1;
+                int bestPionIdx = -1;
 
-                const reco::Candidate* genKaon = nullptr;
-                const reco::Candidate* genPion = nullptr;
-
-                if(genD0Dau0){
-                  if(std::abs(genD0Dau0->pdgId()) == 321) genKaon = genD0Dau0;
-                  else if(std::abs(genD0Dau0->pdgId()) == 211) genPion = genD0Dau0;
+                for (size_t iReco = 0; iReco < recoDaughters.size(); ++iReco) {
+                  const auto* recoCandK = recoDaughters[iReco];
+                  if (!recoCandK) continue;
+                  if (recoCandK->charge() != genKaon->charge()) continue;
+                  const double drK = reco::deltaR(*recoCandK, *genKaon);
+                  if (drK >= deltaR_) continue;
+                  for (size_t jReco = 0; jReco < recoDaughters.size(); ++jReco) {
+                    if (jReco == iReco) continue;
+                    const auto* recoCandPi = recoDaughters[jReco];
+                    if (!recoCandPi) continue;
+                    if (recoCandPi->charge() != genPion->charge()) continue;
+                    const double drPi = reco::deltaR(*recoCandPi, *genPion);
+                    if (drPi >= deltaR_) continue;
+                    const double sum = drK + drPi;
+                    if (sum < bestSum) {
+                      bestSum = sum;
+                      bestKaonIdx = static_cast<int>(iReco);
+                      bestPionIdx = static_cast<int>(jReco);
+                    }
+                  }
                 }
-                if(genD0Dau1){
-                  if(!genKaon && std::abs(genD0Dau1->pdgId()) == 321) genKaon = genD0Dau1;
-                  else if(!genPion && std::abs(genD0Dau1->pdgId()) == 211) genPion = genD0Dau1;
-                }
 
-                if(recoD0Dau0 && recoD0Dau1 && genKaon && genPion){
-                  const bool reco0Kaon = matchTrackdR(recoD0Dau0, genKaon, true);
-                  const bool reco1Kaon = matchTrackdR(recoD0Dau1, genKaon, true);
-                  const bool reco0Pion = matchTrackdR(recoD0Dau0, genPion, true);
-                  const bool reco1Pion = matchTrackdR(recoD0Dau1, genPion, true);
-
-                  kaonMatch = reco0Kaon || reco1Kaon;
-                  pionFromD0Match = reco0Pion || reco1Pion;
+                if (bestKaonIdx >= 0 && bestPionIdx >= 0) {
+                  kaonRecoMatched = true;
+                  pionRecoMatched = true;
+                  candidateMask |= kD0MaskRecoPairMatched;
+                  if (!d0Match) {
+                    d0Match = true;
+                  }
                 }
+              }
+
+              (void)recoD0Dau0;
+              (void)recoD0Dau1;
               }
               
               if(d0Match) {
@@ -299,20 +370,15 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
                         << " | D0 match: " << d0Match << " (dR=" << deltaR_D0 << ")"
                         << " | Pion match: " << pionMatch << " (dR=" << deltaR_Pion << ")");
               }
-              
-              matchMaskD0_[it] = 0;
-              if(kaonMatch) matchMaskD0_[it] |= 0x1;
-              if(pionFromD0Match) matchMaskD0_[it] |= 0x2;
-
-              matchMaskAll_[it] = matchMaskD0_[it];
-              if(pionMatch) matchMaskAll_[it] |= 0x4;
-
               matchGEN[it] = matchGEN[it] || (d0Match && pionMatch);
                 if(matchGEN[it]){
                   if(debugGenMatching_) {
                     LogInfo("PATCompositeTreeProducer") << "DStar gen matching SUCCESS for candidate " << it;
                     DEBUG_GEN("DStar gen matching SUCCESS for candidate " << it);
                   }
+
+                  selectedD0Mask = candidateMask;
+                  if(pionMatch) selectedSlowMatch = true;
 
                   isSwap[it] = checkSwap(recoD1, *theGenD0);
                   auto mom_ref = findMother(theGenDStar);
@@ -373,6 +439,7 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
                   break;
                 }
               } // END for nGen
+
             }
             else {
               if(debugGenMatching_) {
