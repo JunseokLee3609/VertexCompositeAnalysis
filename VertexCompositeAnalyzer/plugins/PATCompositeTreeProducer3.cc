@@ -350,11 +350,6 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
                   }
                 }
               }
-
-              (void)recoD0Dau0;
-              (void)recoD0Dau1;
-              }
-              
               if(d0Match) {
                 deltaR_D0 = sqrt(pow(recoD1->eta() - theGenD0->eta(), 2) + pow(recoD1->phi() - theGenD0->phi(), 2));
               }
