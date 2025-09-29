@@ -1144,8 +1144,6 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
               double gdl2D = d1CC->userFloat("decaylength2D");
               grand_dlos2D[it] = d1CC->userFloat("decaylengthsignif2D");
 
-              double gdl2Derror = gdl2D/grand_dlos2D[it];
-              
           }
 
           if(saveHistogram_)
@@ -2022,7 +2020,6 @@ std::vector<reco::GenParticleRef> PATCompositeTreeProducer3::processGenMatching(
     edm::LogInfo("GenMatching") << "=== Gen Matching Process Started ===";
     edm::LogInfo("GenMatching") << "Total gen particles in collection: " << genpars->size();
     
-    int totalCandidates = 0;
     int pidMatches = 0;
     int daughterMatches = 0;
     int permutationMatches = 0;
