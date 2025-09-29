@@ -9,6 +9,60 @@
 #include <limits>
 #include "DataFormats/Math/interface/deltaR.h"
 
+namespace {
+
+struct TrackMatchResult {
+    const reco::GenParticle* particle = nullptr;
+    double deltaR = std::numeric_limits<double>::max();
+    int index = -1;
+};
+
+TrackMatchResult findBestTrackMatch(const reco::Candidate& recoCand,
+                                    const std::vector<const reco::GenParticle*>& genTracks,
+                                    const std::vector<bool>& usedFlags,
+                                    double maxDr) {
+    TrackMatchResult best;
+    for (size_t idx = 0; idx < genTracks.size(); ++idx) {
+        if (idx < usedFlags.size() && usedFlags[idx]) {
+            continue;
+        }
+        const auto* gen = genTracks[idx];
+        if (!gen) {
+            continue;
+        }
+        if (recoCand.charge() != 0 && gen->charge() != 0 && recoCand.charge() != gen->charge()) {
+            continue;
+        }
+        const double dr = reco::deltaR(recoCand.eta(), recoCand.phi(), gen->eta(), gen->phi());
+        if (dr > maxDr) {
+            continue;
+        }
+        if (!best.particle || dr < best.deltaR) {
+            best.particle = gen;
+            best.deltaR = dr;
+            best.index = static_cast<int>(idx);
+        }
+    }
+    return best;
+}
+
+const reco::GenParticle* findAncestor(const reco::GenParticle* particle, int absPdgId) {
+    const reco::GenParticle* current = particle;
+    while (current) {
+        const reco::Candidate* mother = current->mother();
+        current = dynamic_cast<const reco::GenParticle*>(mother);
+        if (!current) {
+            break;
+        }
+        if (std::abs(current->pdgId()) == absPdgId) {
+            return current;
+        }
+    }
+    return nullptr;
+}
+
+}  // namespace
+
 // Debugging macros for better control
 #ifdef DEBUG_GEN_MATCHING
     #define DEBUG_MSG(msg) std::cout << "DEBUG: " << msg << std::endl
@@ -333,17 +387,17 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
               } else {
                 std::vector<bool> used(genTrackPool.size(), false);
 
-                auto gd1Match = findBestTrackMatch(*recoKaonCand, genTrackPool, used);
+                auto gd1Match = findBestTrackMatch(*recoKaonCand, genTrackPool, used, deltaR_);
                 if (gd1Match.index >= 0 && static_cast<size_t>(gd1Match.index) < used.size()) {
                   used[gd1Match.index] = true;
                 }
 
-                auto gd2Match = findBestTrackMatch(*recoPionCand, genTrackPool, used);
+                auto gd2Match = findBestTrackMatch(*recoPionCand, genTrackPool, used, deltaR_);
                 if (gd2Match.index >= 0 && static_cast<size_t>(gd2Match.index) < used.size()) {
                   used[gd2Match.index] = true;
                 }
 
-                auto slowMatch = findBestTrackMatch(*recoSlow, genTrackPool, used);
+                auto slowMatch = findBestTrackMatch(*recoSlow, genTrackPool, used, deltaR_);
                 if (slowMatch.index >= 0 && static_cast<size_t>(slowMatch.index) < used.size()) {
                   used[slowMatch.index] = true;
                 }
@@ -1141,7 +1195,6 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
               grand_dl[it] = d1CC->userFloat("decaylength3D");
               grand_dlos[it] = d1CC->userFloat("decaylengthsignif3D");
               grand_dlerror[it] = grand_dl[it]/grand_dlos[it];
-              double gdl2D = d1CC->userFloat("decaylength2D");
               grand_dlos2D[it] = d1CC->userFloat("decaylengthsignif2D");
 
           }
@@ -2107,52 +2160,6 @@ std::vector<reco::GenParticleRef> PATCompositeTreeProducer3::processGenMatching(
     }
     
     return genRefs;
-}
-
-PATCompositeTreeProducer3::TrackMatchResult
-PATCompositeTreeProducer3::findBestTrackMatch(const reco::Candidate& recoCand,
-                                              const std::vector<const reco::GenParticle*>& genTracks,
-                                              const std::vector<bool>& usedFlags) const {
-    TrackMatchResult best;
-    const double maxDr = deltaR_;
-    for (size_t idx = 0; idx < genTracks.size(); ++idx) {
-        if (idx < usedFlags.size() && usedFlags[idx]) {
-            continue;
-        }
-        const auto* gen = genTracks[idx];
-        if (!gen) {
-            continue;
-        }
-        if (recoCand.charge() != 0 && gen->charge() != 0 && recoCand.charge() != gen->charge()) {
-            continue;
-        }
-        const double dr = reco::deltaR(recoCand.eta(), recoCand.phi(), gen->eta(), gen->phi());
-        if (dr > maxDr) {
-            continue;
-        }
-        if (!best.particle || dr < best.deltaR) {
-            best.particle = gen;
-            best.deltaR = dr;
-            best.index = static_cast<int>(idx);
-        }
-    }
-    return best;
-}
-
-const reco::GenParticle*
-PATCompositeTreeProducer3::findAncestor(const reco::GenParticle* particle, int absPdgId) const {
-    const reco::GenParticle* current = particle;
-    while (current) {
-        const reco::Candidate* mother = current->mother();
-        current = dynamic_cast<const reco::GenParticle*>(mother);
-        if (!current) {
-            break;
-        }
-        if (std::abs(current->pdgId()) == absPdgId) {
-            return current;
-        }
-    }
-    return nullptr;
 }
 
 bool PATCompositeTreeProducer3::isValidCandidateIndex(unsigned int index) const {

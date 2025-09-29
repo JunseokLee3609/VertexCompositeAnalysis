@@ -165,17 +165,6 @@ private:
   
   // Strict D* → D0 + π → K + π + π decay chain validation
   bool isValidDStarDecayChain(const reco::Candidate* Dd1, const reco::Candidate* Dd2) const;
-
-  struct TrackMatchResult {
-    const reco::GenParticle* particle = nullptr;
-    double deltaR = std::numeric_limits<double>::max();
-    int index = -1;
-  };
-
-  TrackMatchResult findBestTrackMatch(const reco::Candidate& recoCand,
-                                      const std::vector<const reco::GenParticle*>& genTracks,
-                                      const std::vector<bool>& usedFlags) const;
-  const reco::GenParticle* findAncestor(const reco::GenParticle* particle, int absPdgId) const;
   
   // Validation and debugging functions (delegated to ValidationUtility)
   void performSelfDiagnostics() const;
