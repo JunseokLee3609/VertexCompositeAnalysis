@@ -1,0 +1,29 @@
+universe    = vanilla
+executable  = runCondor.sh
+
+py_script = PbPb2023_D0BothAndDStar_MB_cfg_mc_v2_Step2MVA.py
+
+arguments   = cmsRun $(py_script) $(inFName) $(idx)
+transfer_input_files = $(py_script), myProxy
+
+output      = /dev/null
+error       = /dev/null
+log         = /dev/null
++JobFlavour = "tomorrow"
+
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+
+##### No Output
+#output = job_$(idx).log
+#error = job_$(idx).err
+#log = job_$(idx).log
+
+request_memory = 8 GB
+request_cpus = 4
++SingularityImage = "/cvmfs/singularity.opensciencegrid.org/opensciencegrid/osgvo-el8:latest"
+
+x509userproxy = myProxy
+requirements = (OpSysAndVer =?= "AlmaLinux9")
+
+queue inFName,idx from files.list

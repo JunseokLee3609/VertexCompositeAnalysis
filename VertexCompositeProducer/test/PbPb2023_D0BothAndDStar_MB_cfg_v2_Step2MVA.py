@@ -10,6 +10,23 @@ process.load('Configuration.StandardSequences.Reconstruction_Data_cff')
 # Limit the output messages
 process.load('FWCore.MessageService.MessageLogger_cfi')
 process.MessageLogger.cerr.FwkReport.reportEvery = 10
+process.MessageLogger.cerr.threshold = "DEBUG"
+process.MessageLogger.debugModules=["*"]
+#process.MessageLogger.cerr.threshold = cms.untracked.string('DEBUG')
+process.MessageLogger.cerr.DStarDebug = cms.untracked.PSet(
+      limit = cms.untracked.int32(-1)
+  )
+process.MessageLogger.cerr.D0DaughterOrder = cms.untracked.PSet(limit=cms.untracked.int32(-1))
+
+process.MessageLogger.cerr.GenMatching = cms.untracked.PSet(
+      limit = cms.untracked.int32(-1)
+  )
+process.MessageLogger.cerr.DStarDecayFilter = cms.untracked.PSet(
+      limit = cms.untracked.int32(-1)
+  )
+process.MessageLogger.cerr.PATCompositeTreeProducer = cms.untracked.PSet(
+      limit = cms.untracked.int32(-1)
+  )
 process.options = cms.untracked.PSet(wantSummary = cms.untracked.bool(True))
 process.FastTimerService = cms.Service("FastTimerService",
                                        printEventSummary = cms.untracked.bool(True),
@@ -94,9 +111,9 @@ process.generalD0CandidatesNew.tkChi2Cut = cms.double(5)
 process.generalD0CandidatesNew.tkNhitsCut = cms.int32(0)
 process.generalD0CandidatesNew.tkPtErrCut = cms.double(0.1)
 # process.generalD0CandidatesNew.tkPtCut = cms.double(0.8)
-process.generalD0CandidatesNew.tkPtCut = cms.double(2.0)
-# process.generalD0CandidatesNew.tkEtaCut = cms.double(2.4)
-process.generalD0CandidatesNew.tkEtaCut = cms.double(1.8)
+process.generalD0CandidatesNew.tkPtCut = cms.double(1.5)
+process.generalD0CandidatesNew.tkEtaCut = cms.double(2.4)
+#process.generalD0CandidatesNew.tkEtaCut = cms.double(1.8)
 process.generalD0CandidatesNew.tkPtSumCut = cms.double(0.0)
 process.generalD0CandidatesNew.tkEtaDiffCut = cms.double(1.0)
 process.generalD0CandidatesNew.dauTransImpactSigCut = cms.double(0.)
@@ -111,13 +128,13 @@ process.generalD0CandidatesNew.alpha2DCut = cms.double(999.0)
 process.generalD0CandidatesNew.rVtxCut = cms.double(0.0)
 process.generalD0CandidatesNew.lVtxCut = cms.double(0.0)
 process.generalD0CandidatesNew.vtxSignificance2DCut = cms.double(0.0)
-process.generalD0CandidatesNew.vtxSignificance3DCut = cms.double(0.0)
+process.generalD0CandidatesNew.vtxSignificance3DCut = cms.double(3.0)
 process.generalD0CandidatesNew.d0MassCut = cms.double(0.14)
 process.generalD0CandidatesNew.d0AbsYCut = cms.double(1.2)
 process.generalD0CandidatesNew.dPtCut = cms.double(0.0)
 
 process.generalD0CandidatesNew.useAnyMVA = cms.bool(True)
-process.generalD0CandidatesNew.mvaCut = cms.double(0.90)
+process.generalD0CandidatesNew.mvaCut = cms.double(-1)
 # process.generalD0CandidatesNew.GBRForestLabel = cms.string('D0InPbPbXGB')
 # #process.generalD0CandidatesNew.GBRForestFileName = cms.string('GBRForestfile_XGBDT_PromptD0InPbPb_15Params_v1_08Mar.root')
 # process.generalD0CandidatesNew.GBRForestFileName = cms.string('GBRForestfile_XGBDT_PromptD0InPbPb_pT_y_cBIN_19Params_v1_25Mar.root')
@@ -135,7 +152,7 @@ process.generalDStarCandidatesNew.trkPtSumCut = cms.double(0.0)
 process.generalDStarCandidatesNew.trkEtaDiffCut = cms.double(99.0)
 process.generalDStarCandidatesNew.tkNhitsCut = cms.int32(0)
 process.generalDStarCandidatesNew.tkPtErrCut = cms.double(0.1)
-process.generalDStarCandidatesNew.tkPtCut = cms.double(0.2)
+process.generalDStarCandidatesNew.tkPtCut = cms.double(0.3)
 process.generalDStarCandidatesNew.tkChi2Cut = cms.double(5)
 process.generalDStarCandidatesNew.VtxChiProbCut = cms.double(0.00)
 #process.generalDStarCandidatesNew.vtxSignificance3DCut = cms.double(3)
@@ -162,7 +179,7 @@ process.load("VertexCompositeAnalysis.VertexCompositeAnalyzer.eventplaneanalyzer
 
 process.TFileService = cms.Service("TFileService",
     fileName =
-    cms.string('d0ana_tree_2gev.root')
+    cms.string('d0ana_tree_step2.root')
     )
 
 process.d0ana.useAnyMVA = cms.bool(True)
