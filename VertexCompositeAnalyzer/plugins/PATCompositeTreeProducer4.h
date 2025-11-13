@@ -57,6 +57,7 @@
 #include "TrackingTools/PatternTools/interface/TSCBLBuilderNoMaterial.h"
 
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+#include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
 
 #include "DataFormats/PatCandidates/interface/Muon.h"
 #include "DataFormats/MuonReco/interface/Muon.h"
@@ -456,6 +457,7 @@ private:
 
     // gen info    
     int candSize_gen;
+    float gen_weight;
     float mass_gen[MAXCAN];
     float pt_gen[MAXCAN];
     float eta_gen[MAXCAN];
@@ -515,6 +517,23 @@ private:
 		int matchGen_D1charge_[MAXCAN];
 		int matchGen_D1pdgId_[MAXCAN];
 		float matchGen_slowPion_dR_[MAXCAN];
+
+		// Extra provenance for matched gen tracks
+		int matchGen_D0Dau1_motherPdgId_[MAXCAN];
+		int matchGen_D0Dau1_motherNDau_[MAXCAN];
+		int matchGen_D0Dau2_motherPdgId_[MAXCAN];
+		int matchGen_D0Dau2_motherNDau_[MAXCAN];
+		int matchGen_D1_motherPdgId_[MAXCAN]; // slow pion mother PDG
+		int matchGen_D1_motherNDau_[MAXCAN];
+		bool matchGen_sameD0_[MAXCAN];
+		bool matchGen_sameDStar_[MAXCAN];
+		bool matchGen_validDstarChain_[MAXCAN];
+
+		// If mothers have >2 daughters, capture extra daughter PDG IDs (up to 4)
+		int matchGen_D0_extraNDau_[MAXCAN];
+		int matchGen_D0_extraDauPdgId_[MAXCAN][4];
+		int matchGen_DStar_extraNDau_[MAXCAN];
+		int matchGen_DStar_extraDauPdgId_[MAXCAN][4];
 
 
 		float gen_D0pT_[MAXCAN];
@@ -577,6 +596,7 @@ private:
     edm::EDGetTokenT<edm::ValueMap<reco::DeDxData> > Dedx_Token1_;
     edm::EDGetTokenT<edm::ValueMap<reco::DeDxData> > Dedx_Token2_;
     edm::EDGetTokenT<reco::GenParticleCollection> tok_genParticle_;
+    edm::EDGetTokenT<GenEventInfoProduct> tok_genInfo_;
     edm::EDGetTokenT<reco::MuonCollection> tok_muon_;
 
     edm::EDGetTokenT<int> tok_centBinLabel_;

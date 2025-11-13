@@ -126,6 +126,7 @@ PATCompositeTreeProducer4::PATCompositeTreeProducer4(const edm::ParameterSet& iC
     Dedx_Token1_ = consumes<edm::ValueMap<reco::DeDxData> >(edm::InputTag("dedxHarmonic2"));
     Dedx_Token2_ = consumes<edm::ValueMap<reco::DeDxData> >(edm::InputTag("dedxTruncated40"));
     tok_genParticle_ = consumes<reco::GenParticleCollection>(edm::InputTag(iConfig.getUntrackedParameter<edm::InputTag>("GenParticleCollection")));
+    tok_genInfo_ = consumes<GenEventInfoProduct>(edm::InputTag("generator"));
 
     isCentrality_ = false;
     if(iConfig.exists("isCentrality")) isCentrality_ = iConfig.getParameter<bool>("isCentrality");
@@ -358,6 +359,18 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
             matchGen_D1charge_[it] = 0;
             matchGen_D1pdgId_[it] = 0;
             matchGen_slowPion_dR_[it] = invalidFloat;
+            matchGen_D0Dau1_motherPdgId_[it] = invalidInt;
+            matchGen_D0Dau1_motherNDau_[it] = invalidInt;
+            matchGen_D0Dau2_motherPdgId_[it] = invalidInt;
+            matchGen_D0Dau2_motherNDau_[it] = invalidInt;
+            matchGen_D1_motherPdgId_[it] = invalidInt;
+            matchGen_D1_motherNDau_[it] = invalidInt;
+            matchGen_sameD0_[it] = false;
+            matchGen_sameDStar_[it] = false;
+            matchGen_validDstarChain_[it] = false;
+            matchGen_D0_extraNDau_[it] = 0;
+            matchGen_DStar_extraNDau_[it] = 0;
+            for (int ei=0; ei<4; ++ei) { matchGen_D0_extraDauPdgId_[it][ei] = 0; matchGen_DStar_extraDauPdgId_[it][ei] = 0; }
 
             bool hasGenTrackPool = genpars.isValid() && !genTrackPool.empty();
             if (hasGenTrackPool) {
@@ -457,6 +470,17 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
                   matchGen_D1pdgId_[it] = slowMatch.particle->pdgId();
                   matchGen_slowPion_dR_[it] = slowMatch.deltaR;
 
+                  // Record mothers and their number of daughters for provenance
+                  const reco::GenParticle* m1 = gd1Match.particle ? dynamic_cast<const reco::GenParticle*>(gd1Match.particle->mother()) : nullptr;
+                  const reco::GenParticle* m2 = gd2Match.particle ? dynamic_cast<const reco::GenParticle*>(gd2Match.particle->mother()) : nullptr;
+                  const reco::GenParticle* m3 = slowMatch.particle ? dynamic_cast<const reco::GenParticle*>(slowMatch.particle->mother()) : nullptr;
+                  matchGen_D0Dau1_motherPdgId_[it] = m1 ? m1->pdgId() : invalidInt;
+                  matchGen_D0Dau1_motherNDau_[it] = m1 ? static_cast<int>(m1->numberOfDaughters()) : invalidInt;
+                  matchGen_D0Dau2_motherPdgId_[it] = m2 ? m2->pdgId() : invalidInt;
+                  matchGen_D0Dau2_motherNDau_[it] = m2 ? static_cast<int>(m2->numberOfDaughters()) : invalidInt;
+                  matchGen_D1_motherPdgId_[it] = m3 ? m3->pdgId() : invalidInt;
+                  matchGen_D1_motherNDau_[it] = m3 ? static_cast<int>(m3->numberOfDaughters()) : invalidInt;
+
                   const reco::GenParticle* genD0 = nullptr;
                   const reco::GenParticle* genFromFirst = findAncestor(gd1Match.particle, D0_PDG_ID);
                   const reco::GenParticle* genFromSecond = findAncestor(gd2Match.particle, D0_PDG_ID);
@@ -511,6 +535,70 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
                   }
                   idmom_reco[it] = momPdg;
                   idBAnc_reco[it] = bAncestor;
+
+                  // Consistency flags for D0 and D*
+                  const reco::GenParticle* genDStarFromD0 = genD0 ? findAncestor(genD0, std::abs(PID_)) : nullptr;
+                  const reco::GenParticle* genDStarFromSlow = slowMatch.particle ? findAncestor(slowMatch.particle, std::abs(PID_)) : nullptr;
+                  matchGen_sameD0_[it] = (genD0 != nullptr);
+                  matchGen_sameDStar_[it] = (genDStarFromD0 && genDStarFromSlow && genDStarFromD0 == genDStarFromSlow);
+
+                  bool validChain = false;
+                  if (genDStarFromD0 && genD0) {
+                    const bool dstarHas2 = genDStarFromD0->numberOfDaughters() == 2;
+                    const bool d0Has2 = genD0->numberOfDaughters() == 2;
+                    bool dstarPDGs = false;
+                    bool d0PDGs = false;
+                    bool directSlowPi = false;
+                    if (dstarHas2) {
+                      const auto* ds_d0 = genDStarFromD0->daughter(0);
+                      const auto* ds_pi = genDStarFromD0->daughter(1);
+                      const int a0 = std::abs(ds_d0->pdgId());
+                      const int a1 = std::abs(ds_pi->pdgId());
+                      dstarPDGs = ( (a0==D0_PDG_ID && a1==PION_PDG_ID) || (a1==D0_PDG_ID && a0==PION_PDG_ID) );
+                      // ensure the D0 pointer is one of D* daughters
+                      dstarPDGs = dstarPDGs && (ds_d0==genD0 || ds_pi==genD0);
+                      // additionally require the matched slow pion to be the other direct D* daughter
+                      if (slowMatch.particle) {
+                        directSlowPi = ((ds_d0==genD0 && ds_pi==slowMatch.particle) || (ds_pi==genD0 && ds_d0==slowMatch.particle));
+                      }
+                    }
+                    if (d0Has2) {
+                      const auto* d0_d1 = genD0->daughter(0);
+                      const auto* d0_d2 = genD0->daughter(1);
+                      const int b0 = std::abs(d0_d1->pdgId());
+                      const int b1 = std::abs(d0_d2->pdgId());
+                      d0PDGs = ( (b0==KAON_PDG_ID && b1==PION_PDG_ID) || (b1==KAON_PDG_ID && b0==PION_PDG_ID) );
+                    }
+                    validChain = (matchGen_sameD0_[it] && matchGen_sameDStar_[it] && dstarPDGs && d0PDGs && directSlowPi);
+                  }
+                  matchGen_validDstarChain_[it] = validChain;
+
+                  // Save extra daughters if mother has >2 daughters
+                  // For D0
+                  if (genD0 && genD0->numberOfDaughters() > 2) {
+                    int saved = 0;
+                    for (unsigned idau=0; idau<genD0->numberOfDaughters() && saved<4; ++idau) {
+                      const auto* dd = genD0->daughter(idau);
+                      if (dd==gd1Match.particle || dd==gd2Match.particle) continue;
+                      matchGen_D0_extraDauPdgId_[it][saved++] = dd->pdgId();
+                    }
+                    matchGen_D0_extraNDau_[it] = saved;
+                  }
+                  // For D*
+                  if (genDStar) {
+                    // find D0 and slow pion daughters to exclude
+                    const reco::Candidate* ds_d0 = nullptr; const reco::Candidate* ds_pi = nullptr;
+                    if (genDStar->numberOfDaughters()>=2) { ds_d0 = genDStar->daughter(0); ds_pi = genDStar->daughter(1); }
+                    int saved = 0;
+                    if (genDStar->numberOfDaughters() > 2) {
+                      for (unsigned idau=0; idau<genDStar->numberOfDaughters() && saved<4; ++idau) {
+                        const auto* dd = genDStar->daughter(idau);
+                        if (dd==ds_d0 || dd==ds_pi || dd==genD0) continue;
+                        matchGen_DStar_extraDauPdgId_[it][saved++] = dd->pdgId();
+                      }
+                    }
+                    matchGen_DStar_extraNDau_[it] = saved;
+                  }
                 }
               }
             } else {
@@ -1396,6 +1484,10 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
   void
   PATCompositeTreeProducer4::fillGEN(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   {
+      edm::Handle<GenEventInfoProduct> geninfo;
+      iEvent.getByToken(tok_genInfo_, geninfo);
+      gen_weight = (geninfo.isValid() ? geninfo->weight() : -1.0);
+      
       edm::Handle<reco::GenParticleCollection> genpars;
       iEvent.getByToken(tok_genParticle_,genpars);
       std::vector<reco::GenParticleRef> genRefs;
@@ -1724,6 +1816,23 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
                 PATCompositeNtuple->Branch("matchGen_D1angle3D_",&matchGen_D1angle3D_, "matchGen_D1angle3D_[candSize]/I");
                 PATCompositeNtuple->Branch("matchGen_D1ancestorId_",&matchGen_D1ancestorId_, "matchGen_D1ancestorId_[candSize]/I");
                 PATCompositeNtuple->Branch("matchGen_D1ancestorFlavor_",&matchGen_D1ancestorFlavor_, "matchGen_D1ancestorFlavor_[candSize]/I");
+
+                // New provenance branches for background diagnosis
+                PATCompositeNtuple->Branch("matchGen_D0Dau1_motherPdgId",&matchGen_D0Dau1_motherPdgId_, "matchGen_D0Dau1_motherPdgId[candSize]/I");
+                PATCompositeNtuple->Branch("matchGen_D0Dau1_motherNDau",&matchGen_D0Dau1_motherNDau_, "matchGen_D0Dau1_motherNDau[candSize]/I");
+                PATCompositeNtuple->Branch("matchGen_D0Dau2_motherPdgId",&matchGen_D0Dau2_motherPdgId_, "matchGen_D0Dau2_motherPdgId[candSize]/I");
+                PATCompositeNtuple->Branch("matchGen_D0Dau2_motherNDau",&matchGen_D0Dau2_motherNDau_, "matchGen_D0Dau2_motherNDau[candSize]/I");
+                PATCompositeNtuple->Branch("matchGen_D1_motherPdgId",&matchGen_D1_motherPdgId_, "matchGen_D1_motherPdgId[candSize]/I");
+                PATCompositeNtuple->Branch("matchGen_D1_motherNDau",&matchGen_D1_motherNDau_, "matchGen_D1_motherNDau[candSize]/I");
+                PATCompositeNtuple->Branch("matchGen_sameD0",&matchGen_sameD0_, "matchGen_sameD0[candSize]/O");
+                PATCompositeNtuple->Branch("matchGen_sameDStar",&matchGen_sameDStar_, "matchGen_sameDStar[candSize]/O");
+                PATCompositeNtuple->Branch("matchGen_validDstarChain",&matchGen_validDstarChain_, "matchGen_validDstarChain[candSize]/O");
+
+                // Extra daughters (if mothers have >2 daughters)
+                PATCompositeNtuple->Branch("matchGen_D0_extraNDau",&matchGen_D0_extraNDau_, "matchGen_D0_extraNDau[candSize]/I");
+                PATCompositeNtuple->Branch("matchGen_D0_extraDauPdgId",&matchGen_D0_extraDauPdgId_, "matchGen_D0_extraDauPdgId[candSize][4]/I");
+                PATCompositeNtuple->Branch("matchGen_DStar_extraNDau",&matchGen_DStar_extraNDau_, "matchGen_DStar_extraNDau[candSize]/I");
+                PATCompositeNtuple->Branch("matchGen_DStar_extraDauPdgId",&matchGen_DStar_extraDauPdgId_, "matchGen_DStar_extraDauPdgId[candSize][4]/I");
               }
               else{
                 PATCompositeNtuple->Branch("matchGen_D0pT",&matchGen_D0pT_, "matchGen_D0pT[candSize]/F");
@@ -1894,6 +2003,7 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
 
     if(doGenNtuple_)
     {
+        PATCompositeNtuple->Branch("gen_weight",&gen_weight,"gen_weight/F");
         PATCompositeNtuple->Branch("candSize_gen",&candSize_gen,"candSize_gen/I");
         PATCompositeNtuple->Branch("gen_mass",&mass_gen,"mass_gen[candSize_gen]/F");
         PATCompositeNtuple->Branch("gen_pT",&pt_gen,"pT_gen[candSize_gen]/F");
