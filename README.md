@@ -202,7 +202,7 @@ Example output format:
 ### For Data:
 1. Generate the file list:
 ```bash
-./filegenerator.sh -Q 'file dataset=/HIPhysicsRawPrime13/HIRun2023A-PromptReco-v2/MINIAOD instance=prod/global' -o file_Data_HIPhysicsRawPrime13.list
+./filegenerator.sh -Q 'file dataset=/HIPhysicsRawPrime13/HIRun2023A-PromptReco-v2/MINIAOD instance=prod/global' -o file_Data_HIPhysicsRawPrime13.list -d HIPhysicsRawPrime13
 ```
 
 2. **Copy and edit your config file** (do not modify the original):
