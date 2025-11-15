@@ -189,6 +189,8 @@ private:
   std::vector<double> dauPhi;
   std::vector<double> dauPt;
 
+  void collectFinalStateDaughters(const reco::Candidate& cand);
+
 };
 
 //
@@ -243,6 +245,30 @@ PATEventPlaneTrack::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   if(doRecoNtuple_) fillRECO(iEvent,iSetup);
   //if(saveTree_&&centrality>=80) PATEventPlaneNtuple->Fill();
   if(saveTree_) PATEventPlaneNtuple->Fill();
+}
+
+
+void
+PATEventPlaneTrack::collectFinalStateDaughters(const reco::Candidate& cand)
+{
+  if(cand.numberOfDaughters()==0)
+  {
+    if(cand.charge()==0) return; // skip neutral leaves
+    const reco::Track* bestTrack = cand.bestTrack();
+    const double eta = (bestTrack ? bestTrack->eta() : cand.eta());
+    const double phi = (bestTrack ? bestTrack->phi() : cand.phi());
+    const double pt  = (bestTrack ? bestTrack->pt()  : cand.pt());
+    dauEta.push_back(eta);
+    dauPhi.push_back(phi);
+    dauPt.push_back(pt);
+    return;
+  }
+
+  for(size_t i = 0; i < cand.numberOfDaughters(); ++i)
+  {
+    const reco::Candidate* daughter = cand.daughter(i);
+    if(daughter) collectFinalStateDaughters(*daughter);
+  }
 }
 
 
@@ -311,7 +337,7 @@ PATEventPlaneTrack::fillRECO(const edm::Event& iEvent, const edm::EventSetup& iS
     bool isJpsi = false;
 	  
     const ushort& nDau = trk.numberOfDaughters();
-    if(nDau!=2) throw cms::Exception("PATCompositeAnalyzer") << "Expected " << 2 << " daughters but V0 candidate has " << nDau << " daughters!" << std::endl;
+    if(nDau==0) throw cms::Exception("PATCompositeAnalyzer") << "Candidate has no daughters!" << std::endl;
     
     pt[it] = trk.pt();
     mass[it] = trk.mass();
@@ -320,14 +346,7 @@ PATEventPlaneTrack::fillRECO(const edm::Event& iEvent, const edm::EventSetup& iS
     if (isJpsi == false) continue;
 
     
-    for(ushort iDau=0; iDau<nDau; iDau++)
-    {
-      const auto& dau = *(trk.daughter(iDau));
-      dauEta.push_back(dau.eta());
-      dauPhi.push_back(dau.phi());
-      dauPt.push_back(dau.pt());
-      //cout << "idau Pt Eta Phi = " << dau.pt() <<' '<< dau.eta()<<' '<<dau.phi()<<endl;
-    }
+    collectFinalStateDaughters(trk);
   }
   //nmuons += dauEta.size();
   
@@ -547,4 +566,3 @@ PATEventPlaneTrack::endJob()
 
 //define this as a plug-in
 DEFINE_FWK_MODULE(PATEventPlaneTrack);
-
