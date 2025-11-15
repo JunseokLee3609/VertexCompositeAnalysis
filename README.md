@@ -267,3 +267,12 @@ tail -f logs/job_0000.err
 * Jobs run in AlmaLinux9 singularity container with el8 CMSSW environment
 * Output files are transferred back when jobs complete
 * The `runCondor_Data.sh` and `runCondor_MC.sh` scripts set up the CMSSW environment and X509 proxy before running cmsRun
+
+### KNU HTCondor submission
+- Update paths in `VertexCompositeProducer/test/runCondor_Data.sh` and `runCondor_MC.sh` to your CMSSW test directory under `/u/user/<your_id>/...` (this repo currently uses `/u/user/jun502s/...`).
+- In `VertexCompositeProducer/test/PbPb2023_D0BothAndDStar_MB_cfg_Step2MVA_condor_v1.py`, set `outDir = f'/u/user/<your_id>/SE_UserHome/DstarAnalysis/{dirName}'` and ensure the directory exists.
+- Create a proxy in the test dir: `voms-proxy-init --voms cms --out myProxy`.
+- Prepare an indexed file list (`inFName idx [subdir]`) and submit from the test dir:
+  - `./submit_condor.sh data file_Data_...list tomorrow`
+  - `./submit_condor.sh mc files_nonpromptMC.list tomorrow`
+- Notes: `submit_condor.sh` targets AlmaLinux9 workers, requests 8 GB RAM and 4 CPUs, writes logs to `logs/job_*.out|err`; Singularity image is not used on KNU.
