@@ -214,6 +214,7 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
 
         if(doGenMatching_ )
         {
+          cout << "gen matching start" << endl;
           if(debugGenMatching_) {
             LogDebug("PATCompositeTreeProducer") << "Starting gen matching for candidate " << it;
             DEBUG_GEN("Starting gen matching for candidate " << it);
@@ -228,8 +229,11 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
             isSwap[it] = false;
             idmom_reco[it] = -77;
             idBAnc_reco[it] = -77;
-
+            cout << "matchGEN[it]" << " ::  " << it << " :: " << (matchGEN[it]==true ? "true" : "false") << endl;
+            cout << "nGen " << nGen << endl;
+        
             for( unsigned int igen=0; igen<nGen; igen++){
+              cout << "gen loop strat" << endl;
               auto const theGenDStar = genRefs.at(igen);
               unsigned int idxD0 = -1;
               if( abs(theGenDStar->daughter(0)->pdgId()) == 421 ) idxD0 = 0;
@@ -268,11 +272,15 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
               }
               
               matchGEN[it] = matchGEN[it] || (d0Match && pionMatch);
+
+              cout << "matchGEN[it]" << " ::  " << it << " :: " << (matchGEN[it]==true ? "true" : "false") << endl;
                 if(matchGEN[it]){
                   if(debugGenMatching_) {
                     LogInfo("PATCompositeTreeProducer") << "DStar gen matching SUCCESS for candidate " << it;
                     DEBUG_GEN("DStar gen matching SUCCESS for candidate " << it);
                   }
+                  
+                  cout << theGenDStar->pt() << endl; 
 
                   isSwap[it] = checkSwap(recoD1, *theGenD0);
                   auto mom_ref = findMother(theGenDStar);
@@ -308,6 +316,7 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
                   const auto* genDau1 = theGenD0->daughter(1);
 
                   matchGen_D0Dau1_pT_[it] = genDau0->pt();
+                  cout << "matchGen_D0Dau1_pT_[it]" << matchGen_D0Dau1_pT_[it] << endl;
                   matchGen_D0Dau1_eta_[it] = genDau0->eta();
                   matchGen_D0Dau1_phi_[it] = genDau0->phi();
                   matchGen_D0Dau1_mass_[it] = genDau0->mass();
