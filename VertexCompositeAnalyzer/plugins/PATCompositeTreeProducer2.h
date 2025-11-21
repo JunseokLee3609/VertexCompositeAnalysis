@@ -56,6 +56,7 @@
 #include "TrackingTools/PatternTools/interface/TSCBLBuilderNoMaterial.h"
 
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+#include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
 
 #include "DataFormats/PatCandidates/interface/Muon.h"
 #include "DataFormats/MuonReco/interface/Muon.h"
@@ -409,6 +410,7 @@ private:
 
     // gen info    
     int candSize_gen;
+    float gen_weight;
     float mass_gen[MAXCAN];
     float pt_gen[MAXCAN];
     float eta_gen[MAXCAN];
@@ -529,6 +531,7 @@ private:
     edm::EDGetTokenT<edm::ValueMap<reco::DeDxData> > Dedx_Token1_;
     edm::EDGetTokenT<edm::ValueMap<reco::DeDxData> > Dedx_Token2_;
     edm::EDGetTokenT<reco::GenParticleCollection> tok_genParticle_;
+    edm::EDGetTokenT<GenEventInfoProduct> tok_genInfo_;
     edm::EDGetTokenT<reco::MuonCollection> tok_muon_;
 
     edm::EDGetTokenT<int> tok_centBinLabel_;

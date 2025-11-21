@@ -51,6 +51,7 @@ PATCompositeTreeProducer2::PATCompositeTreeProducer2(const edm::ParameterSet& iC
     Dedx_Token1_ = consumes<edm::ValueMap<reco::DeDxData> >(edm::InputTag("dedxHarmonic2"));
     Dedx_Token2_ = consumes<edm::ValueMap<reco::DeDxData> >(edm::InputTag("dedxTruncated40"));
     tok_genParticle_ = consumes<reco::GenParticleCollection>(edm::InputTag(iConfig.getUntrackedParameter<edm::InputTag>("GenParticleCollection")));
+    tok_genInfo_ = consumes<GenEventInfoProduct>(edm::InputTag("generator"));
 
     isCentrality_ = false;
     if(iConfig.exists("isCentrality")) isCentrality_ = iConfig.getParameter<bool>("isCentrality");
@@ -1302,6 +1303,11 @@ PATCompositeTreeProducer2::fillRECO(const edm::Event& iEvent, const edm::EventSe
       #ifdef DEBUG
       cout << "Fill GEN Start" << endl;
       #endif
+      
+      edm::Handle<GenEventInfoProduct> geninfo;
+      iEvent.getByToken(tok_genInfo_, geninfo);
+      gen_weight = (geninfo.isValid() ? geninfo->weight() : -1.0);
+      
       edm::Handle<reco::GenParticleCollection> genpars;
       iEvent.getByToken(tok_genParticle_,genpars);
       std::vector<reco::GenParticleRef> genRefs;
@@ -1913,6 +1919,7 @@ PATCompositeTreeProducer2::fillRECO(const edm::Event& iEvent, const edm::EventSe
 
     if(doGenNtuple_)
     {
+        PATCompositeNtuple->Branch("gen_weight",&gen_weight,"gen_weight/F");
         PATCompositeNtuple->Branch("candSize_gen",&candSize_gen,"candSize_gen/I");
         PATCompositeNtuple->Branch("gen_mass",&mass_gen,"mass_gen[candSize_gen]/F");
         PATCompositeNtuple->Branch("gen_pT",&pt_gen,"pT_gen[candSize_gen]/F");
