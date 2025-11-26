@@ -5,7 +5,6 @@
 #include <vector>
 #include <iostream>
 #include <math.h>
-#include <map>
 
 #include <TH1.h>
 #include <TH2.h>
@@ -236,15 +235,6 @@ private:
     double massHistPeak_;
     double massHistWidth_;
     int    massHistBins_;
-    int    mvaHistBins_;
-    double mvaHistMin_;
-    double mvaHistMax_;
-    int    pTHistBins_;
-    double pTHistMin_;
-    double pTHistMax_;
-    std::vector<double> mvaAxisBins_;
-    std::vector<double> pTAxisBins_;
-    std::map<std::string, std::vector<double>> axisBins_;
 
     //options
     bool doRecoNtuple_;

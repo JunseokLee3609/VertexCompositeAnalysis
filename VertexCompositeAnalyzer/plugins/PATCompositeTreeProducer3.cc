@@ -47,25 +47,6 @@ PATCompositeTreeProducer3::PATCompositeTreeProducer3(const edm::ParameterSet& iC
     massHistPeak_ = iConfig.getUntrackedParameter<double>("massHistPeak");
     massHistWidth_ = iConfig.getUntrackedParameter<double>("massHistWidth");
     massHistBins_ = iConfig.getUntrackedParameter<int>("massHistBins");
-    mvaHistBins_ = iConfig.getUntrackedParameter<int>("mvaHistBins", 100);
-    mvaHistMin_ = iConfig.getUntrackedParameter<double>("mvaHistMin", -1.0);
-    mvaHistMax_ = iConfig.getUntrackedParameter<double>("mvaHistMax", 1.0);
-    pTHistBins_ = iConfig.getUntrackedParameter<int>("pTHistBins", 100);
-    pTHistMin_ = iConfig.getUntrackedParameter<double>("pTHistMin", 0.0);
-    pTHistMax_ = iConfig.getUntrackedParameter<double>("pTHistMax", 10.0);
-    mvaAxisBins_ = iConfig.getUntrackedParameter<std::vector<double> >("mvaAxisBins", {});
-    pTAxisBins_ = iConfig.getUntrackedParameter<std::vector<double> >("pTAxisBins", {});
-    axisBins_.clear();
-    if(iConfig.exists("axisBins"))
-    {
-      auto axisBinCfg = iConfig.getUntrackedParameter<std::vector<edm::ParameterSet> >("axisBins");
-      for(const auto& ps : axisBinCfg)
-      {
-        const std::string name = ps.getParameter<std::string>("name");
-        const auto edges = ps.getParameter<std::vector<double> >("edges");
-        if(edges.size()>1) axisBins_[name] = edges;
-      }
-    }
 
     useAnyMVA_ = iConfig.getParameter<bool>("useAnyMVA");
     isSkimMVA_ = iConfig.getUntrackedParameter<bool>("isSkimMVA"); 
@@ -1355,88 +1336,52 @@ void PATCompositeTreeProducer3::processCandidates(const CCC* v0candidates_,
   void
   PATCompositeTreeProducer3::initHistogram()
   {
-    const bool useVariableMVABins = mvaAxisBins_.size() > 1;
-    const bool useVariablePTBins = pTAxisBins_.size() > 1;
-    const int mvaBins = useVariableMVABins ? static_cast<int>(mvaAxisBins_.size()) - 1 : mvaHistBins_;
-    const int pTBins = useVariablePTBins ? static_cast<int>(pTAxisBins_.size()) - 1 : pTHistBins_;
-    const double* mvaEdges = useVariableMVABins ? mvaAxisBins_.data() : nullptr;
-    const double* pTEdges = useVariablePTBins ? pTAxisBins_.data() : nullptr;
-
-    auto getEdges = [&](const std::string& key) -> const std::vector<double>* {
-      auto it = axisBins_.find(key);
-      if(it != axisBins_.end() && it->second.size()>1) return &it->second;
-      return nullptr;
-    };
-
-    // Helper to build histograms with either uniform or variable MVA binning
-    auto makeMVAHist = [&](const char* name, const char* title, const std::string& yKey, int ybins, double ymin, double ymax) -> TH2F* {
-      const auto* yEdges = getEdges(yKey);
-      if(mvaEdges && yEdges) return fs->make<TH2F>(name, title, mvaBins, mvaEdges, static_cast<int>(yEdges->size())-1, yEdges->data());
-      if(yEdges) return fs->make<TH2F>(name, title, mvaBins, mvaHistMin_, mvaHistMax_, static_cast<int>(yEdges->size())-1, yEdges->data());
-      if(mvaEdges) return fs->make<TH2F>(name, title, mvaBins, mvaEdges, ybins, ymin, ymax);
-      return fs->make<TH2F>(name, title, mvaBins, mvaHistMin_, mvaHistMax_, ybins, ymin, ymax);
-    };
-
-    // Helper for MVA vs pT plots with support for variable binning on either axis
-    auto makeMVAvsPTHist = [&](const char* name, const char* title, const std::string& pTKey) -> TH2F* {
-      const auto* pTEdgesCustom = getEdges(pTKey);
-      if(!pTEdgesCustom) pTEdgesCustom = getEdges("pT");
-      const bool useCustomPT = pTEdgesCustom && pTEdgesCustom->size()>1;
-      const int pTBinsLocal = useCustomPT ? static_cast<int>(pTEdgesCustom->size())-1 : pTBins;
-      const double* pTEdgesLocal = useCustomPT ? pTEdgesCustom->data() : pTEdges;
-
-      if(mvaEdges && pTEdgesLocal) return fs->make<TH2F>(name, title, mvaBins, mvaEdges, pTBinsLocal, pTEdgesLocal);
-      if(mvaEdges) return fs->make<TH2F>(name, title, mvaBins, mvaEdges, pTBinsLocal, pTHistMin_, pTHistMax_);
-      if(pTEdgesLocal) return fs->make<TH2F>(name, title, mvaBins, mvaHistMin_, mvaHistMax_, pTBinsLocal, pTEdgesLocal);
-      return fs->make<TH2F>(name, title, mvaBins, mvaHistMin_, mvaHistMax_, pTBinsLocal, pTHistMin_, pTHistMax_);
-    };
-
     for(unsigned int ipt=0;ipt<pTBins_.size()-1;ipt++)
     {
       for(unsigned int iy=0;iy<yBins_.size()-1;iy++)
     {
-    hMassVsMVA[iy][ipt] = makeMVAHist(Form("hMassVsMVA_y%d_pt%d",iy,ipt),";mva;mass(GeV)","mass",massHistBins_,massHistPeak_-massHistWidth_,massHistPeak_+massHistWidth_);
+    hMassVsMVA[iy][ipt] = fs->make<TH2F>(Form("hMassVsMVA_y%d_pt%d",iy,ipt),";mva;mass(GeV)",100,-1.,1.,massHistBins_,massHistPeak_-massHistWidth_,massHistPeak_+massHistWidth_);
 
     if(saveAllHistogram_)
     {
-    hpTVsMVA[iy][ipt] = makeMVAvsPTHist(Form("hpTVsMVA_y%d_pt%d",iy,ipt),";mva;pT;","pT");
-    hetaVsMVA[iy][ipt] = makeMVAHist(Form("hetaVsMVA_y%d_pt%d",iy,ipt),";mva;eta;","eta",40,-4,4);
-    hyVsMVA[iy][ipt] = makeMVAHist(Form("hyVsMVA_y%d_pt%d",iy,ipt),";mva;y;","rapidity",40,-4,4);
-    hVtxProbVsMVA[iy][ipt] = makeMVAHist(Form("hVtxProbVsMVA_y%d_pt%d",iy,ipt),";mva;VtxProb;","vtxProb",100,0,1);
-    h3DCosPointingAngleVsMVA[iy][ipt] = makeMVAHist(Form("h3DCosPointingAngleVsMVA_y%d_pt%d",iy,ipt),";mva;3DCosPointingAngle;","cosPA3D",100,-1,1);
-    h3DPointingAngleVsMVA[iy][ipt] = makeMVAHist(Form("h3DPointingAngleVsMVA_y%d_pt%d",iy,ipt),";mva;3DPointingAngle;","point3D",50,-3.14,3.14);
-    h2DCosPointingAngleVsMVA[iy][ipt] = makeMVAHist(Form("h2DCosPointingAngleVsMVA_y%d_pt%d",iy,ipt),";mva;2DCosPointingAngle;","cosPA2D",100,-1,1);
-    h2DPointingAngleVsMVA[iy][ipt] = makeMVAHist(Form("h2DPointingAngleVsMVA_y%d_pt%d",iy,ipt),";mva;2DPointingAngle;","point2D",50,-3.14,3.14);
-    h3DDecayLengthSignificanceVsMVA[iy][ipt] = makeMVAHist(Form("h3DDecayLengthSignificanceVsMVA_y%d_pt%d",iy,ipt),";mva;3DDecayLengthSignificance;","dlSig3D",300,0,30);
-    h2DDecayLengthSignificanceVsMVA[iy][ipt] = makeMVAHist(Form("h2DDecayLengthSignificanceVsMVA_y%d_pt%d",iy,ipt),";mva;2DDecayLengthSignificance;","dlSig2D",300,0,30);
-    h3DDecayLengthVsMVA[iy][ipt] = makeMVAHist(Form("h3DDecayLengthVsMVA_y%d_pt%d",iy,ipt),";mva;3DDecayLength;","dl3D",300,0,30);
-    h2DDecayLengthVsMVA[iy][ipt] = makeMVAHist(Form("h2DDecayLengthVsMVA_y%d_pt%d",iy,ipt),";mva;2DDecayLength;","dl2D",300,0,30);
-    hzDCASignificanceDaugther1VsMVA[iy][ipt] = makeMVAHist(Form("hzDCASignificanceDaugther1VsMVA_y%d_pt%d",iy,ipt),";mva;zDCASignificanceDaugther1;","zDCA1",100,-10,10);
-    hxyDCASignificanceDaugther1VsMVA[iy][ipt] = makeMVAHist(Form("hxyDCASignificanceDaugther1VsMVA_y%d_pt%d",iy,ipt),";mva;xyDCASignificanceDaugther1;","xyDCA1",100,-10,10);
-    hNHitD1VsMVA[iy][ipt] = makeMVAHist(Form("hNHitD1VsMVA_y%d_pt%d",iy,ipt),";mva;NHitD1;","nHit1",100,0,100);
-    hpTD1VsMVA[iy][ipt] = makeMVAvsPTHist(Form("hpTD1VsMVA_y%d_pt%d",iy,ipt),";mva;pTD1;","pT1");
-    hpTerrD1VsMVA[iy][ipt] = makeMVAHist(Form("hpTerrD1VsMVA_y%d_pt%d",iy,ipt),";mva;pTerrD1;","pTerr1",50,0,0.5);
-    hEtaD1VsMVA[iy][ipt] = makeMVAHist(Form("hEtaD1VsMVA_y%d_pt%d",iy,ipt),";mva;EtaD1;","eta1",40,-4,4);
-    hdedxHarmonic2D1VsMVA[iy][ipt] = makeMVAHist(Form("hdedxHarmonic2D1VsMVA_y%d_pt%d",iy,ipt),";mva;dedxHarmonic2D1;","dedx1",100,0,10);
+    hpTVsMVA[iy][ipt] = fs->make<TH2F>(Form("hpTVsMVA_y%d_pt%d",iy,ipt),";mva;pT;",100,-1,1,100,0,10);
+    hetaVsMVA[iy][ipt] = fs->make<TH2F>(Form("hetaVsMVA_y%d_pt%d",iy,ipt),";mva;eta;",100,-1.,1.,40,-4,4);
+    hyVsMVA[iy][ipt] = fs->make<TH2F>(Form("hyVsMVA_y%d_pt%d",iy,ipt),";mva;y;",100,-1.,1.,40,-4,4);
+    hVtxProbVsMVA[iy][ipt] = fs->make<TH2F>(Form("hVtxProbVsMVA_y%d_pt%d",iy,ipt),";mva;VtxProb;",100,-1.,1.,100,0,1);
+    h3DCosPointingAngleVsMVA[iy][ipt] = fs->make<TH2F>(Form("h3DCosPointingAngleVsMVA_y%d_pt%d",iy,ipt),";mva;3DCosPointingAngle;",100,-1.,1.,100,-1,1);
+    h3DPointingAngleVsMVA[iy][ipt] = fs->make<TH2F>(Form("h3DPointingAngleVsMVA_y%d_pt%d",iy,ipt),";mva;3DPointingAngle;",100,-1.,1.,50,-3.14,3.14);
+    h2DCosPointingAngleVsMVA[iy][ipt] = fs->make<TH2F>(Form("h2DCosPointingAngleVsMVA_y%d_pt%d",iy,ipt),";mva;2DCosPointingAngle;",100,-1.,1.,100,-1,1);
+    h2DPointingAngleVsMVA[iy][ipt] = fs->make<TH2F>(Form("h2DPointingAngleVsMVA_y%d_pt%d",iy,ipt),";mva;2DPointingAngle;",100,-1.,1.,50,-3.14,3.14);
+    h3DDecayLengthSignificanceVsMVA[iy][ipt] = fs->make<TH2F>(Form("h3DDecayLengthSignificanceVsMVA_y%d_pt%d",iy,ipt),";mva;3DDecayLengthSignificance;",100,-1.,1.,300,0,30);
+    h2DDecayLengthSignificanceVsMVA[iy][ipt] = fs->make<TH2F>(Form("h2DDecayLengthSignificanceVsMVA_y%d_pt%d",iy,ipt),";mva;2DDecayLengthSignificance;",100,-1.,1.,300,0,30);
+    h3DDecayLengthVsMVA[iy][ipt] = fs->make<TH2F>(Form("h3DDecayLengthVsMVA_y%d_pt%d",iy,ipt),";mva;3DDecayLength;",100,-1.,1.,300,0,30);
+    h2DDecayLengthVsMVA[iy][ipt] = fs->make<TH2F>(Form("h2DDecayLengthVsMVA_y%d_pt%d",iy,ipt),";mva;2DDecayLength;",100,-1.,1.,300,0,30);
+    hzDCASignificanceDaugther1VsMVA[iy][ipt] = fs->make<TH2F>(Form("hzDCASignificanceDaugther1VsMVA_y%d_pt%d",iy,ipt),";mva;zDCASignificanceDaugther1;",100,-1.,1.,100,-10,10);
+    hxyDCASignificanceDaugther1VsMVA[iy][ipt] = fs->make<TH2F>(Form("hxyDCASignificanceDaugther1VsMVA_y%d_pt%d",iy,ipt),";mva;xyDCASignificanceDaugther1;",100,-1.,1.,100,-10,10);
+    hNHitD1VsMVA[iy][ipt] = fs->make<TH2F>(Form("hNHitD1VsMVA_y%d_pt%d",iy,ipt),";mva;NHitD1;",100,-1.,1.,100,0,100);
+    hpTD1VsMVA[iy][ipt] = fs->make<TH2F>(Form("hpTD1VsMVA_y%d_pt%d",iy,ipt),";mva;pTD1;",100,-1.,1.,100,0,10);
+    hpTerrD1VsMVA[iy][ipt] = fs->make<TH2F>(Form("hpTerrD1VsMVA_y%d_pt%d",iy,ipt),";mva;pTerrD1;",100,-1.,1.,50,0,0.5);
+    hEtaD1VsMVA[iy][ipt] = fs->make<TH2F>(Form("hEtaD1VsMVA_y%d_pt%d",iy,ipt),";mva;EtaD1;",100,-1.,1.,40,-4,4);
+    hdedxHarmonic2D1VsMVA[iy][ipt] = fs->make<TH2F>(Form("hdedxHarmonic2D1VsMVA_y%d_pt%d",iy,ipt),";mva;dedxHarmonic2D1;",100,-1.,1.,100,0,10);
     hdedxHarmonic2D1VsP[iy][ipt] = fs->make<TH2F>(Form("hdedxHarmonic2D1VsP_y%d_pt%d",iy,ipt),";p (GeV);dedxHarmonic2D1",100,0,10,100,0,10);
-    hzDCASignificanceDaugther2VsMVA[iy][ipt] = makeMVAHist(Form("hzDCASignificanceDaugther2VsMVA_y%d_pt%d",iy,ipt),";mva;zDCASignificanceDaugther2;","zDCA2",100,-10,10);
-    hxyDCASignificanceDaugther2VsMVA[iy][ipt] = makeMVAHist(Form("hxyDCASignificanceDaugther2VsMVA_y%d_pt%d",iy,ipt),";mva;xyDCASignificanceDaugther2;","xyDCA2",100,-10,10);
-    hNHitD2VsMVA[iy][ipt] = makeMVAHist(Form("hNHitD2VsMVA_y%d_pt%d",iy,ipt),";mva;NHitD2;","nHit2",100,0,100);
-    hpTD2VsMVA[iy][ipt] = makeMVAvsPTHist(Form("hpTD2VsMVA_y%d_pt%d",iy,ipt),";mva;pTD2;","pT2");
-    hpTerrD2VsMVA[iy][ipt] = makeMVAHist(Form("hpTerrD2VsMVA_y%d_pt%d",iy,ipt),";mva;pTerrD2;","pTerr2",50,0,0.5);
-    hEtaD2VsMVA[iy][ipt] = makeMVAHist(Form("hEtaD2VsMVA_y%d_pt%d",iy,ipt),";mva;EtaD2;","eta2",40,-4,4);
-    hdedxHarmonic2D2VsMVA[iy][ipt] = makeMVAHist(Form("hdedxHarmonic2D2VsMVA_y%d_pt%d",iy,ipt),";mva;dedxHarmonic2D2;","dedx2",100,0,10);
+    hzDCASignificanceDaugther2VsMVA[iy][ipt] = fs->make<TH2F>(Form("hzDCASignificanceDaugther2VsMVA_y%d_pt%d",iy,ipt),";mva;zDCASignificanceDaugther2;",100,-1.,1.,100,-10,10);
+    hxyDCASignificanceDaugther2VsMVA[iy][ipt] = fs->make<TH2F>(Form("hxyDCASignificanceDaugther2VsMVA_y%d_pt%d",iy,ipt),";mva;xyDCASignificanceDaugther2;",100,-1.,1.,100,-10,10);
+    hNHitD2VsMVA[iy][ipt] = fs->make<TH2F>(Form("hNHitD2VsMVA_y%d_pt%d",iy,ipt),";mva;NHitD2;",100,-1.,1.,100,0,100);
+    hpTD2VsMVA[iy][ipt] = fs->make<TH2F>(Form("hpTD2VsMVA_y%d_pt%d",iy,ipt),";mva;pTD2;",100,-1.,1.,100,0,10);
+    hpTerrD2VsMVA[iy][ipt] = fs->make<TH2F>(Form("hpTerrD2VsMVA_y%d_pt%d",iy,ipt),";mva;pTerrD2;",100,-1.,1.,50,0,0.5);
+    hEtaD2VsMVA[iy][ipt] = fs->make<TH2F>(Form("hEtaD2VsMVA_y%d_pt%d",iy,ipt),";mva;EtaD2;",100,-1.,1.,40,-4,4);
+    hdedxHarmonic2D2VsMVA[iy][ipt] = fs->make<TH2F>(Form("hdedxHarmonic2D2VsMVA_y%d_pt%d",iy,ipt),";mva;dedxHarmonic2D2;",100,-1.,1.,100,0,10);
     hdedxHarmonic2D2VsP[iy][ipt] = fs->make<TH2F>(Form("hdedxHarmonic2D2VsP_y%d_pt%d",iy,ipt),";p (GeV);dedxHarmonic2D2",100,0,10,100,0,10);
 
     if(threeProngDecay_)
     {
-      hzDCASignificanceDaugther3VsMVA[iy][ipt] = makeMVAHist(Form("hzDCASignificanceDaugther3VsMVA_y%d_pt%d",iy,ipt),";mva;zDCASignificanceDaugther3;","zDCA3",100,-10,10);
-      hxyDCASignificanceDaugther3VsMVA[iy][ipt] = makeMVAHist(Form("hxyDCASignificanceDaugther3VsMVA_y%d_pt%d",iy,ipt),";mva;xyDCASignificanceDaugther3;","xyDCA3",100,-10,10);
-      hNHitD3VsMVA[iy][ipt] = makeMVAHist(Form("hNHitD3VsMVA_y%d_pt%d",iy,ipt),";mva;NHitD3;","nHit3",100,0,100);
-      hpTD3VsMVA[iy][ipt] = makeMVAvsPTHist(Form("hpTD3VsMVA_y%d_pt%d",iy,ipt),";mva;pTD3;","pT3");
-      hpTerrD3VsMVA[iy][ipt] = makeMVAHist(Form("hpTerrD3VsMVA_y%d_pt%d",iy,ipt),";mva;pTerrD3;","pTerr3",50,0,0.5);
-      hEtaD3VsMVA[iy][ipt] = makeMVAHist(Form("hEtaD3VsMVA_y%d_pt%d",iy,ipt),";mva;EtaD3;","eta3",40,-4,4);
-      hdedxHarmonic2D3VsMVA[iy][ipt] = makeMVAHist(Form("hdedxHarmonic2D3VsMVA_y%d_pt%d",iy,ipt),";mva;dedxHarmonic2D3;","dedx3",100,0,10);
+      hzDCASignificanceDaugther3VsMVA[iy][ipt] = fs->make<TH2F>(Form("hzDCASignificanceDaugther3VsMVA_y%d_pt%d",iy,ipt),";mva;zDCASignificanceDaugther3;",100,-1.,1.,100,-10,10);
+      hxyDCASignificanceDaugther3VsMVA[iy][ipt] = fs->make<TH2F>(Form("hxyDCASignificanceDaugther3VsMVA_y%d_pt%d",iy,ipt),";mva;xyDCASignificanceDaugther3;",100,-1.,1.,100,-10,10);
+      hNHitD3VsMVA[iy][ipt] = fs->make<TH2F>(Form("hNHitD3VsMVA_y%d_pt%d",iy,ipt),";mva;NHitD3;",100,-1.,1.,100,0,100);
+      hpTD3VsMVA[iy][ipt] = fs->make<TH2F>(Form("hpTD3VsMVA_y%d_pt%d",iy,ipt),";mva;pTD3;",100,-1.,1.,100,0,10);
+      hpTerrD3VsMVA[iy][ipt] = fs->make<TH2F>(Form("hpTerrD3VsMVA_y%d_pt%d",iy,ipt),";mva;pTerrD3;",100,-1.,1.,50,0,0.5);
+      hEtaD3VsMVA[iy][ipt] = fs->make<TH2F>(Form("hEtaD3VsMVA_y%d_pt%d",iy,ipt),";mva;EtaD3;",100,-1.,1.,40,-4,4);
+      hdedxHarmonic2D3VsMVA[iy][ipt] = fs->make<TH2F>(Form("hdedxHarmonic2D3VsMVA_y%d_pt%d",iy,ipt),";mva;dedxHarmonic2D3;",100,-1.,1.,100,0,10);
       hdedxHarmonic2D3VsP[iy][ipt] = fs->make<TH2F>(Form("hdedxHarmonic2D3VsP_y%d_pt%d",iy,ipt),";p (GeV);dedxHarmonic2D3",100,0,10,100,0,10);
     }
 
