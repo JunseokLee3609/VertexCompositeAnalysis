@@ -25,13 +25,14 @@ process.source = cms.Source("PoolSource",
 #    fileNames = cms.untracked.vstring("/store/user/junseok/Genproduction/RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_241026_v1/DStarKpipiPU/crab_RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_241026_v1/241026_084606/0000/step4_1.root"),
    # fileNames= cms.untracked.vstring("root://cmsxrootd.fnal.gov//store/mc/HINPbPbSpring23MiniAOD/promptD0ToKPi_PT-1_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/2560000/bf4f838b-571d-4570-805c-cd3cb84839c2.root"),
     #fileNames= cms.untracked.vstring("file:bf4f838b-571d-4570-805c-cd3cb84839c2.root"),
-    fileNames= cms.untracked.vstring("file:071045a5-fddb-4ca6-9df1-82e2a7321dfd.root"),
+    # fileNames= cms.untracked.vstring("file:/eos/home-j/junseok/analysis/D0study/CMSSW_13_2_11/src/VertexCompositeAnalysis/VertexCompositeProducer/test/f0fe02d1-72bd-4d3d-8e3d-3a6869808803.root"),
+    fileNames= cms.untracked.vstring("/store/mc/HINPbPbSpring23MiniAOD/promptD0ToKPi_PT-0_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/120000/9a2aa582-4960-4b1f-b853-b4fcfd5143ee.root","/store/mc/HINPbPbSpring23MiniAOD/promptD0ToKPi_PT-0_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/120000/80d5a73b-06e3-42bb-b31a-0477dad1e436.root","/store/mc/HINPbPbSpring23MiniAOD/promptD0ToKPi_PT-0_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/120000/ec044cd9-6811-4f78-9e73-c6d8ebf34fb3.root"),
    # fileNames = cms.untracked.vstring(
         # '/store/user/junseok/Genproduction/RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_081924_v1/DStarKpipiPU/crab_RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_081924_v1/240819_054039/0001/step4_1619.root',
 #        '/store/user/junseok/Genproduction/RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_082724_v1/DStarKpipiPU/crab_RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_082724_v1/240827_082226/0000/step4_105.root',
         #),
 )
-process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(1000))
+process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(2000))
 
 # Set the global tag
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
@@ -55,8 +56,8 @@ process.load("RecoHI.HiCentralityAlgos.CentralityBin_cfi")
 process.GlobalTag.snapshotTime = cms.string("9999-12-31 23:59:59.000")
 process.GlobalTag.toGet.extend([
     cms.PSet(record = cms.string("HeavyIonRcd"),
-        tag = cms.string("CentralityTable_HFtowers200_DataPbPb_periHYDJETshape_run3v1302x04_offline_374810"),
-        connect = cms.string("sqlite_file:CentralityTable_HFtowers200_DataPbPb_periHYDJETshape_run3v1302x04_offline_374810.db"),
+        tag = cms.string("CentralityTable_HFtowers200_HydjetDrum5F_Run3v1302x04_Official_MC"),
+        connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
         label = cms.untracked.string("HFtowers")
         )
     ]
@@ -100,7 +101,7 @@ process.generalD0CandidatesNew = process.generalD0Candidates.clone()
 process.generalD0CandidatesNew.tkChi2Cut = cms.double(99)
 process.generalD0CandidatesNew.tkNhitsCut = cms.int32(0)
 process.generalD0CandidatesNew.tkPtErrCut = cms.double(0.1)
-process.generalD0CandidatesNew.tkPtCut = cms.double(0.8)
+process.generalD0CandidatesNew.tkPtCut = cms.double(1.0)
 process.generalD0CandidatesNew.tkEtaCut = cms.double(2.4)
 process.generalD0CandidatesNew.tkPtSumCut = cms.double(0.0)
 process.generalD0CandidatesNew.tkEtaDiffCut = cms.double(1.0)
@@ -243,8 +244,8 @@ process.generalDStarCandidatesNew.d0Collection = cms.InputTag("generalD0Candidat
 #process.d0ana_newreduced.DCAErrCollection = cms.InputTag("generalD0CandidatesNew:DCAErrorsNewD0")
 
 
-#process.dStarAna_step = cms.Path( process.eventFilter_HM * process.generalD0CandidatesNew* process.generalDStarCandidatesNew * process.d0ana_newreduced *process.dStarana_mc)
-process.dStarAna_step = cms.Path( process.eventFilter_HM * process.generalD0CandidatesNew* process.d0ana_newreduced)
+process.dStarAna_step = cms.Path( process.eventFilter_HM * process.generalD0CandidatesNew* process.generalDStarCandidatesNew * process.d0ana_newreduced *process.dStarana_mc)
+# process.dStarAna_step = cms.Path( process.eventFilter_HM * process.generalD0CandidatesNew* process.d0ana_newreduced)
 #*process.eventplane)
 
 # eventinfoana must be in EndPath, and process.eventinfoana.selectEvents must be the name of eventFilter_HM Path
@@ -259,15 +260,22 @@ process.eventinfoana.eventFilterNames = cms.untracked.vstring(
     'Flag_hfCoincFilter',
     'Flag_primaryVertexFilter', 
     )
+
+process.centralityBin.Centrality = cms.InputTag("hiCentrality")
+process.centralityBin.centralityVariable = cms.string("HFtowers")
 process.eventinfoana.triggerFilterNames = cms.untracked.vstring()
 process.eventinfoana.stageL1Trigger = cms.uint32(2)
+process.eventinfoana.centralityBinLabel = cms.InputTag("centralityBin", "HFtowers")
+process.eventinfoana.centralitySrc = cms.InputTag("hiCentrality")
 process.pevt = cms.EndPath(process.eventinfoana)
+process.centralityPath = cms.Path(process.cent_seq)
 
 
 # Add the Conversion tree
 
 # Define the process schedule
 process.schedule = cms.Schedule(
+    process.centralityPath,
     process.eventFilter_HM_step,
     process.dStarAna_step,
    process.pevt,

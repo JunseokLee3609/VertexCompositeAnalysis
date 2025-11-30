@@ -5,7 +5,7 @@
 // 2. CMSSW logging system (preferred): use LogDebug
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
-#include "VertexCompositeAnalysis/VertexCompositeAnalyzer/plugins/PATCompositeTreeProducer4.h"
+#include "VertexCompositeAnalysis/VertexCompositeAnalyzer/plugins/PATCompositeTreeProducer5.h"
 #include <limits>
 #include "DataFormats/Math/interface/deltaR.h"
 
@@ -61,6 +61,46 @@ const reco::GenParticle* findAncestor(const reco::GenParticle* particle, int abs
     return nullptr;
 }
 
+bool matchD0WithFSR(const reco::Candidate* recoDau1,
+                    const reco::Candidate* recoDau2,
+                    const reco::GenParticle* genD0,
+                    double maxDr) {
+    if (!genD0 || !recoDau1 || !recoDau2) return false;
+
+    bool invalidDau = false;
+    bool hasKMatch = false;
+    bool hasPiMatch = false;
+    bool usedReco1 = false;
+    bool usedReco2 = false;
+
+    auto tryMatch = [&](const reco::Candidate* recoDau, bool& usedFlag, const reco::Candidate* genDau) -> bool {
+        if (usedFlag || !recoDau || !genDau) return false;
+        if (reco::deltaR(*genDau, *recoDau) < maxDr) {
+            usedFlag = true;
+            return true;
+        }
+        return false;
+    };
+
+    for (size_t idau = 0; idau < genD0->numberOfDaughters(); ++idau) {
+        const auto* genDau = genD0->daughter(idau);
+        if (!genDau) continue;
+        const int absId = std::abs(genDau->pdgId());
+        if (absId == 22) continue;  // allow FSR gamma
+        if (absId != KAON_PDG_ID && absId != PION_PDG_ID) { invalidDau = true; break; }
+
+        bool matchedThis = tryMatch(recoDau1, usedReco1, genDau);
+        if (!matchedThis) matchedThis = tryMatch(recoDau2, usedReco2, genDau);
+
+        if (matchedThis) {
+            if (absId == KAON_PDG_ID) hasKMatch = true;
+            else if (absId == PION_PDG_ID) hasPiMatch = true;
+        }
+    }
+
+    return (!invalidDau && hasKMatch && hasPiMatch);
+}
+
 }  // namespace
 
 // Debugging macros for better control
@@ -80,7 +120,7 @@ using namespace std;
 using namespace edm;
 using namespace reco;
 
-PATCompositeTreeProducer4::PATCompositeTreeProducer4(const edm::ParameterSet& iConfig)
+PATCompositeTreeProducer5::PATCompositeTreeProducer5(const edm::ParameterSet& iConfig)
 {
     doRecoNtuple_ = iConfig.getUntrackedParameter<bool>("doRecoNtuple");
     doGenNtuple_ = iConfig.getUntrackedParameter<bool>("doGenNtuple");
@@ -146,12 +186,12 @@ PATCompositeTreeProducer4::PATCompositeTreeProducer4(const edm::ParameterSet& iC
     if(useAnyMVA_ && iConfig.exists("MVACollection"))
       MVAValues_Token_ = consumes<MVACollection>(iConfig.getParameter<edm::InputTag>("MVACollection"));
 }
-PATCompositeTreeProducer4::~PATCompositeTreeProducer4()
+PATCompositeTreeProducer5::~PATCompositeTreeProducer5()
 {
 }
 
 void
-PATCompositeTreeProducer4::analyze(const edm::Event& iEvent, const edm::EventSetup&
+PATCompositeTreeProducer5::analyze(const edm::Event& iEvent, const edm::EventSetup&
 iSetup)
 {
     using std::vector;
@@ -165,7 +205,7 @@ iSetup)
 }
 
 void
-PATCompositeTreeProducer4::fillRECO(const edm::Event& iEvent, const edm::EventSetup& iSetup)
+PATCompositeTreeProducer5::fillRECO(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
     edm::Handle<reco::VertexCollection> vertices;
     iEvent.getByToken(tok_offlinePV_,vertices);
@@ -205,7 +245,7 @@ PATCompositeTreeProducer4::fillRECO(const edm::Event& iEvent, const edm::EventSe
     processCandidates(v0candidates_, mvavalues, genRefs, dEdxHandle1, dEdxHandle2, iEvent, vertices, genpars);
 }
 
-void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
+void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
                                                    const edm::Handle<MVACollection>& mvavalues,
                                                    const std::vector<reco::GenParticleRef>& genRefs,
                                                    const edm::Handle<edm::ValueMap<reco::DeDxData>>& dEdxHandle1,
@@ -368,6 +408,7 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
             matchGen_sameD0_[it] = false;
             matchGen_sameDStar_[it] = false;
             matchGen_validDstarChain_[it] = false;
+            matchGen_validD0_noFSR_[it] = false;
             matchGen_D0_extraNDau_[it] = 0;
             matchGen_DStar_extraNDau_[it] = 0;
             for (int ei=0; ei<4; ++ei) { matchGen_D0_extraDauPdgId_[it][ei] = 0; matchGen_DStar_extraDauPdgId_[it][ei] = 0; }
@@ -563,18 +604,27 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
                       }
                     }
                     if (d0HasEnough) {
-                      bool hasK = false;
-                      bool hasPi = false;
-                      for (size_t i = 0; i < genD0->numberOfDaughters(); ++i) {
-                        const int dauId = std::abs(genD0->daughter(i)->pdgId());
-                        if (dauId == KAON_PDG_ID) hasK = true;
-                        else if (dauId == PION_PDG_ID) hasPi = true;
-                      }
-                      d0PDGs = (hasK && hasPi);
+                      d0PDGs = matchD0WithFSR(recoKaonCand, recoPionCand, genD0, deltaR_);
                     }
                     validChain = (matchGen_sameD0_[it] && matchGen_sameDStar_[it] && dstarPDGs && d0PDGs && directSlowPi);
                   }
                   matchGen_validDstarChain_[it] = validChain;
+
+                  // D0 FSR validation: check if D0 has exactly 2 daughters (K and pi) with no FSR
+                  bool validD0_noFSR = false;
+                  if (genD0) {
+                    const size_t nDau = genD0->numberOfDaughters();
+                    if (nDau == 2) {
+                      const auto* dau0 = genD0->daughter(0);
+                      const auto* dau1 = genD0->daughter(1);
+                      const int id0 = std::abs(dau0->pdgId());
+                      const int id1 = std::abs(dau1->pdgId());
+                      const bool isKPi = (id0 == KAON_PDG_ID && id1 == PION_PDG_ID) ||
+                                         (id0 == PION_PDG_ID && id1 == KAON_PDG_ID);
+                      validD0_noFSR = isKPi;
+                    }
+                  }
+                  matchGen_validD0_noFSR_[it] = validD0_noFSR;
 
                   // Save extra daughters if mother has >2 daughters
                   // For D0
@@ -632,6 +682,8 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
                 
                 // DEBUG: Calculate deltaR for gen matching verification
                 bool hadronMatch = matchHadron(&trk, *theGenP,true);
+                bool manualMatch = matchD0WithFSR(d1, d2, theGenP.get(), deltaR_);
+
                 double deltaR_hadron = -999.0;
                 if(hadronMatch) {
                   deltaR_hadron = sqrt(pow(trk.eta() - theGenP->eta(), 2) + pow(trk.phi() - theGenP->phi(), 2));
@@ -645,7 +697,7 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
                   }
                 }
                 
-                matchGEN[it] = matchGEN[it] || hadronMatch;
+                matchGEN[it] = matchGEN[it] || hadronMatch || manualMatch;
                 if(matchGEN[it]){
                   if(debugGenMatching_) {
                     LogInfo("PATCompositeTreeProducer") << "D0 gen matching SUCCESS for candidate " << it << " with gen " << igen;
@@ -1349,44 +1401,57 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
       }
   }
 
-  std::vector<unsigned int> PATCompositeTreeProducer4::findDaughterPermutation(
+  std::vector<unsigned int> PATCompositeTreeProducer5::findDaughterPermutation(
       const reco::GenParticle& particle, 
       bool twoLayerDecay, 
       bool threeProngDecay) {
       
-      int nDau = threeProngDecay ? 3 : 2;
       std::vector<unsigned int> idxs;
+      
+      // Collect non-gamma daughter indices
+      std::vector<unsigned int> nonGammaDauIndices;
+      for(size_t i = 0; i < particle.numberOfDaughters(); ++i) {
+          if(std::abs(particle.daughter(i)->pdgId()) != 22) {  // Skip FSR gamma
+              nonGammaDauIndices.push_back(i);
+          }
+      }
+      
+      int nDau = threeProngDecay ? 3 : 2;
+      if(static_cast<int>(nonGammaDauIndices.size()) != nDau) return idxs;  // Wrong number of non-gamma daughters
+      
       std::vector<unsigned int> permutations(nDau);
       std::iota(permutations.begin(), permutations.end(), 0);
       std::sort(permutations.begin(), permutations.end());
       
       if (!threeProngDecay) {
           do {
-              auto Dd1 = particle.daughter(permutations.at(0));
-              auto Dd2 = particle.daughter(permutations.at(1));
+              auto Dd1 = particle.daughter(nonGammaDauIndices[permutations.at(0)]);
+              auto Dd2 = particle.daughter(nonGammaDauIndices[permutations.at(1)]);
               if (abs(Dd1->pdgId()) == PID_dau1_ && abs(Dd2->pdgId()) == PID_dau2_) {
                   if (twoLayerDecay) {
-                      // Use strict D* → D0 + π → K + π + π decay chain validation
+                      // D* → D0 + π → K + π + π decay chain validation (FSR allowed)
                       if(isValidDStarDecayChain(Dd1, Dd2)) {
-                          idxs = permutations;
+                          idxs = {nonGammaDauIndices[permutations.at(0)], nonGammaDauIndices[permutations.at(1)]};
                           break;
                       }
                   } else {
-                      idxs = permutations;
+                      idxs = {nonGammaDauIndices[permutations.at(0)], nonGammaDauIndices[permutations.at(1)]};
                       break;
                   }
               }
           } while (std::next_permutation(permutations.begin(), permutations.end()));
       } else {
           do {
-              auto Dd1 = particle.daughter(permutations.at(0));
-              auto Dd2 = particle.daughter(permutations.at(1));
-              auto Dd3 = particle.daughter(permutations.at(2));
+              auto Dd1 = particle.daughter(nonGammaDauIndices[permutations.at(0)]);
+              auto Dd2 = particle.daughter(nonGammaDauIndices[permutations.at(1)]);
+              auto Dd3 = particle.daughter(nonGammaDauIndices[permutations.at(2)]);
               
               if (abs(Dd1->pdgId()) == PID_dau1_ &&
                   abs(Dd2->pdgId()) == PID_dau2_ &&
                   abs(Dd3->pdgId()) == PID_dau3_) {
-                  idxs = permutations;
+                  idxs = {nonGammaDauIndices[permutations.at(0)], 
+                          nonGammaDauIndices[permutations.at(1)], 
+                          nonGammaDauIndices[permutations.at(2)]};
                   break;
               }
           } while (std::next_permutation(permutations.begin(), permutations.end()));
@@ -1395,97 +1460,56 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
       return idxs;
   }
 
-  // Strict D* → D0 + π → K + π + π decay chain validation
-  bool PATCompositeTreeProducer4::isValidDStarDecayChain(const reco::Candidate* Dd1, const reco::Candidate* Dd2) const {
-      LogDebug("DStarDecayFilter") << "=== D* Decay Chain Validation ===";
+  // D* → D0 + π decay chain validation (allows FSR gamma)
+  // Returns true if valid D* → D0 + π → K + π + π structure (with optional FSR)
+  bool PATCompositeTreeProducer5::isValidDStarDecayChain(const reco::Candidate* Dd1, const reco::Candidate* Dd2) const {
+      LogDebug("DStarDecayFilter") << "=== D* Decay Chain Validation (FSR allowed) ===";
       
-      // D* must have exactly 2 daughters: D0 and π
       if(!Dd1 || !Dd2) {
-          edm::LogWarning("DStarDecayFilter") << "REJECT: Null daughters - Dd1=" << (Dd1 ? "valid" : "null") 
-                                              << " Dd2=" << (Dd2 ? "valid" : "null");
           return false;
       }
       
-      LogDebug("DStarDecayFilter") << "D* daughters: Dd1(PDG=" << Dd1->pdgId() << " nDau=" << Dd1->numberOfDaughters() 
-                                   << ") Dd2(PDG=" << Dd2->pdgId() << " nDau=" << Dd2->numberOfDaughters() << ")";
-      
-      // Identify which is D0 and which is π
+      // Identify which is D0 (allow FSR gamma as extra daughter at D* level)
       const reco::Candidate* D0 = nullptr;
-      const reco::Candidate* pion = nullptr;
       
       // D0 has PDG ID = ±421, π has PDG ID = ±211
-      if(abs(Dd1->pdgId()) == 421 && abs(Dd2->pdgId()) == 211) {
+      if(abs(Dd1->pdgId()) == D0_PDG_ID && abs(Dd2->pdgId()) == PION_PDG_ID) {
           D0 = Dd1;
-          pion = Dd2;
-          LogDebug("DStarDecayFilter") << "D* structure: D0=Dd1(421) π=Dd2(211)";
-      } else if(abs(Dd1->pdgId()) == 211 && abs(Dd2->pdgId()) == 421) {
+      } else if(abs(Dd1->pdgId()) == PION_PDG_ID && abs(Dd2->pdgId()) == D0_PDG_ID) {
           D0 = Dd2;
-          pion = Dd1;
-          LogDebug("DStarDecayFilter") << "D* structure: π=Dd1(211) D0=Dd2(421)";
       } else {
-          edm::LogWarning("DStarDecayFilter") << "REJECT: Not D* → D0+π decay. Expected PDG ±421,±211 but got " 
-                                              << Dd1->pdgId() << "," << Dd2->pdgId();
+          // Not a valid D* → D0 + π structure
           return false;
       }
       
-      // D0 must have exactly 2 daughters (for D0 → K + π)
-      if(D0->numberOfDaughters() != 2) {
-          edm::LogWarning("DStarDecayFilter") << "REJECT: D0 has " << D0->numberOfDaughters() 
-                                              << " daughters (expected exactly 2 for K+π)";
+      if(!D0) return false;
+      
+      // Count non-gamma daughters in D0
+      int nNonGammaD0Dau = 0;
+      bool hasKaon = false;
+      bool hasPion = false;
+      
+      for(size_t i = 0; i < D0->numberOfDaughters(); ++i) {
+          const auto* dau = D0->daughter(i);
+          if(!dau) continue;
+          const int absId = std::abs(dau->pdgId());
+          if(absId == 22) continue;  // Skip FSR gamma
+          nNonGammaD0Dau++;
+          if(absId == KAON_PDG_ID) hasKaon = true;
+          if(absId == PION_PDG_ID) hasPion = true;
+      }
+      
+      // D0 must have exactly 2 non-gamma daughters: K and π
+      if(nNonGammaD0Dau != 2 || !hasKaon || !hasPion) {
           return false;
       }
       
-      // Check D0 daughters are exactly K and π
-      auto D0dau1 = D0->daughter(0);
-      auto D0dau2 = D0->daughter(1);
-      
-      if(!D0dau1 || !D0dau2) {
-          edm::LogWarning("DStarDecayFilter") << "REJECT: D0 daughters are null";
-          return false;
-      }
-      
-      LogDebug("DStarDecayFilter") << "D0 daughters: dau1(PDG=" << D0dau1->pdgId() << " nDau=" << D0dau1->numberOfDaughters()
-                                   << ") dau2(PDG=" << D0dau2->pdgId() << " nDau=" << D0dau2->numberOfDaughters() << ")";
-      
-      // Must be K-π pair (K = ±321, π = ±211)
-      bool hasKaon = (abs(D0dau1->pdgId()) == 321) || (abs(D0dau2->pdgId()) == 321);
-      bool hasPion = (abs(D0dau1->pdgId()) == 211) || (abs(D0dau2->pdgId()) == 211);
-      bool isKPiPair = (abs(D0dau1->pdgId()) == 321 && abs(D0dau2->pdgId()) == 211) ||
-                       (abs(D0dau1->pdgId()) == 211 && abs(D0dau2->pdgId()) == 321);
-      
-      LogDebug("DStarDecayFilter") << "D0 decay check: hasKaon=" << hasKaon << " hasPion=" << hasPion << " isKPiPair=" << isKPiPair;
-      
-      if(!hasKaon || !hasPion || !isKPiPair) {
-          edm::LogWarning("DStarDecayFilter") << "REJECT: D0 → K+π check failed. Expected K=±321,π=±211 but got " 
-                                              << D0dau1->pdgId() << "," << D0dau2->pdgId();
-          return false;
-      }
-      
-      // Additional strict checks: ensure no further decay
-      // D0 daughters (K, π) should not decay further (or very minimal daughters)
-      if(D0dau1->numberOfDaughters() > 0 || D0dau2->numberOfDaughters() > 0) {
-          LogDebug("DStarDecayFilter") << "WARNING: D0 daughters have sub-decays (dau1=" << D0dau1->numberOfDaughters() 
-                                       << " dau2=" << D0dau2->numberOfDaughters() << ")";
-          // Allow some flexibility for stable particles that might have "daughters" in MC
-          // But not too many (avoid multi-body decays)
-          if(D0dau1->numberOfDaughters() > 2 || D0dau2->numberOfDaughters() > 2) {
-              edm::LogWarning("DStarDecayFilter") << "REJECT: Too many sub-daughters (max allowed: 2)";
-              return false;
-          }
-      }
-      
-      // π from D* should also not decay significantly
-      if(pion->numberOfDaughters() > 2) {
-          edm::LogWarning("DStarDecayFilter") << "REJECT: D* pion has too many daughters (" << pion->numberOfDaughters() << " > 2)";
-          return false;
-      }
-      
-      edm::LogInfo("DStarDecayFilter") << "ACCEPT: Valid D* → D0+π → K+π+π decay chain!";
+      LogDebug("DStarDecayFilter") << "ACCEPT: Valid D* → D0+π → K+π+π decay chain (FSR allowed)!";
       return true;
   }
 
   void
-  PATCompositeTreeProducer4::fillGEN(const edm::Event& iEvent, const edm::EventSetup& iSetup)
+  PATCompositeTreeProducer5::fillGEN(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   {
       edm::Handle<GenEventInfoProduct> geninfo;
       iEvent.getByToken(tok_genInfo_, geninfo);
@@ -1501,8 +1525,15 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
           int id = trk.pdgId();
 
           if(fabs(id)!=PID_) continue; //check is target
-          if(decayInGen_ && trk.numberOfDaughters()!=2 && !threeProngDecay_) continue; //check 2-pron decay if target decays in Gen
-          if(decayInGen_ && trk.numberOfDaughters()!=3 && threeProngDecay_) continue; //check 2-pron decay if target decays in Gen
+          
+          // Count non-gamma daughters to allow FSR
+          int nNonGammaDaughters = 0;
+          for(size_t i = 0; i < trk.numberOfDaughters(); ++i) {
+              if(std::abs(trk.daughter(i)->pdgId()) != 22) nNonGammaDaughters++;
+          }
+          
+          if(decayInGen_ && nNonGammaDaughters != 2 && !threeProngDecay_) continue;
+          if(decayInGen_ && nNonGammaDaughters != 3 && threeProngDecay_) continue;
           
           std::vector<unsigned int> idxs = findDaughterPermutation(trk, twoLayerDecay_, threeProngDecay_);
           if (decayInGen_ && idxs.empty()) continue;
@@ -1538,6 +1569,8 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
           }
           auto const* theGenD0 = genRefs.at(igen)->daughter(idxD0);
           auto const* theGenPion = genRefs.at(igen)->daughter(1- idxD0);
+          gen_validDstarChain_[igen] = false;
+          gen_validD0_noFSR_[igen] = false;
           mass_gen[igen] = theGenDStar->mass();
           pt_gen[igen] = theGenDStar->pt();
           eta_gen[igen] = theGenDStar->eta(); 
@@ -1566,6 +1599,20 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
           gen_D1phi_[igen] = theGenPion->phi();
           gen_D1y_[igen] = theGenPion->rapidity();
           gen_D1pdgId_[igen] = theGenPion->pdgId();
+          // GEN-only strict flags
+          int d0NonGamma = 0;
+          bool d0HasK = false;
+          bool d0HasPi = false;
+          for (size_t idau = 0; idau < theGenD0->numberOfDaughters(); ++idau) {
+            const auto* dau = theGenD0->daughter(idau);
+            if (!dau) continue;
+            const int absId = std::abs(dau->pdgId());
+            if (absId == 22) continue;
+            ++d0NonGamma;
+            if (absId == KAON_PDG_ID) d0HasK = true;
+            if (absId == PION_PDG_ID) d0HasPi = true;
+          }
+          gen_validD0_noFSR_[igen] = (d0NonGamma == 2 && d0HasK && d0HasPi);
 
           const auto* genDau0 = theGenD0->daughter(0);
           const auto* genDau1 = theGenD0->daughter(1);
@@ -1584,11 +1631,28 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
           gen_D0Dau2_phi_[igen] = genDau1->phi();
           gen_D0Dau2_y_[igen] = genDau1->rapidity();
           gen_D0Dau2_pdgId_[igen] = genDau1->pdgId();
+
+          // Strict D* chain flag at GEN level (D* has only D0+π non-gamma, D0 has only K+π non-gamma)
+          int dstarNonGamma = 0;
+          int dstarD0Count = 0;
+          int dstarPiCount = 0;
+          for (size_t idau = 0; idau < theGenDStar->numberOfDaughters(); ++idau) {
+            const auto* dau = theGenDStar->daughter(idau);
+            if (!dau) continue;
+            const int absId = std::abs(dau->pdgId());
+            if (absId == 22) continue;
+            ++dstarNonGamma;
+            if (absId == D0_PDG_ID) ++dstarD0Count;
+            if (absId == PION_PDG_ID) ++dstarPiCount;
+          }
+          gen_validDstarChain_[igen] = (dstarNonGamma == 2 && dstarD0Count == 1 && dstarPiCount == 1 && gen_validD0_noFSR_[igen]);
       }
     }
     else{
         for( unsigned int igen=0; igen<nGen; igen++){
             auto const theGenP = genRefs.at(igen);
+             gen_validDstarChain_[igen] = false;
+             gen_validD0_noFSR_[igen] = false;
              pt_gen[igen] = theGenP->pt();
              eta_gen[igen] = theGenP->eta();
              phi_gen[igen] = theGenP->phi();
@@ -1609,6 +1673,21 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
              const auto* genDau0 = theGenP->daughter(0);
              const auto* genDau1 = theGenP->daughter(1);
 
+             // Strict D0 flag (no extra non-gamma daughters; must be Kπ)
+             int d0NonGamma = 0;
+             bool d0HasK = false;
+             bool d0HasPi = false;
+             for (size_t idau = 0; idau < theGenP->numberOfDaughters(); ++idau) {
+               const auto* dau = theGenP->daughter(idau);
+               if (!dau) continue;
+               const int absId = std::abs(dau->pdgId());
+               if (absId == 22) continue;
+               ++d0NonGamma;
+               if (absId == KAON_PDG_ID) d0HasK = true;
+               if (absId == PION_PDG_ID) d0HasPi = true;
+             }
+             gen_validD0_noFSR_[igen] = (d0NonGamma == 2 && d0HasK && d0HasPi);
+
              gen_D0Dau1_pT_[igen] = genDau0->pt();
              gen_D0Dau1_eta_[igen] = genDau0->eta();
              gen_D0Dau1_phi_[igen] = genDau0->phi();
@@ -1628,7 +1707,7 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
               } // END for nGen
             }
   void
-  PATCompositeTreeProducer4::beginJob()
+  PATCompositeTreeProducer5::beginJob()
   {
       TH1D::SetDefaultSumw2();
       
@@ -1647,7 +1726,7 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
   }
 
   void
-  PATCompositeTreeProducer4::initHistogram()
+  PATCompositeTreeProducer5::initHistogram()
   {
     for(unsigned int ipt=0;ipt<pTBins_.size()-1;ipt++)
     {
@@ -1704,7 +1783,7 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
   }
 
   void 
-  PATCompositeTreeProducer4::initTree()
+  PATCompositeTreeProducer5::initTree()
   { 
       PATCompositeNtuple = fs->make< TTree>("PATCompositeNtuple","PATCompositeNtuple");
       
@@ -1830,6 +1909,7 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
                 PATCompositeNtuple->Branch("matchGen_sameD0",&matchGen_sameD0_, "matchGen_sameD0[candSize]/O");
                 PATCompositeNtuple->Branch("matchGen_sameDStar",&matchGen_sameDStar_, "matchGen_sameDStar[candSize]/O");
                 PATCompositeNtuple->Branch("matchGen_validDstarChain",&matchGen_validDstarChain_, "matchGen_validDstarChain[candSize]/O");
+                 PATCompositeNtuple->Branch("matchGen_validD0_noFSR",&matchGen_validD0_noFSR_, "matchGen_validD0_noFSR[candSize]/O");
 
                 // Extra daughters (if mothers have >2 daughters)
                 PATCompositeNtuple->Branch("matchGen_D0_extraNDau",&matchGen_D0_extraNDau_, "matchGen_D0_extraNDau[candSize]/I");
@@ -2059,6 +2139,8 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
           PATCompositeNtuple->Branch("gen_D1y",&gen_D1y_, "gen_D1y[candSize_gen]/F");
           PATCompositeNtuple->Branch("gen_D1charge",&gen_D1charge_, "gen_D1charge[candSize_gen]/I");
           PATCompositeNtuple->Branch("gen_D1pdgId",&gen_D1pdgId_, "gen_D1pdgId[candSize_gen]/I");
+          PATCompositeNtuple->Branch("gen_validDstarChain",&gen_validDstarChain_, "gen_validDstarChain[candSize_gen]/O");
+          PATCompositeNtuple->Branch("gen_validD0_noFSR",&gen_validD0_noFSR_, "gen_validD0_noFSR[candSize_gen]/O");
         }
         else{
           PATCompositeNtuple->Branch("gen_D0ancestorId_",&gen_D0ancestorId_, "gen_D0ancestorId_[candSize_gen]/I");
@@ -2078,11 +2160,12 @@ void PATCompositeTreeProducer4::processCandidates(const CCC* v0candidates_,
           PATCompositeNtuple->Branch("gen_D0Dau2_y",&gen_D0Dau2_y_, "gen_D0Dau2_y[candSize_gen]/F");
           PATCompositeNtuple->Branch("gen_D0Dau2_charge",&gen_D0Dau2_charge_, "gen_D0Dau2_charge[candSize_gen]/I");
           PATCompositeNtuple->Branch("gen_D0Dau2_pdgId",&gen_D0Dau2_pdgId_, "gen_D0Dau2_pdgId[candSize_gen]/I");
+          PATCompositeNtuple->Branch("gen_validD0_noFSR",&gen_validD0_noFSR_, "gen_validD0_noFSR[candSize_gen]/O");
         }
     }
 }
 
-int PATCompositeTreeProducer4::
+int PATCompositeTreeProducer5::
 muAssocToTrack( const reco::TrackRef& trackref,
                 const edm::Handle<reco::MuonCollection>& muonh) const {
   auto muon = std::find_if(muonh->cbegin(),muonh->cend(),
@@ -2093,7 +2176,7 @@ muAssocToTrack( const reco::TrackRef& trackref,
   return ( muon != muonh->cend() ? std::distance(muonh->cbegin(),muon) : -1 );
 }
 
-void PATCompositeTreeProducer4::processCentralityInfo(const edm::Event& iEvent) {
+void PATCompositeTreeProducer5::processCentralityInfo(const edm::Event& iEvent) {
     centrality = -1;
     if(isCentrality_) {
         edm::Handle<reco::Centrality> cent;
@@ -2108,7 +2191,7 @@ void PATCompositeTreeProducer4::processCentralityInfo(const edm::Event& iEvent) 
     }
 }
 
-void PATCompositeTreeProducer4::processEventPlaneInfo(const edm::Event& iEvent) {
+void PATCompositeTreeProducer5::processEventPlaneInfo(const edm::Event& iEvent) {
     if(isEventPlane_) {
         edm::Handle<reco::EvtPlaneCollection> eventplanes;
         iEvent.getByToken(tok_eventplaneSrc_, eventplanes);
@@ -2141,7 +2224,7 @@ void PATCompositeTreeProducer4::processEventPlaneInfo(const edm::Event& iEvent) 
     }
 }
 
-void PATCompositeTreeProducer4::processVertexAndTrackInfo(const edm::Handle<reco::VertexCollection>& vertices,
+void PATCompositeTreeProducer5::processVertexAndTrackInfo(const edm::Handle<reco::VertexCollection>& vertices,
                                                           const edm::Handle<reco::TrackCollection>& tracks) {
     bestvz = -999.9; bestvx = -999.9; bestvy = -999.9;
     double bestvzError = -999.9, bestvxError = -999.9, bestvyError = -999.9;
@@ -2175,7 +2258,7 @@ void PATCompositeTreeProducer4::processVertexAndTrackInfo(const edm::Handle<reco
     }
 }
 
-std::vector<reco::GenParticleRef> PATCompositeTreeProducer4::processGenMatching(const edm::Handle<reco::GenParticleCollection>& genpars) {
+std::vector<reco::GenParticleRef> PATCompositeTreeProducer5::processGenMatching(const edm::Handle<reco::GenParticleCollection>& genpars) {
     std::vector<reco::GenParticleRef> genRefs;
     
     if(!genpars.isValid()) {
@@ -2199,55 +2282,81 @@ std::vector<reco::GenParticleRef> PATCompositeTreeProducer4::processGenMatching(
         if(fabs(id) != PID_) continue;
         pidMatches++;
         
-        if(decayInGen_ && trk.numberOfDaughters() != 2 && !threeProngDecay_) continue;
+        // Check daughter PDG IDs based on decay mode (allow FSR gamma)
+        bool hasDau1 = false;
+        bool hasDau2 = false;
+        int nNonGammaDaughters = 0;
+        for (size_t i = 0; i < trk.numberOfDaughters(); ++i) {
+            const int dauId = std::abs(trk.daughter(i)->pdgId());
+            if (dauId == 22) continue;  // Skip FSR gamma
+            nNonGammaDaughters++;
+            if (dauId == std::abs(PID_dau1_)) hasDau1 = true;  // D0(421) for D*, K(321) for D0
+            if (dauId == std::abs(PID_dau2_)) hasDau2 = true;  // π(211) for both
+        }
+
+        // For non-threeProngDecay: require exactly 2 non-gamma daughters (allow FSR)
+        if(decayInGen_ && (!hasDau1 || !hasDau2) && !threeProngDecay_) continue;
+        if(decayInGen_ && nNonGammaDaughters != 2 && !threeProngDecay_) continue;
         if(decayInGen_ && trk.numberOfDaughters() != 3 && threeProngDecay_) continue;
         daughterMatches++;
         
         LogDebug("GenMatching") << "Processing candidate " << it << ": PDG=" << id 
                                 << " nDau=" << trk.numberOfDaughters();
         
+        // Collect non-gamma daughter indices for permutation
+        std::vector<unsigned int> nonGammaDauIndices;
+        for(size_t i = 0; i < trk.numberOfDaughters(); ++i) {
+            if(std::abs(trk.daughter(i)->pdgId()) != 22) {
+                nonGammaDauIndices.push_back(i);
+            }
+        }
+        
         int nDau = threeProngDecay_ ? 3 : 2;
         std::vector<unsigned int> idxs;
+        
+        if(static_cast<int>(nonGammaDauIndices.size()) != nDau) {
+            LogDebug("GenMatching") << "Candidate " << it << " has wrong number of non-gamma daughters";
+            continue;
+        }
+        
         std::vector<unsigned int> permutations(nDau);
         std::iota(permutations.begin(), permutations.end(), 0);
         std::sort(permutations.begin(), permutations.end());
         
         if (!threeProngDecay_) {
             do {
-                auto Dd1 = trk.daughter( permutations.at(0) );
-                auto Dd2 = trk.daughter( permutations.at(1) );
+                auto Dd1 = trk.daughter( nonGammaDauIndices[permutations.at(0)] );
+                auto Dd2 = trk.daughter( nonGammaDauIndices[permutations.at(1)] );
                 if (abs(Dd1->pdgId()) == PID_dau1_ && abs(Dd2->pdgId()) == PID_dau2_) {
                   if(twoLayerDecay_){
-                    // Strict D* → D0 + π → K + π + π decay chain validation
+                    // D* → D0 + π → K + π + π decay chain validation (FSR allowed)
                     if(!isValidDStarDecayChain(Dd1, Dd2)) {
                         LogDebug("GenMatching") << "Candidate " << it << " failed D* decay chain validation";
                         continue;
                     }
-                    idxs = permutations;
+                    idxs = {nonGammaDauIndices[permutations.at(0)], nonGammaDauIndices[permutations.at(1)]};
                     permutationMatches++;
                     LogDebug("GenMatching") << "Candidate " << it << " passed D* decay chain validation";
                     break;
                   } else {
-                    if (abs(Dd1->pdgId()) == PID_dau1_
-                        && abs(Dd2->pdgId()) == PID_dau2_
-                        ) {
-                      idxs = permutations;
-                      permutationMatches++;
-                      break;
-                    }
+                    idxs = {nonGammaDauIndices[permutations.at(0)], nonGammaDauIndices[permutations.at(1)]};
+                    permutationMatches++;
+                    break;
                   }
                 }
             } while (std::next_permutation(permutations.begin(), permutations.end()));
         } else {
             do {
-                auto Dd1 = trk.daughter( permutations.at(0) );
-                auto Dd2 = trk.daughter( permutations.at(1) );
-                auto Dd3 = trk.daughter( permutations.at(2) );
+                auto Dd1 = trk.daughter( nonGammaDauIndices[permutations.at(0)] );
+                auto Dd2 = trk.daughter( nonGammaDauIndices[permutations.at(1)] );
+                auto Dd3 = trk.daughter( nonGammaDauIndices[permutations.at(2)] );
 
                 if (abs(Dd1->pdgId()) == PID_dau1_
                     && abs(Dd2->pdgId()) == PID_dau2_
                     && abs(Dd3->pdgId()) == PID_dau3_) {
-                  idxs = permutations;
+                  idxs = {nonGammaDauIndices[permutations.at(0)], 
+                          nonGammaDauIndices[permutations.at(1)], 
+                          nonGammaDauIndices[permutations.at(2)]};
                   permutationMatches++;
                   break;
                 }
@@ -2275,11 +2384,11 @@ std::vector<reco::GenParticleRef> PATCompositeTreeProducer4::processGenMatching(
     return genRefs;
 }
 
-bool PATCompositeTreeProducer4::isValidCandidateIndex(unsigned int index) const {
+bool PATCompositeTreeProducer5::isValidCandidateIndex(unsigned int index) const {
     return index < MAXCAN;
 }
 
-void PATCompositeTreeProducer4::validateArrayAccess(unsigned int index, const std::string& arrayName) const {
+void PATCompositeTreeProducer5::validateArrayAccess(unsigned int index, const std::string& arrayName) const {
     if (!isValidCandidateIndex(index)) {
         throw std::runtime_error("Array index " + std::to_string(index) + 
                                 " out of bounds for " + arrayName + 
@@ -2288,8 +2397,8 @@ void PATCompositeTreeProducer4::validateArrayAccess(unsigned int index, const st
 }
 
 void 
-PATCompositeTreeProducer4::endJob() {
+PATCompositeTreeProducer5::endJob() {
     
 }
 
-DEFINE_FWK_MODULE(PATCompositeTreeProducer4);
+DEFINE_FWK_MODULE(PATCompositeTreeProducer5);

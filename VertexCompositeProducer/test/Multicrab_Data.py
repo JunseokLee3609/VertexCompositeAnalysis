@@ -7,7 +7,7 @@ from CRABClient.UserUtilities import config
 config = config()
 
 userName = "junseok"
-date = "20241010"
+date = "20241206"
 
 config.section_("General")
 config.General.workArea = 'crab_projects/'+date
@@ -33,7 +33,7 @@ config.section_('Site')
 #config.Data.ignoreLocality = True
 #config.Site.whitelist = ['T2_US_Purdue', 'T2_US_MIT']
 #config.Site.blacklist = ['T2_US_Vanderbilt']
-config.Site.storageSite = 'T2_CH_CERN'
+config.Site.storageSite = 'T2_KR_KISTI'
 
 def submit(config):
     try:
@@ -49,7 +49,7 @@ def submit(config):
 
 dataMap = {}
 
-for i in range(10,32):
+for i in range(0,32):
     dataMap[("HIPhysicsRawPrime"+str(i))] = { "PD": ("/HIPhysicsRawPrime"+str(i)+"/HIRun2023A-PromptReco-v2/MINIAOD"), "Units": 20, "Memory": 2500, "RunTime": 800 }
 
 ## Submit the muon PDs

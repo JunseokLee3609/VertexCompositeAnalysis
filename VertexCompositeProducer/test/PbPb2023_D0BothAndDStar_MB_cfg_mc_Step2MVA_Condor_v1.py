@@ -78,8 +78,8 @@ process.load("RecoHI.HiCentralityAlgos.CentralityBin_cfi")
 process.GlobalTag.snapshotTime = cms.string("9999-12-31 23:59:59.000")
 process.GlobalTag.toGet.extend([
     cms.PSet(record = cms.string("HeavyIonRcd"),
-        tag = cms.string("CentralityTable_HFtowers200_HydjetDrum5F_v1302x04_official_MC2023"),
-        connect = cms.string("sqlite_file:CentralityTable_HFtowers200_HydjetDrum5F_v1302x04_HYD2023_official.db"),
+        tag = cms.string("CentralityTable_HFtowers200_HydjetDrum5F_Run3v1302x04_Official_MC"),
+        connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
         label = cms.untracked.string("HFtowers")
         )
     ]
@@ -315,6 +315,7 @@ process.eventinfoana.eventFilterNames = cms.untracked.vstring(
     'Flag_hfCoincFilter',
     'Flag_primaryVertexFilter', 
     )
+process.centralityPath = cms.Path(process.cent_seq)
 process.eventinfoana.triggerFilterNames = cms.untracked.vstring()
 process.eventinfoana.stageL1Trigger = cms.uint32(2)
 process.pevt = cms.EndPath(process.eventinfoana)
@@ -324,6 +325,7 @@ process.pevt = cms.EndPath(process.eventinfoana)
 
 # Define the process schedule
 process.schedule = cms.Schedule(
+    process.centralityPath,
     process.eventFilter_HM_step,
     process.dStarAna_step,
    process.pevt,

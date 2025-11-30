@@ -50,17 +50,20 @@ process.GlobalTag.globaltag = cms.string('132X_mcRun3_2023_realistic_HI_v9')
 #    input = cms.VPSet(cms.PSet(object = cms.string('ElectronicsMap'), file = cms.FileInPath("emap_2023_newZDC_v3.txt")))
 #)
 
-# Add PbPb centrality
+# Add PbPb centrality (read from conditions DB instead of local sqlite)
 process.load("RecoHI.HiCentralityAlgos.CentralityBin_cfi")
+process.centralityBin.Centrality = cms.InputTag("hiCentrality")
+process.centralityBin.centralityVariable = cms.string("HFtowers")
+isMC = True
 process.GlobalTag.snapshotTime = cms.string("9999-12-31 23:59:59.000")
 process.GlobalTag.toGet.extend([
-    cms.PSet(record = cms.string("HeavyIonRcd"),
-        tag = cms.string("CentralityTable_HFtowers200_DataPbPb_periHYDJETshape_run3v1302x04_offline_374810"),
-        connect = cms.string("sqlite_file:CentralityTable_HFtowers200_DataPbPb_periHYDJETshape_run3v1302x04_offline_374810.db"),
+    cms.PSet(
+        record = cms.string("HeavyIonRcd"),
+        tag = cms.string("CentralityTable_HFtowers200_HydjetDrum5F_Run3v1302x04_Official_MC") if isMC else cms.string("CentralityTable_HFtowers200_DataPbPb_periHYDJETshape_Run3v1302x04_Nominal_Offline"),
+        connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
         label = cms.untracked.string("HFtowers")
-        )
-    ]
-)
+    )
+])
 process.cent_seq = cms.Sequence(process.centralityBin)
 
 # =============== Import Sequences =====================
@@ -97,16 +100,16 @@ from VertexCompositeAnalysis.VertexCompositeProducer.PATAlgos_cff import changeT
 process.load("VertexCompositeAnalysis.VertexCompositeProducer.generalD0Candidates_cff")
 process.generalD0CandidatesNew = process.generalD0Candidates.clone()
 #process.generalD0CandidatesNew.trkPtSumCut = cms.double(1.6)
-process.generalD0CandidatesNew.tkChi2Cut = cms.double(5)
+process.generalD0CandidatesNew.tkChi2Cut = cms.double(10)
 process.generalD0CandidatesNew.tkNhitsCut = cms.int32(0)
 process.generalD0CandidatesNew.tkPtErrCut = cms.double(0.025)
-process.generalD0CandidatesNew.tkPtCut = cms.double(0.4)
+process.generalD0CandidatesNew.tkPtCut = cms.double(1.0)
 process.generalD0CandidatesNew.tkEtaCut = cms.double(1.6)
 process.generalD0CandidatesNew.tkPtSumCut = cms.double(0.0)
 process.generalD0CandidatesNew.trkEtaDiffCut = cms.double(1.0)
 process.generalD0CandidatesNew.dauTransImpactSigCut = cms.double(0.)
 process.generalD0CandidatesNew.dauLongImpactSigCut = cms.double(0.)
-process.generalD0CandidatesNew.tkDCACut = cms.double(0.03)
+process.generalD0CandidatesNew.tkDCACut = cms.double(0.05)
 process.generalD0CandidatesNew.vtxChi2Cut = cms.double(9999.0)
 process.generalD0CandidatesNew.VtxChiProbCut = cms.double(0.01)
 process.generalD0CandidatesNew.collinearityCut2D = cms.double(-2.0)
@@ -156,7 +159,7 @@ process.generalDStarCandidatesNew.alpha2DCut = cms.double(999.0)
 process.generalDStarCandidatesNew.rVtxCut = cms.double(0.0)
 process.generalDStarCandidatesNew.lVtxCut = cms.double(0.0)
 process.generalDStarCandidatesNew.vtxSignificance2DCut = cms.double(0.0)
-process.generalDStarCandidatesNew.vtxSignificance3DCut = cms.double(0.0)
+process.generalDStarCandidatesNew.vtxSignificance3DCut = cms.double(1.0)
 process.generalDStarCandidatesNew.dStarMassCut = cms.double(0.22)
 process.generalDStarCandidatesNew.dPtCut = cms.double(0.0)
 #process.generalDStarCandidatesNew.trkPtSumCut = cms.double(0.0)
@@ -221,14 +224,14 @@ process.TFileService = cms.Service("TFileService",
     )
 
 process.d0ana_mc.GenParticleCollection =  cms.untracked.InputTag("prunedGenParticles")
-process.d0ana_mc.useAnyMVA = cms.bool(False)
+process.d0ana_mc.useAnyMVA = cms.bool(True)
 process.d0ana_mc.multMin = cms.untracked.double(0)
 process.d0ana_mc.multMax = cms.untracked.double(100000)
 
 #process.d0ana_mc.VertexCompositeCollection = cms.untracked.InputTag("d0selectorNewReduced:D0")
 #process.d0ana_mc.MVACollection = cms.InputTag("d0selectorNewReduced:MVAValuesNewD0")
 process.d0ana_newreduced = process.d0ana_mc.clone()
-process.d0ana_newreduced.CompositeCollection = cms.untracked.InputTag("generalD0CandidatesNew:D0")
+process.d0ana_newreduced.CompositeCollection = cms.untracked.InputTag("generalD0CandidatesNew:MVAValuesD0")
 process.d0ana_newreduced.VertexCompositeCollection = cms.untracked.InputTag("generalD0CandidatesNew:D0")
 
 process.dStarana_mc.GenParticleCollection =  cms.untracked.InputTag("prunedGenParticles")
@@ -243,8 +246,8 @@ process.generalDStarCandidatesNew.d0Collection = cms.InputTag("generalD0Candidat
 #process.d0ana_newreduced.DCAErrCollection = cms.InputTag("generalD0CandidatesNew:DCAErrorsNewD0")
 
 
-#process.dStarAna_step = cms.Path( process.eventFilter_HM * process.generalD0CandidatesNew* process.generalDStarCandidatesNew * process.d0ana_newreduced *process.dStarana_mc)
-process.dStarAna_step = cms.Path( process.eventFilter_HM * process.generalD0CandidatesNew* process.d0ana_newreduced)
+process.dStarAna_step = cms.Path( process.eventFilter_HM * process.generalD0CandidatesNew* process.generalDStarCandidatesNew * process.d0ana_newreduced *process.dStarana_mc)
+#process.dStarAna_step = cms.Path( process.eventFilter_HM * process.generalD0CandidatesNew* process.d0ana_newreduced)
 #*process.eventplane)
 
 # eventinfoana must be in EndPath, and process.eventinfoana.selectEvents must be the name of eventFilter_HM Path

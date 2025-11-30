@@ -56,17 +56,20 @@ process.GlobalTag.globaltag = cms.string('132X_mcRun3_2023_realistic_HI_v9')
 #    input = cms.VPSet(cms.PSet(object = cms.string('ElectronicsMap'), file = cms.FileInPath("emap_2023_newZDC_v3.txt")))
 #)
 
-# Add PbPb centrality
+# Add PbPb centrality (read from conditions DB instead of local sqlite)
 process.load("RecoHI.HiCentralityAlgos.CentralityBin_cfi")
+process.centralityBin.Centrality = cms.InputTag("hiCentrality")
+process.centralityBin.centralityVariable = cms.string("HFtowers")
+isMC = True
 process.GlobalTag.snapshotTime = cms.string("9999-12-31 23:59:59.000")
 process.GlobalTag.toGet.extend([
-    cms.PSet(record = cms.string("HeavyIonRcd"),
-        tag = cms.string("CentralityTable_HFtowers200_HydjetDrum5F_v1302x04_official_MC2023"),
-        connect = cms.string("sqlite_file:CentralityTable_HFtowers200_HydjetDrum5F_v1302x04_HYD2023_official.db"),
+    cms.PSet(
+        record = cms.string("HeavyIonRcd"),
+        tag = cms.string("CentralityTable_HFtowers200_HydjetDrum5F_Run3v1302x04_Official_MC") if isMC else cms.string("CentralityTable_HFtowers200_DataPbPb_periHYDJETshape_Run3v1302x04_Nominal_Offline"),
+        connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
         label = cms.untracked.string("HFtowers")
-        )
-    ]
-)
+    )
+])
 process.cent_seq = cms.Sequence(process.centralityBin)
 
 # =============== Import Sequences =====================
@@ -298,6 +301,7 @@ process.eventinfoana.eventFilterNames = cms.untracked.vstring(
     'Flag_hfCoincFilter',
     'Flag_primaryVertexFilter', 
     )
+process.c = cms.Path(process.cent_seq)
 process.eventinfoana.triggerFilterNames = cms.untracked.vstring()
 process.eventinfoana.stageL1Trigger = cms.uint32(2)
 process.pevt = cms.EndPath(process.eventinfoana)
@@ -307,6 +311,7 @@ process.pevt = cms.EndPath(process.eventinfoana)
 
 # Define the process schedule
 process.schedule = cms.Schedule(
+    process.c,
     process.eventFilter_HM_step,
     process.dStarAna_step,
    process.pevt,

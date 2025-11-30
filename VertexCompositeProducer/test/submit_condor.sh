@@ -3,12 +3,14 @@ set -euo pipefail
 
 if [[ $# -lt 2 ]]; then
   echo "Usage: $0 <mc|data> <file_list> [job_flavour]" >&2
+  echo "Optional: set STAGE_DIR to copy needed files and submit from that directory (e.g. /afs/.../condor_stage)" >&2
   exit 1
 fi
 
 mode="$1"
 list_in="$2"
 flavour="${3:-tomorrow}"
+stage_dir="${STAGE_DIR:-}"
 
 # Resolve absolute list path before cd
 if [[ "$list_in" = /* ]]; then
@@ -17,7 +19,20 @@ else
   list_abs="$(pwd)/$list_in"
 fi
 
-script_dir="$(cd "$(dirname "$0")" && pwd)"
+src_dir="$(cd "$(dirname "$0")" && pwd)"
+# working directory may change if staging
+script_dir="$src_dir"
+
+# If staging is requested, copy minimal dependencies to STAGE_DIR first.
+if [[ -n "$stage_dir" ]]; then
+  mkdir -p "$stage_dir"
+  cp -p "$list_abs" "$stage_dir"/
+  list_abs="$stage_dir/$(basename "$list_abs")"
+  cp -p "$src_dir"/runCondor_MC.sh "$src_dir"/runCondor_Data.sh "$src_dir"/myProxy "$stage_dir"/
+  # mode-specific python cfg copied later after it is chosen
+  script_dir="$stage_dir"
+fi
+
 cd "$script_dir"
 mkdir -p logs
 
@@ -51,7 +66,12 @@ case "$mode" in
     echo "Mode must be 'mc' or 'data'" >&2
     exit 2
     ;;
- esac
+esac
+
+# If staged, copy the chosen python cfg into the stage area now.
+if [[ -n "$stage_dir" ]]; then
+  cp -p "$src_dir/${py_script}" "$stage_dir"/
+fi
 
 # Create and submit the job description on the fly
 condor_submit -terse - <<EOF
@@ -64,18 +84,18 @@ arguments   = ${args_line}
 transfer_input_files = \
   	${py_script}, myProxy
 
-output      = /dev/null
-error       = /dev/null
-log         = /dev/null
+#output      = /dev/null
+#error       = /dev/null
+#log         = /dev/null
 +JobFlavour = "${flavour}"
 
 should_transfer_files = YES
 when_to_transfer_output = ON_EXIT
 
 ##### Per-job logs
-#output = logs/job_\$(ClusterId)_\$(ProcId).log
-#error = logs/job_\$(ClusterId)_\$(ProcId).err
-#log = logs/job_\$(ClusterId)_\$(ProcId).log
+output = logs/job_\$(ProcId).out
+error  = logs/job_\$(ProcId).err
+log    = logs/job_\$(ProcId).log
 should_transfer_files   = YES
 
 request_memory = 8 GB
