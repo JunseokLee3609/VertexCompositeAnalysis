@@ -58,15 +58,17 @@
 
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
-
 #include "DataFormats/PatCandidates/interface/Muon.h"
 #include "DataFormats/MuonReco/interface/Muon.h"
 #include "DataFormats/MuonReco/interface/MuonFwd.h"
 #include "DataFormats/MuonReco/interface/MuonChamberMatch.h"
 #include "DataFormats/MuonReco/interface/MuonSegmentMatch.h"
+#include "DataFormats/MuonReco/interface/MuonSelectors.h"
+
 #include "DataFormats/HeavyIonEvent/interface/CentralityBins.h"
 #include "DataFormats/HeavyIonEvent/interface/Centrality.h"
 #include "DataFormats/HeavyIonEvent/interface/EvtPlane.h"
+#include "VertexCompositeAnalysis/VertexCompositeAnalyzer/plugins/PATCompositeUtils.h"
 
 //#include "RecoHI/HiEvtPlaneAlgos/interface/HiEvtPlaneFlatten.h"
 //#include "RecoHI/HiEvtPlaneAlgos/interface/HiEvtPlaneList.h"
@@ -137,6 +139,8 @@ private:
   void processEventPlaneInfo(const edm::Event& iEvent);
   void processVertexAndTrackInfo(const edm::Handle<reco::VertexCollection>& vertices,
                                  const edm::Handle<reco::TrackCollection>& tracks);
+  void resetRecoCandidate(unsigned int index);
+  void resetGenCandidate(unsigned int index);
   std::vector<reco::GenParticleRef> processGenMatching(const edm::Handle<reco::GenParticleCollection>& genpars);
   void processTwoLayerDecayMatching(const CC& trk, unsigned it, 
                                    const std::vector<reco::GenParticleRef>& genRefs);
@@ -156,16 +160,35 @@ private:
   // Error handling and safety functions
   bool isValidCandidateIndex(unsigned int index) const;
   void validateArrayAccess(unsigned int index, const std::string& arrayName) const;
+  int muAssocToTrack( const reco::TrackRef& trackref, const edm::Handle<reco::MuonCollection>& muonh) const;
+  
+  // Centralized decay selection policy
+  patcomp::DecaySelectionConfig decayConfig_;
   
   // Improved permutation matching functions
   bool findDaughterPermutation(const reco::GenParticle& genParticle, std::vector<unsigned int>& matchedIndices);
   bool checkTwoLayerDecayPermutation(const reco::Candidate* daughter, std::vector<unsigned int>& subIndices);
   
   // Helper function for finding correct daughter permutation (for code deduplication)
-  std::vector<unsigned int> findDaughterPermutation(const reco::GenParticle& particle, bool twoLayerDecay, bool threeProngDecay);
+  std::vector<unsigned int> findDaughterPermutation(const reco::GenParticle& particle, bool twoLayerDecay);
   
-  // Strict D* → D0 + π → K + π + π decay chain validation
-  bool isValidDStarDecayChain(const reco::Candidate* Dd1, const reco::Candidate* Dd2) const;
+	  // Strict D* → D0 + π → K + π + π decay chain validation
+	  bool isValidDStarDecayChain(const reco::Candidate* Dd1, const reco::Candidate* Dd2) const;
+
+	  // Gen-matching helper utilities (kept here for refactored plugin)
+	  struct D0DaughterSummary {
+	    int gammaCount = 0;
+	    int nonGammaCount = 0;
+	    bool hasKaon = false;
+	    bool hasPion = false;
+	  };
+	  D0DaughterSummary summarizeD0Daughters(const reco::Candidate* d0) const;
+	  const reco::GenParticle* findAncestor(const reco::GenParticle* particle, int absPdgId) const;
+	  bool matchD0WithFSR(const reco::Candidate* recoDau1,
+	                      const reco::Candidate* recoDau2,
+	                      const reco::GenParticle* genD0,
+	                      double maxDr) const;
+	  void resetRecoGenMatch(unsigned int index);
   
   // Validation and debugging functions (delegated to ValidationUtility)
   void performSelfDiagnostics() const;
@@ -178,7 +201,6 @@ private:
   bool checkSwap(const reco::Candidate* _dmeson_, const reco::GenParticle& _gen_) const;
   bool checkSwap(const reco::Candidate* _dmeson_, const reco::Candidate& _gen_) const;
 
-  int muAssocToTrack( const reco::TrackRef& trackref, const edm::Handle<reco::MuonCollection>& muonh) const;
 
   reco::GenParticleRef findMother(const reco::GenParticleRef&);
   void genDecayLength(const reco::Candidate& gCand, float& gen_decayLength2D_, float& gen_decayLength3D_, float& gen_angle2D_, float& gen_angle3D_);
@@ -220,15 +242,7 @@ private:
     TH2F*  hEtaD2VsMVA[6][10];
     TH2F*  hdedxHarmonic2D2VsMVA[6][10];
     TH2F*  hdedxHarmonic2D2VsP[6][10];
-    TH2F*  hzDCASignificanceDaugther3VsMVA[6][10];
-    TH2F*  hxyDCASignificanceDaugther3VsMVA[6][10];
-    TH2F*  hNHitD3VsMVA[6][10];
-    TH2F*  hpTD3VsMVA[6][10];
-    TH2F*  hpTerrD3VsMVA[6][10];
-    TH2F*  hEtaD3VsMVA[6][10];
-    TH2F*  hdedxHarmonic2D3VsMVA[6][10];
-    TH2F*  hdedxHarmonic2D3VsP[6][10];
-    
+
     bool   saveTree_;
     bool   saveHistogram_;
     bool   saveAllHistogram_;
@@ -244,13 +258,11 @@ private:
     bool hasSwap_;
     bool decayInGen_;
     bool twoLayerDecay_;
-    bool threeProngDecay_;
     bool doMuon_;
     bool doMuonFull_;
     int PID_;
     int PID_dau1_;
     int PID_dau2_;
-    int PID_dau3_;
     
     //cut variables
     double multMax_;
@@ -336,40 +348,29 @@ private:
     //dau info
     float dzos1[MAXCAN];
     float dzos2[MAXCAN];
-    float dzos3[MAXCAN];
     float dxyos1[MAXCAN];
     float dxyos2[MAXCAN];
-    float dxyos3[MAXCAN];
     float dzval1[MAXCAN];
     float dzval2[MAXCAN];
-    float dzval3[MAXCAN];
     float dxyval1[MAXCAN];
     float dxyval2[MAXCAN];
-    float dxyval3[MAXCAN];
     float nhit1[MAXCAN];
     float nhit2[MAXCAN];
-    float nhit3[MAXCAN];
     bool trkquality1[MAXCAN];
     bool trkquality2[MAXCAN];
-    bool trkquality3[MAXCAN];
     float pt1[MAXCAN];
     float pt2[MAXCAN];
-    float pt3[MAXCAN];
     float ptErr1[MAXCAN];
     float ptErr2[MAXCAN];
-    float ptErr3[MAXCAN];
     float p1[MAXCAN];
     float p2[MAXCAN];
-    float p3[MAXCAN];
+    float massD2[MAXCAN];
     float eta1[MAXCAN];
     float eta2[MAXCAN];
-    float eta3[MAXCAN];
     float phi1[MAXCAN];
     float phi2[MAXCAN];
-    float phi3[MAXCAN];
     int charge1[MAXCAN];
     int charge2[MAXCAN];
-    int charge3[MAXCAN];
     int pid1[MAXCAN];
     int pid2[MAXCAN];
     int pid3[MAXCAN];
@@ -378,16 +379,12 @@ private:
     float matchDeltaR3[MAXCAN];
     float tof1[MAXCAN];
     float tof2[MAXCAN];
-    float tof3[MAXCAN];
     float H2dedx1[MAXCAN];
     float H2dedx2[MAXCAN];
-    float H2dedx3[MAXCAN];
     float T4dedx1[MAXCAN];
     float T4dedx2[MAXCAN];
-    float T4dedx3[MAXCAN];
     float trkChi1[MAXCAN];
     float trkChi2[MAXCAN];
-    float trkChi3[MAXCAN];
    
     //grand-dau info
     float grand_dzos1[MAXCAN];
@@ -455,6 +452,7 @@ private:
     float ddxdzSig2_seg_[MAXCAN];
     float ddydzSig2_seg_[MAXCAN];
 
+
     // gen info    
     int candSize_gen;
     float gen_weight;
@@ -469,7 +467,6 @@ private:
     float y_gen[MAXCAN];
     int iddau1[MAXCAN];
     int iddau2[MAXCAN];
-    int iddau3[MAXCAN];
 
     float matchGen_DStarpT_[MAXCAN];
 		float matchGen_DStareta_[MAXCAN];
@@ -523,18 +520,10 @@ private:
 		int matchGen_D0Dau1_motherNDau_[MAXCAN];
 		int matchGen_D0Dau2_motherPdgId_[MAXCAN];
 		int matchGen_D0Dau2_motherNDau_[MAXCAN];
-		int matchGen_D1_motherPdgId_[MAXCAN]; // slow pion mother PDG
-		int matchGen_D1_motherNDau_[MAXCAN];
-		bool matchGen_sameD0_[MAXCAN];
-		bool matchGen_sameDStar_[MAXCAN];
-		bool matchGen_validDstarChain_[MAXCAN];
-		bool matchGen_validD0_noFSR_[MAXCAN];
-
-		// If mothers have >2 daughters, capture extra daughter PDG IDs (up to 4)
-		int matchGen_D0_extraNDau_[MAXCAN];
-		int matchGen_D0_extraDauPdgId_[MAXCAN][4];
-		int matchGen_DStar_extraNDau_[MAXCAN];
-		int matchGen_DStar_extraDauPdgId_[MAXCAN][4];
+			int matchGen_D1_motherPdgId_[MAXCAN]; // slow pion mother PDG
+			int matchGen_D1_motherNDau_[MAXCAN];
+			bool matchGen_validDstarChain_[MAXCAN];
+			bool matchGen_validD0chain_[MAXCAN];
 
 
 		float gen_D0pT_[MAXCAN];
@@ -568,10 +557,10 @@ private:
 		float gen_D1phi_[MAXCAN];
 		float gen_D1mass_[MAXCAN];
 		float gen_D1y_[MAXCAN];
-		int gen_D1charge_[MAXCAN];
-		int gen_D1pdgId_[MAXCAN];
-		bool gen_validDstarChain_[MAXCAN];
-		bool gen_validD0_noFSR_[MAXCAN];
+			int gen_D1charge_[MAXCAN];
+			int gen_D1pdgId_[MAXCAN];
+			bool gen_validDstarChain_[MAXCAN];
+			bool gen_validD0chain_[MAXCAN];
 
     //vector for gen match
     std::vector< std::vector<double> > *pVect;
@@ -580,7 +569,6 @@ private:
     std::vector<double> *GDvector1;
     std::vector<double> *Dvector2;
     std::vector<double> *GDvector2;
-    std::vector<double> *Dvector3;
     std::vector<int> *pVectIDmom;
     
     bool useAnyMVA_;
@@ -595,12 +583,12 @@ private:
     edm::EDGetTokenT<reco::TrackCollection> tok_generalTrk_;
     edm::EDGetTokenT<CCC> PATCompositeCandidateCollection_Token_;
     edm::EDGetTokenT<MVACollection> MVAValues_Token_;
+    edm::EDGetTokenT<reco::MuonCollection> tok_muon_;
 
     edm::EDGetTokenT<edm::ValueMap<reco::DeDxData> > Dedx_Token1_;
     edm::EDGetTokenT<edm::ValueMap<reco::DeDxData> > Dedx_Token2_;
     edm::EDGetTokenT<reco::GenParticleCollection> tok_genParticle_;
     edm::EDGetTokenT<GenEventInfoProduct> tok_genInfo_;
-    edm::EDGetTokenT<reco::MuonCollection> tok_muon_;
 
     edm::EDGetTokenT<int> tok_centBinLabel_;
     edm::EDGetTokenT<reco::Centrality> tok_centSrc_;
@@ -762,23 +750,36 @@ void PATCompositeTreeProducer5::getAncestorId(const reco::Candidate& gCand, int&
     // 1. 항상 기본값으로 초기화
     gen_ancestorId_ = 0;
     gen_ancestorFlavor_ = 0;
-
-    edm::LogVerbatim("PATCompositeTreeProducer") << "[getAncestorId] Starting ancestor search for particle with PDG ID: " << gCand.pdgId();
+    const bool doVerbose = verboseDebug_;
+    if (doVerbose) {
+      edm::LogVerbatim("PATCompositeTreeProducer")
+          << "[getAncestorId] Starting ancestor search for particle with PDG ID: " << gCand.pdgId();
+    }
 
     const reco::Candidate* mom = &gCand; // 시작 입자를 현재 입자로 설정
     int depth = 0;
     const int MAX_DEPTH = 50; // 2. 무한 루프 방지
 
     while (mom != nullptr && depth < MAX_DEPTH) {
-        edm::LogVerbatim("PATCompositeTreeProducer") << "[getAncestorId] Depth " << depth << ": Current particle PDG ID = " << mom->pdgId();
+        if (doVerbose) {
+          edm::LogVerbatim("PATCompositeTreeProducer")
+              << "[getAncestorId] Depth " << depth << ": Current particle PDG ID = " << mom->pdgId();
+        }
         
         if (depth > 0) { 
              int currentId = mom->pdgId();
              int absId = std::abs(currentId);
-             edm::LogVerbatim("PATCompositeTreeProducer") << "[getAncestorId] Processing mother: PDG ID = " << currentId << ", Abs ID = " << absId;
+             if (doVerbose) {
+               edm::LogVerbatim("PATCompositeTreeProducer")
+                   << "[getAncestorId] Processing mother: PDG ID = " << currentId << ", Abs ID = " << absId;
+             }
 
              std::string idstr = std::to_string(absId);
-             edm::LogVerbatim("PATCompositeTreeProducer") << "[getAncestorId] ID string: " << idstr << ", First digit: " << (idstr.empty() ? '?' : idstr[0]);
+             if (doVerbose) {
+               edm::LogVerbatim("PATCompositeTreeProducer")
+                   << "[getAncestorId] ID string: " << idstr
+                   << ", First digit: " << (idstr.empty() ? '?' : idstr[0]);
+             }
              
                  gen_ancestorId_ = currentId;
                  gen_ancestorFlavor_ = std::stoi(std::string{idstr.begin(), idstr.begin() + 1}); 
@@ -786,7 +787,11 @@ void PATCompositeTreeProducer5::getAncestorId(const reco::Candidate& gCand, int&
              if (!idstr.empty() && idstr[0] == '5') {
 
 
-                 edm::LogVerbatim("PATCompositeTreeProducer") << "[getAncestorId] Found B meson: ID = " << gen_ancestorId_ << ", Flavor = " << gen_ancestorFlavor_;
+                 if (doVerbose) {
+                   edm::LogVerbatim("PATCompositeTreeProducer")
+                       << "[getAncestorId] Found B meson: ID = " << gen_ancestorId_
+                       << ", Flavor = " << gen_ancestorFlavor_;
+                 }
                  break; 
              }
 
@@ -796,23 +801,37 @@ void PATCompositeTreeProducer5::getAncestorId(const reco::Candidate& gCand, int&
                  if(!final_idstr.empty()) {
                     gen_ancestorFlavor_ = std::stoi(std::string{final_idstr.begin(), final_idstr.begin() + 1});
                  }
-                 edm::LogVerbatim("PATCompositeTreeProducer") << "[getAncestorId] Found light quark/lepton: ID = " << gen_ancestorId_ << ", Flavor = " << gen_ancestorFlavor_;
+                 if (doVerbose) {
+                   edm::LogVerbatim("PATCompositeTreeProducer")
+                       << "[getAncestorId] Found light quark/lepton: ID = " << gen_ancestorId_
+                       << ", Flavor = " << gen_ancestorFlavor_;
+                 }
                  break;
              }
-             edm::LogVerbatim("PATCompositeTreeProducer") << "[getAncestorId] Not target particle, continuing search...";
+             if (doVerbose) {
+               edm::LogVerbatim("PATCompositeTreeProducer")
+                   << "[getAncestorId] Not target particle, continuing search...";
+             }
         }
 
         mom = mom->mother();
         depth++;
-        edm::LogVerbatim("PATCompositeTreeProducer") << "[getAncestorId] Moving to next mother, depth now = " << depth;
+        if (doVerbose) {
+          edm::LogVerbatim("PATCompositeTreeProducer")
+              << "[getAncestorId] Moving to next mother, depth now = " << depth;
+        }
     }
     
     if (depth >= MAX_DEPTH) {
         edm::LogWarning("PATCompositeTreeProducer") << "[getAncestorId] Maximum depth reached (" << MAX_DEPTH << "), stopping search";
     }
-    if (mom == nullptr) {
+    if (mom == nullptr && doVerbose) {
         edm::LogVerbatim("PATCompositeTreeProducer") << "[getAncestorId] No more mothers found";
     }
     
-    edm::LogVerbatim("PATCompositeTreeProducer") << "[getAncestorId] Final result: ancestorId = " << gen_ancestorId_ << ", ancestorFlavor = " << gen_ancestorFlavor_;
+    if (doVerbose) {
+      edm::LogVerbatim("PATCompositeTreeProducer")
+          << "[getAncestorId] Final result: ancestorId = " << gen_ancestorId_
+          << ", ancestorFlavor = " << gen_ancestorFlavor_;
+    }
 };
