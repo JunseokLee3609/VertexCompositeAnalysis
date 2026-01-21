@@ -94,6 +94,7 @@ DStarFitter::DStarFitter(const edm::ParameterSet& theParameters,  edm::ConsumesC
   collinCut2D = theParameters.getParameter<double>(string("collinearityCut2D"));
   collinCut3D = theParameters.getParameter<double>(string("collinearityCut3D"));
   dStarMassCut = theParameters.getParameter<double>(string("dStarMassCut"));
+  dStarAbsYCut = theParameters.getParameter<double>(string("dStarAbsYCut"));
   dauTransImpactSigCut = theParameters.getParameter<double>(string("dauTransImpactSigCut"));
   dauLongImpactSigCut = theParameters.getParameter<double>(string("dauLongImpactSigCut"));
   VtxChiProbCut = theParameters.getParameter<double>(string("VtxChiProbCut"));
@@ -247,7 +248,7 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
       double dzvtx = tmpRef->dz(bestvtx);
       double dxyvtx = tmpRef->dxy(bestvtx);
       double dzerror = sqrt(tmpRef->dzError()*tmpRef->dzError()+zVtxError*zVtxError);
-      double dxyerror = sqrt(tmpRef->d0Error()*tmpRef->d0Error()+xVtxError*yVtxError);
+      double dxyerror = sqrt(tmpRef->d0Error()*tmpRef->d0Error()+xVtxError*xVtxError+yVtxError*yVtxError);
 
       double dauLongImpactSig = dzvtx/dzerror;
       double dauTransImpactSig = dxyvtx/dxyerror;
@@ -286,6 +287,21 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
       pionTransTkPtr = &theTransTracks[trdx1];
       CC theD0 = (*theD0Handle)[didx1];
 
+      // if (theD0.numberOfDaughters() < 2) continue;
+      const reco::Candidate* dau0 = theD0.daughter(0);
+      const reco::Candidate* dau1 = theD0.daughter(1);
+
+      // // Skip slow pion if it reuses a track already used in the D0
+      // reco::TrackRef d0Track0;
+      // reco::TrackRef d0Track1;
+      // if (const auto* rc0 = dynamic_cast<const reco::RecoChargedCandidate*>(dau0)) d0Track0 = rc0->track();
+      // if (const auto* rc1 = dynamic_cast<const reco::RecoChargedCandidate*>(dau1)) d0Track1 = rc1->track();
+      // if ((d0Track0.isNonnull() && d0Track0 == pionTrackRef) ||
+      //    (d0Track1.isNonnull() && d0Track1 == pionTrackRef)) {
+
+      //  continue;
+      // }
+
       // if( !pionTransTkPtr->impactPointStateAvailable()) continue;
       const auto& D0Vec = theD0.p4();
       const reco::Track& thePiTrack = pionTransTkPtr->track();
@@ -299,14 +315,14 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
 //      double dzvtx_pos = positiveTrackRef->dz(bestvtx);
 //      double dxyvtx_pos = positiveTrackRef->dxy(bestvtx);
 //      double dzerror_pos = sqrt(positiveTrackRef->dzError()*positiveTrackRef->dzError()+zVtxError*zVtxError);
-//      double dxyerror_pos = sqrt(positiveTrackRef->d0Error()*positiveTrackRef->d0Error()+xVtxError*yVtxError);
+//      double dxyerror_pos = sqrt(positiveTrackRef->d0Error()*positiveTrackRef->d0Error()+xVtxError*xVtxError+yVtxError*yVtxError);
 //      double dauLongImpactSig_pos = dzvtx_pos/dzerror_pos;
 //      double dauTransImpactSig_pos = dxyvtx_pos/dxyerror_pos;
 //
 //      double dzvtx_neg = negativeTrackRef->dz(bestvtx);
 //      double dxyvtx_neg = negativeTrackRef->dxy(bestvtx);
 //      double dzerror_neg = sqrt(negativeTrackRef->dzError()*negativeTrackRef->dzError()+zVtxError*zVtxError);
-//      double dxyerror_neg = sqrt(negativeTrackRef->d0Error()*negativeTrackRef->d0Error()+xVtxError*yVtxError);
+//      double dxyerror_neg = sqrt(negativeTrackRef->d0Error()*negativeTrackRef->d0Error()+xVtxError*xVtxError+yVtxError*yVtxError);
 //      double dauLongImpactSig_neg = dzvtx_neg/dzerror_neg;
 //      double dauTransImpactSig_neg = dxyvtx_neg/dxyerror_neg;
 //
@@ -360,15 +376,13 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
        float ndf = 0.0;
 
        //Creating a KinematicParticleFactory
-       KinematicParticleFactoryFromTransientTrack pFactory;
-       vector<RefCountedKinematicParticle> d0Daus;
-       reco::Candidate* dau0 = theD0.daughter(0);
-       reco::Candidate* dau1 = theD0.daughter(1);
+      KinematicParticleFactoryFromTransientTrack pFactory;
+      vector<RefCountedKinematicParticle> d0Daus;
 
        int slowPionCharge = pionTrackRef->charge();
        
-       reco::Candidate* kaonCand = nullptr;
-       reco::Candidate* pionCand = nullptr;
+      const reco::Candidate* kaonCand = nullptr;
+      const reco::Candidate* pionCand = nullptr;
        
        
        if (dau0->mass() > dau1->mass()) {
@@ -487,6 +501,11 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
        float dStarTotalE = posCandTotalE + negCandTotalE;
 
        const Particle::LorentzVector dStarP4(dStarTotalP.x(), dStarTotalP.y(), dStarTotalP.z(), dStarTotalE);
+       double dStarPt = dStarTotalP.perp();
+       if(dStarPt < dPtCut) continue;
+       double dStarY = 0.5 * log((dStarTotalE + dStarPt * TMath::SinH(dStarTotalP.eta())) /
+                                 (dStarTotalE - dStarPt * TMath::SinH(dStarTotalP.eta())));
+       if(fabs(dStarY) > dStarAbsYCut) continue;
 
        Particle::Point dStarVtx((*dStarDecayVertex).position().x(), (*dStarDecayVertex).position().y(), (*dStarDecayVertex).position().z());
        std::vector<double> dStarVtxEVec;
@@ -531,13 +550,15 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
        sigmaRvtxMag = sqrt(ROOT::Math::Similarity(dStarTotalCov, distanceVector2D)) / rVtxMag;
 
        // DCA error
-       tsos = extrapolator.extrapolate(dStarCand->currentState().freeTrajectoryState(), RecoVertex::convertPos(vtxPrimary->position()));
+       GlobalPoint refVtxPos(xVtx, yVtx, zVtx);
+       tsos = extrapolator.extrapolate(dStarCand->currentState().freeTrajectoryState(), refVtxPos);
        Measurement1D cur3DIP;
        VertexDistance3D a3d;
        GlobalPoint refPoint          = tsos.globalPosition();
        GlobalError refPointErr       = tsos.cartesianError().position();
-       GlobalPoint vertexPosition    = RecoVertex::convertPos(vtxPrimary->position());
-       GlobalError vertexPositionErr = RecoVertex::convertError(vtxPrimary->error());
+       GlobalPoint vertexPosition    = refVtxPos;
+       GlobalError vertexPositionErr = isVtxPV ? RecoVertex::convertError(vtxPrimary->error())
+                                               : theBeamSpotHandle->rotatedCovariance3D();
        cur3DIP =  (a3d.distance(VertexState(vertexPosition,vertexPositionErr), VertexState(refPoint, refPointErr)));
 
 
@@ -580,11 +601,11 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
         theDStar->addUserFloat("alpha3D", dStarAngle3D );
         theDStar->addUserFloat("decaylength2D", rVtxMag);
         theDStar->addUserFloat("decaylength3D", lVtxMag );
-        theDStar->addUserFloat("decaylengthsignif2D", rVtxMag/sigmaRvtxMag);
-        theDStar->addUserFloat("decaylengthsignif3D", lVtxMag/sigmaLvtxMag );
-        theDStar->addUserFloat("dca3D", cur3DIP.value());
-        theDStar->addUserFloat("dca3DErr", cur3DIP.error());
-        if(theD0.hasUserFloat("mva")) theDStar->addUserFloat("D0mva", theD0.userFloat("mva"));
+       theDStar->addUserFloat("decaylengthsignif2D", rVtxMag/sigmaRvtxMag);
+       theDStar->addUserFloat("decaylengthsignif3D", lVtxMag/sigmaLvtxMag );
+       theDStar->addUserFloat("dca3D", cur3DIP.value());
+       theDStar->addUserFloat("dca3DErr", cur3DIP.error());
+       if(theD0.hasUserFloat("mva")) theDStar->addUserFloat("D0mva", theD0.userFloat("mva"));
 //        theDStar->addUserFloat("D03DDCA", dca);
 //        theDStar->addUserFloat("D03DDCAErr", dcaError);
       //  addp4.set( *theDStar );

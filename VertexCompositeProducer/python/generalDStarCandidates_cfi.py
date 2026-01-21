@@ -37,6 +37,7 @@ generalDStarCandidates = cms.EDProducer("DStarProducer",
     vtxSignificance2DCut = cms.double(0.0),
     vtxSignificance3DCut = cms.double(0.0),
     dStarMassCut = cms.double(0.22),
+    dStarAbsYCut = cms.double(999.0),
     dPtCut = cms.double(0.0),
 
     isWrongSign = cms.bool(False),

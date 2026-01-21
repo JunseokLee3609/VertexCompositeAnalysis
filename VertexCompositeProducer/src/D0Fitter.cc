@@ -46,11 +46,12 @@
 #include "FWCore/Framework/interface/stream/EDAnalyzer.h"
 #include "PhysicsTools/ONNXRuntime/interface/ONNXRuntime.h"
 
+#include <cmath>
 #include <chrono>
 using namespace std::chrono;
 
 
-const size_t VARSIZE = 19;
+const size_t VARSIZE = 17;
 const float piMassD0 = 0.13957018;
 const float piMassD0Squared = piMassD0*piMassD0;
 const float kaonMassD0 = 0.493677;
@@ -144,6 +145,51 @@ D0Fitter::D0Fitter(const edm::ParameterSet& theParameters,  edm::ConsumesCollect
     } else {
       throw cms::Exception("Configuration") << "onnxModelFileName not provided in ParameterSet";
     }
+
+    if (theParameters.exists("onnxFeatureNames")) {
+      onnxFeatureNames_ = theParameters.getParameter<std::vector<std::string>>("onnxFeatureNames");
+    } else {
+      // Default feature order for the trained ONNX BDT model
+      // f0 -> pT
+      // f1 -> y
+      // f2 -> VtxProb
+      // f3 -> 3DCosPointingAngle
+      // f4 -> 3DPointingAngle
+      // f5 -> 2DCosPointingAngle
+      // f6 -> 2DPointingAngle
+      // f7 -> 3DDecayLength
+      // f8 -> 3DDecayLengthSignificance
+      // f9 -> 2DDecayLength
+      // f10 -> 2DDecayLengthSignificance
+      // f11 -> pTD1
+      // f12 -> EtaD1
+      // f13 -> pTD2
+      // f14 -> EtaD2
+      // f15 -> Trk3DDCA
+      // f16 -> dEta_dau (= EtaD1 - EtaD2)
+      onnxFeatureNames_ = {
+          "pT",
+          "y",
+          "VtxProb",
+          "3DCosPointingAngle",
+          "3DPointingAngle",
+          "2DCosPointingAngle",
+          "2DPointingAngle",
+          "3DDecayLength",
+          "3DDecayLengthSignificance",
+          "2DDecayLength",
+          "2DDecayLengthSignificance",
+          "pTD1",
+          "EtaD1",
+          "pTD2",
+          "EtaD2",
+          "Trk3DDCA",
+          "dEta_dau",
+      };
+    }
+
+    input_shapes_.clear();
+    input_shapes_.push_back({1, static_cast<int64_t>(onnxFeatureNames_.size())});
 //  Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "D0Fitter");
 //    Ort::SessionOptions sessionOptions;
 //    sessionOptions.SetIntraOpNumThreads(1); // Single-threaded for simplicity
@@ -568,15 +614,17 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
             cos(d0Angle3D) < collinCut3D || cos(d0Angle2D) < collinCut2D || d0Angle3D > alphaCut || d0Angle2D > alpha2DCut
         ) continue;
         AnalyticalImpactPointExtrapolator extrapolator(magField);
-        TrajectoryStateOnSurface tsos = extrapolator.extrapolate(d0Cand->currentState().freeTrajectoryState(), RecoVertex::convertPos(vtxPrimary->position()));;
+        GlobalPoint refVtxPos(xVtx, yVtx, zVtx);
+        TrajectoryStateOnSurface tsos = extrapolator.extrapolate(d0Cand->currentState().freeTrajectoryState(), refVtxPos);;
 
 	      if( !tsos.isValid() ) continue;
         Measurement1D cur3DIP;
         VertexDistance3D a3d;
         GlobalPoint refPoint          = tsos.globalPosition();
         GlobalError refPointErr       = tsos.cartesianError().position();
-        GlobalPoint vertexPosition    = RecoVertex::convertPos(vtxPrimary->position());
-        GlobalError vertexPositionErr = RecoVertex::convertError(vtxPrimary->error());
+        GlobalPoint vertexPosition    = refVtxPos;
+        GlobalError vertexPositionErr = isVtxPV ? RecoVertex::convertError(vtxPrimary->error())
+                                                : theBeamSpotHandle->rotatedCovariance3D();
         cur3DIP =  (a3d.distance(VertexState(vertexPosition,vertexPositionErr), VertexState(refPoint, refPointErr)));
         // // Debugging part : cur3DIP and sin(alpha) * decaylength value is equal but the error different
         // std::cout << "By cur3DIP " << cur3DIP.value() << " +/- " << cur3DIP.error() <<std::endl;
@@ -637,6 +685,9 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
         theD0->addUserFloat("VtxNdof", d0VtxNdof );
         theD0->addUserFloat("alpha2D", d0Angle2D );
         theD0->addUserFloat("alpha3D", d0Angle3D );
+        theD0->addUserFloat("d0FitVx", d0Vtx.x());
+        theD0->addUserFloat("d0FitVy", d0Vtx.y());
+        theD0->addUserFloat("d0FitVz", d0Vtx.z());
         theD0->addUserFloat("decaylength2D", rVtxMag);
         theD0->addUserFloat("decaylength3D", lVtxMag );
         theD0->addUserFloat("decaylengthsignif2D", rVtxMag/sigmaRvtxMag);
@@ -675,28 +726,57 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
           // Prepare input data
           cms::Ort::FloatArrays data_;
 
-          // auto start = high_resolution_clock::now();
-          data_.emplace_back(19, 0);
-          std::vector<float> &onnxVals_=data_[0];
-          onnxVals_[0] = theD0->pt();
-          onnxVals_[1] = theD0->y();;
-          onnxVals_[2] = d0C2Prob;
-          onnxVals_[3] = centrality;
-          onnxVals_[4] = cos(d0Angle3D);
-          onnxVals_[5] = d0Angle3D;
-          onnxVals_[6] = cos(d0Angle2D);
-          onnxVals_[7] = d0Angle2D;
-          onnxVals_[8] = lVtxMag;
-          onnxVals_[9] = lVtxMag / sigmaLvtxMag;
-          onnxVals_[10] = rVtxMag;
-          onnxVals_[11] = rVtxMag / sigmaRvtxMag;
-          onnxVals_[12] = posCandTotalP.perp();
-          onnxVals_[13] = posCandTotalP.eta();
-          onnxVals_[14] = negCandTotalP.perp();
-          onnxVals_[15] = negCandTotalP.eta();
-          onnxVals_[16] = ptErr_pos;
-          onnxVals_[17] = ptErr_neg;
-          onnxVals_[18] = dca;
+          const float lVtxSig = (sigmaLvtxMag > 0.f ? lVtxMag / sigmaLvtxMag : 0.f);
+          const float rVtxSig = (sigmaRvtxMag > 0.f ? rVtxMag / sigmaRvtxMag : 0.f);
+          const float dEta_dau = posCandTotalP.eta() - negCandTotalP.eta();
+
+          data_.emplace_back(onnxFeatureNames_.size(), 0.0f);
+          std::vector<float> &onnxVals_ = data_[0];
+
+          auto featureValue = [&](const std::string &name) -> float {
+            if (name == "pT") return theD0->pt();
+            if (name == "y") return theD0->y();
+            if (name == "VtxProb") return d0C2Prob;
+            if (name == "3DCosPointingAngle") return std::cos(d0Angle3D);
+            if (name == "3DPointingAngle") return d0Angle3D;
+            if (name == "2DCosPointingAngle") return std::cos(d0Angle2D);
+            if (name == "2DPointingAngle") return d0Angle2D;
+            if (name == "3DDecayLength") return lVtxMag;
+            if (name == "3DDecayLengthSignificance") return lVtxSig;
+            if (name == "2DDecayLength") return rVtxMag;
+            if (name == "2DDecayLengthSignificance") return rVtxSig;
+            if (name == "pTD1") return posCandTotalP.perp();
+            if (name == "EtaD1") return posCandTotalP.eta();
+            if (name == "pTD2") return negCandTotalP.perp();
+            if (name == "EtaD2") return negCandTotalP.eta();
+            if (name == "Trk3DDCA" || name == "track3DDCA") return dca;
+            if (name == "dEta_dau" || name == "dEtaDau") return dEta_dau;
+            if (name == "cent" || name == "centrality") return static_cast<float>(centrality);
+            if (name == "ptErrD1") return ptErr_pos;
+            if (name == "ptErrD2") return ptErr_neg;
+            return 0.f;
+          };
+
+          for (size_t i = 0; i < onnxFeatureNames_.size(); ++i) {
+            onnxVals_[i] = featureValue(onnxFeatureNames_[i]);
+          }
+          // onnxVals_[0] = theD0->pt();
+          // onnxVals_[1] = d0C2Prob;
+          // onnxVals_[2] = cos(d0Angle3D);
+          // onnxVals_[3] = d0Angle3D;
+          // onnxVals_[4] = cos(d0Angle2D);
+          // onnxVals_[5] = d0Angle2D;
+          // onnxVals_[6] = lVtxMag;
+          // onnxVals_[7] = lVtxMag / sigmaLvtxMag;
+          // onnxVals_[8] = rVtxMag;
+          // onnxVals_[9] = rVtxMag / sigmaRvtxMag;
+          // onnxVals_[10] = posCandTotalP.perp();
+          // onnxVals_[11] = posCandTotalP.eta();
+          // onnxVals_[12] = negCandTotalP.perp();
+          // onnxVals_[13] = negCandTotalP.eta();
+          // onnxVals_[14] = ptErr_pos;
+          // onnxVals_[15] = ptErr_neg;
+          // onnxVals_[16] = dca;
           //onnxVals_[3] = cos(d0Angle3D);
           //onnxVals_[4] = d0Angle3D;
           //onnxVals_[5] = cos(d0Angle2D);

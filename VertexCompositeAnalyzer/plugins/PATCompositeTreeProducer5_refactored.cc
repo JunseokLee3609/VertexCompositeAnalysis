@@ -131,9 +131,6 @@ void PATCompositeTreeProducer5::resetRecoGenMatch(unsigned int idx) {
   const float invalidFloat = INVALID_VALUE;
   const int invalidInt = -1;
 
-  matchDeltaR1[idx] = INVALID_VALUE;
-  matchDeltaR2[idx] = INVALID_VALUE;
-  matchDeltaR3[idx] = INVALID_VALUE;
   matchGen_DStarpT_[idx] = invalidFloat;
   matchGen_DStareta_[idx] = invalidFloat;
   matchGen_DStarphi_[idx] = invalidFloat;
@@ -449,7 +446,6 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
 
         matchGen_slowPion_dR_[it] = INVALID_VALUE;
         massD2[it] = INVALID_VALUE;
-        matchDeltaR3[it] = INVALID_VALUE;
 
 	        if(doGenMatching_ )
 	        {
@@ -508,9 +504,6 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
 	                  used[slowPionMatch.index] = true;
 	                }
 
-	                matchDeltaR1[it] = kaonMatch.particle ? kaonMatch.deltaR : INVALID_VALUE;
-	                matchDeltaR2[it] = pionMatch.particle ? pionMatch.deltaR : INVALID_VALUE;
-	                matchDeltaR3[it] = slowPionMatch.particle ? slowPionMatch.deltaR : INVALID_VALUE;
 
 	                const bool allTracksMatched = kaonMatch.particle && pionMatch.particle && slowPionMatch.particle;
 
@@ -821,16 +814,11 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
           pid1[it] = -99999;
           pid2[it] = -99999;
           pid3[it] = -99999;
-          matchDeltaR1[it] = INVALID_VALUE;
-          matchDeltaR2[it] = INVALID_VALUE;
-          matchDeltaR3[it] = INVALID_VALUE;
+          tof1[it] = INVALID_VALUE;
+          tof2[it] = INVALID_VALUE;
           
           if(doGenMatchingTOF_)
           {
-            const double maxDouble = std::numeric_limits<double>::max();
-            double bestDeltaR1 = maxDouble;
-            double bestDeltaR2 = maxDouble;
-
             for(unsigned igen=0; igen<genpars->size(); ++igen){
 
                 const reco::GenParticle & trk = (*genpars)[igen];
@@ -843,19 +831,15 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
                 if(fabs(id)!=PID_ && trk.charge())
                 {
                   double deltaR = trkvect.DeltaR(dauvec1);
-                  if(trk.charge()==charge1[it] && deltaR < bestDeltaR1) bestDeltaR1 = deltaR;
                   if(deltaR < deltaR_ && fabs((trk.pt()-pt1[it])/pt1[it]) < 0.5 && trk.charge()==charge1[it] && pid1[it]==-99999)
                   {
                     pid1[it] = id;
-                    matchDeltaR1[it] = deltaR;
                   }
 
                   deltaR = trkvect.DeltaR(dauvec2);
-                  if(trk.charge()==charge2[it] && deltaR < bestDeltaR2) bestDeltaR2 = deltaR;
                   if(deltaR < deltaR_ && fabs((trk.pt()-pt2[it])/pt2[it]) < 0.5 && trk.charge()==charge2[it] && pid2[it]==-99999)
                   {
                     pid2[it] = id;
-                    matchDeltaR2[it] = deltaR;
                   }
                 }
 
@@ -869,43 +853,31 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
                   int id2 = Dd2->pdgId();
 
                   double deltaR = d1vect.DeltaR(dauvec1);
-                  if(Dd1->charge()==charge1[it] && deltaR < bestDeltaR1) bestDeltaR1 = deltaR;
                   if(deltaR < deltaR_ && fabs((Dd1->pt()-pt1[it])/pt1[it]) < 0.5 && Dd1->charge()==charge1[it] && pid1[it]==-99999)
                   {
                     pid1[it] = id1;
-                    matchDeltaR1[it] = deltaR;
                   }
                   deltaR = d2vect.DeltaR(dauvec1);
-                  if(Dd2->charge()==charge1[it] && deltaR < bestDeltaR1) bestDeltaR1 = deltaR;
                   if(deltaR < deltaR_ && fabs((Dd2->pt()-pt1[it])/pt1[it]) < 0.5 && Dd2->charge()==charge1[it] && pid1[it]==-99999)
                   {
                     pid1[it] = id1;
-                    matchDeltaR1[it] = deltaR;
                   }
 
                   deltaR = d1vect.DeltaR(dauvec2);
-                  if(Dd1->charge()==charge2[it] && deltaR < bestDeltaR2) bestDeltaR2 = deltaR;
                   if(deltaR < deltaR_ && fabs((Dd1->pt()-pt2[it])/pt2[it]) < 0.5 && Dd1->charge()==charge2[it] && pid2[it]==-99999)
                   {
                     pid2[it] = id2;
-                    matchDeltaR2[it] = deltaR;
                   }
                   deltaR = d2vect.DeltaR(dauvec2);
-                  if(Dd2->charge()==charge2[it] && deltaR < bestDeltaR2) bestDeltaR2 = deltaR;
                   if(deltaR < deltaR_ && fabs((Dd2->pt()-pt2[it])/pt2[it]) < 0.5 && Dd2->charge()==charge2[it] && pid2[it]==-99999)
                   {
                     pid2[it] = id2;
-                    matchDeltaR2[it] = deltaR;
                   }
                 }
 
                 if(pid1[it]!=-99999 && pid2[it]!=-99999) break;
             }
 
-            if(matchDeltaR1[it] == INVALID_VALUE && bestDeltaR1 < maxDouble)
-              matchDeltaR1[it] = bestDeltaR1;
-            if(matchDeltaR2[it] == INVALID_VALUE && bestDeltaR2 < maxDouble)
-              matchDeltaR2[it] = bestDeltaR2;
           }
 
           vtxChi2[it] = trk.userFloat("VtxChi2");
@@ -1281,12 +1253,16 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
               
               grand_pt1[it] = gd1->pt();
               grand_pt2[it] = gd2->pt();
+              grand_mass1[it] = gd1->mass();
+              grand_mass2[it] = gd2->mass();
               
               grand_p1[it] = gd1->p();
               grand_p2[it] = gd2->p();
               
               grand_eta1[it] = gd1->eta();
               grand_eta2[it] = gd2->eta();
+              grand_phi1[it] = gd1->phi();
+              grand_phi2[it] = gd2->phi();
               
               grand_charge1[it] = gd1->charge();
               grand_charge2[it] = gd2->charge();
@@ -1297,7 +1273,16 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
               grand_ptErr1[it] = gdau1->ptError();
               grand_ptErr2[it] = gdau2->ptError();
               
-              secvz = d1->vz(); secvx = d1->vx(); secvy = d1->vy();
+              CC* d1CC = (CC*) d1;
+              if (d1CC && d1CC->hasUserFloat("d0FitVx") &&
+                  d1CC->hasUserFloat("d0FitVy") &&
+                  d1CC->hasUserFloat("d0FitVz")) {
+                secvx = d1CC->userFloat("d0FitVx");
+                secvy = d1CC->userFloat("d0FitVy");
+                secvz = d1CC->userFloat("d0FitVz");
+              } else {
+                secvz = d1->vz(); secvx = d1->vx(); secvy = d1->vy();
+              }
               
               grand_nhit1[it] = gdau1->numberOfValidHits();
               grand_nhit2[it] = gdau2->numberOfValidHits();
@@ -1330,22 +1315,33 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
               TVector3 ptosvec2D(secvx-bestvx,secvy-bestvy,0);
               TVector3 secvec2D(d1->px(),d1->py(),0);
               
-              grand_agl[it] = cos(secvec.Angle(ptosvec));
-              grand_agl_abs[it] = secvec.Angle(ptosvec);
-              
-              grand_agl2D[it] = cos(secvec2D.Angle(ptosvec2D));
-              grand_agl2D_abs[it] = secvec2D.Angle(ptosvec2D);
+              if (d1CC->hasUserFloat("alpha3D")) {
+                grand_agl_abs[it] = d1CC->userFloat("alpha3D");
+                grand_agl[it] = cos(grand_agl_abs[it]);
+              } else {
+                grand_agl[it] = cos(secvec.Angle(ptosvec));
+                grand_agl_abs[it] = secvec.Angle(ptosvec);
+              }
+
+              if (d1CC->hasUserFloat("alpha2D")) {
+                grand_agl2D_abs[it] = d1CC->userFloat("alpha2D");
+                grand_agl2D[it] = cos(grand_agl2D_abs[it]);
+              } else {
+                grand_agl2D[it] = cos(secvec2D.Angle(ptosvec2D));
+                grand_agl2D_abs[it] = secvec2D.Angle(ptosvec2D);
+              }
               
               typedef ROOT::Math::SMatrix<double, 3, 3, ROOT::Math::MatRepSym<double, 3> > SMatrixSym3D;
               typedef ROOT::Math::SVector<double, 3> SVector3;
               typedef ROOT::Math::SVector<double, 6> SVector6;
               
-              CC* d1CC = (CC*) d1;
+              // d1CC already set above
 
               grand_dl[it] = d1CC->userFloat("decaylength3D");
               grand_dlos[it] = d1CC->userFloat("decaylengthsignif3D");
               grand_dlerror[it] = grand_dl[it]/grand_dlos[it];
               grand_dlos2D[it] = d1CC->userFloat("decaylengthsignif2D");
+              grand_dl2D[it] = d1CC->userFloat("decaylength2D");
 
           }
 
@@ -1756,6 +1752,36 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
         PATCompositeNtuple->Branch("ephfmQ",&ephfmQ,"ephfmQ[3]/F");
         PATCompositeNtuple->Branch("ephfpSumW",&ephfpSumW,"ephfpSumW/F");
         PATCompositeNtuple->Branch("ephfmSumW",&ephfmSumW,"ephfmSumW/F");
+        PATCompositeNtuple->Branch("ephfmAngleoff",&ephfmAngleoff,"ephfmAngleoff[2]/F");
+        PATCompositeNtuple->Branch("ephfpAngleoff",&ephfpAngleoff,"ephfpAngleoff[2]/F");
+        PATCompositeNtuple->Branch("ephfQ",&ephfQ,"ephfQ[2]/F");
+        PATCompositeNtuple->Branch("ephfSumW",&ephfSumW,"ephfSumW/F");
+
+        // Raw HF +/- (v2,v3)
+        PATCompositeNtuple->Branch("ephfmAngleRaw", &ephfmAngleRaw, "ephfmAngleRaw[2]/F");
+        PATCompositeNtuple->Branch("ephfmsumCosRaw", &ephfmsumCosRaw, "ephfmsumCosRaw[2]/F");
+        PATCompositeNtuple->Branch("ephfmsumSinRaw", &ephfmsumSinRaw, "ephfmsumSinRaw[2]/F");
+        PATCompositeNtuple->Branch("ephfmsumPtOrEt", &ephfmsumPtOrEt, "ephfmsumPtOrEt[2]/F");
+
+        PATCompositeNtuple->Branch("ephfpAngleRaw", &ephfpAngleRaw, "ephfpAngleRaw[2]/F");
+        PATCompositeNtuple->Branch("ephfpsumCosRaw", &ephfpsumCosRaw, "ephfpsumCosRaw[2]/F");
+        PATCompositeNtuple->Branch("ephfpsumSinRaw", &ephfpsumSinRaw, "ephfpsumSinRaw[2]/F");
+        PATCompositeNtuple->Branch("ephfpsumPtOrEt", &ephfpsumPtOrEt, "ephfpsumPtOrEt[2]/F");
+
+        // Track-mid (v2,v3)
+        PATCompositeNtuple->Branch("eptrackmidAngle", &eptrackmidAngle, "eptrackmidAngle[2]/F");
+        PATCompositeNtuple->Branch("eptrackmidQ", &eptrackmidQ, "eptrackmidQ[2]/F");
+        PATCompositeNtuple->Branch("eptrackmidSumW", &eptrackmidSumW, "eptrackmidSumW/F");
+
+        // Full HF (v2,v3): flat(level2), offset(level1), raw(level0)
+        PATCompositeNtuple->Branch("ephfAngle", &ephfAngle, "ephfAngle[2]/F");
+        PATCompositeNtuple->Branch("ephfAngleoff", &ephfAngleoff, "ephfAngleoff[2]/F");
+        PATCompositeNtuple->Branch("ephfAngleRaw", &ephfAngleRaw, "ephfAngleRaw[2]/F");
+        PATCompositeNtuple->Branch("ephfsumCos", &ephfsumCos, "ephfsumCos[2]/F");
+        PATCompositeNtuple->Branch("ephfsumSin", &ephfsumSin, "ephfsumSin[2]/F");
+        PATCompositeNtuple->Branch("ephfsumCosRaw", &ephfsumCosRaw, "ephfsumCosRaw[2]/F");
+        PATCompositeNtuple->Branch("ephfsumSinRaw", &ephfsumSinRaw, "ephfsumSinRaw[2]/F");
+        PATCompositeNtuple->Branch("ephfsumPtOrEt", &ephfsumPtOrEt, "ephfsumPtOrEt[2]/F");
       }
 
       PATCompositeNtuple->Branch("pT",&pt,"pT[candSize]/F");
@@ -1784,9 +1810,6 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
           PATCompositeNtuple->Branch("dca3D",&dca3D,"dca3D[candSize]/F");
           PATCompositeNtuple->Branch("dca3DErr",&dca3DErr,"dca3DErr[candSize]/F");
           PATCompositeNtuple->Branch("dca2D",&dca2D,"dca2D[candSize]/F");
-          PATCompositeNtuple->Branch("matchDeltaR1",&matchDeltaR1,"matchDeltaR1[candSize]/F");
-          PATCompositeNtuple->Branch("matchDeltaR2",&matchDeltaR2,"matchDeltaR2[candSize]/F");
-          PATCompositeNtuple->Branch("matchDeltaR3",&matchDeltaR3,"matchDeltaR3[candSize]/F");
       
           if(doGenMatching_)
           {
@@ -1888,9 +1911,9 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
           if(doGenMatchingTOF_)
           {
             PATCompositeNtuple->Branch("PIDD1",&pid1,"PIDD1[candSize]/I");
-            PATCompositeNtuple->Branch("PIDD2",&pid1,"PIDD2[candSize]/I");
+            PATCompositeNtuple->Branch("PIDD2",&pid2,"PIDD2[candSize]/I");
             PATCompositeNtuple->Branch("TOFD1",&tof1,"TOFD1[candSize]/F");
-            PATCompositeNtuple->Branch("TOFD2",&tof1,"TOFD2[candSize]/F");
+            PATCompositeNtuple->Branch("TOFD2",&tof2,"TOFD2[candSize]/F");
           }
 
           if(twoLayerDecay_)
@@ -1910,6 +1933,7 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
               PATCompositeNtuple->Branch("3DDecayLengthSignificanceDaugther1",&grand_dlos,"3DDecayLengthSignificanceDaugther1[candSize]/F");
               PATCompositeNtuple->Branch("3DDecayLengthDaugther1",&grand_dl,"3DDecayLengthDaugther1[candSize]/F");
               PATCompositeNtuple->Branch("3DDecayLengthErrorDaugther1",&grand_dlerror,"3DDecayLengthErrorDaugther1[candSize]/F");
+              PATCompositeNtuple->Branch("2DDecayLengthDaugther1",&grand_dl2D,"2DDecayLengthDaugther1[candSize]/F");
               PATCompositeNtuple->Branch("2DDecayLengthSignificanceDaugther1",&grand_dlos2D,"2DDecayLengthSignificanceDaugther1[candSize]/F");
               PATCompositeNtuple->Branch("zDCASignificanceDaugther2",&dzos2,"zDCASignificanceDaugther2[candSize]/F");
               PATCompositeNtuple->Branch("xyDCASignificanceDaugther2",&dxyos2,"xyDCASignificanceDaugther2[candSize]/F");
@@ -1918,7 +1942,7 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
               PATCompositeNtuple->Branch("pTD2",&pt2,"pTD2[candSize]/F");
               PATCompositeNtuple->Branch("EtaD2",&eta2,"EtaD2[candSize]/F");
               PATCompositeNtuple->Branch("PhiD2",&phi2,"PhiD2[candSize]/F");
-              PATCompositeNtuple->Branch("pTerrD1",&ptErr2,"pTerrD1[candSize]/F");
+              PATCompositeNtuple->Branch("pTerrD1",&ptErr1,"pTerrD1[candSize]/F");
               PATCompositeNtuple->Branch("pTerrD2",&ptErr2,"pTerrD2[candSize]/F");
               PATCompositeNtuple->Branch("dedxHarmonic2D2",&H2dedx2,"dedxHarmonic2D2[candSize]/F");
               PATCompositeNtuple->Branch("zDCASignificanceGrandDaugther1",&grand_dzos1,"zDCASignificanceGrandDaugther1[candSize]/F");
@@ -1933,8 +1957,12 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
               PATCompositeNtuple->Branch("pTGrandD2",&grand_pt2,"pTGrandD2[candSize]/F");
               PATCompositeNtuple->Branch("pTerrGrandD1",&grand_ptErr1,"pTerrGrandD1[candSize]/F");
               PATCompositeNtuple->Branch("pTerrGrandD2",&grand_ptErr2,"pTerrGrandD2[candSize]/F");
+              PATCompositeNtuple->Branch("massGrandD1",&grand_mass1,"massGrandD1[candSize]/F");
+              PATCompositeNtuple->Branch("massGrandD2",&grand_mass2,"massGrandD2[candSize]/F");
               PATCompositeNtuple->Branch("EtaGrandD1",&grand_eta1,"EtaGrandD1[candSize]/F");
               PATCompositeNtuple->Branch("EtaGrandD2",&grand_eta2,"EtaGrandD2[candSize]/F");
+              PATCompositeNtuple->Branch("PhiGrandD1",&grand_phi1,"PhiGrandD1[candSize]/F");
+              PATCompositeNtuple->Branch("PhiGrandD2",&grand_phi2,"PhiGrandD2[candSize]/F");
               PATCompositeNtuple->Branch("dedxHarmonic2GrandD1",&grand_H2dedx1,"dedxHarmonic2GrandD1[candSize]/F");
               PATCompositeNtuple->Branch("dedxHarmonic2GrandD2",&grand_H2dedx2,"dedxHarmonic2GrandD2[candSize]/F");
           }
@@ -2103,39 +2131,145 @@ void PATCompositeTreeProducer5::processCentralityInfo(const edm::Event& iEvent) 
         Npixel = cent->multiplicityPixel();
         ZDCPlus = cent->zdcSumPlus();
         ZDCMinus = cent->zdcSumMinus();
+        edm::LogPrint("CentralityDebug") << "PATCompositeTreeProducer5 centrality run="
+                                    << iEvent.id().run() << " lumi="
+                                    << iEvent.luminosityBlock() << " event="
+                                    << iEvent.id().event() << " cbin="
+                                    << centrality;
     }
 }
 
 void PATCompositeTreeProducer5::processEventPlaneInfo(const edm::Event& iEvent) {
-    if(isEventPlane_) {
-        edm::Handle<reco::EvtPlaneCollection> eventplanes;
-        iEvent.getByToken(tok_eventplaneSrc_, eventplanes);
-        
-        const reco::EvtPlane & ephfp1 = (*eventplanes)[0];
-        const reco::EvtPlane & ephfm1 = (*eventplanes)[1];
-        const reco::EvtPlane & ephfp2 = (*eventplanes)[6];
-        const reco::EvtPlane & ephfm2 = (*eventplanes)[7];
-        const reco::EvtPlane & ephfp3 = (*eventplanes)[13];
-        const reco::EvtPlane & ephfm3 = (*eventplanes)[14];
-        
-        ephfpAngle[0] = ephfp1.angle(2);
-        ephfpAngle[1] = ephfp2.angle(2);
-        ephfpAngle[2] = ephfp3.angle(2);
-        
-        ephfmAngle[0] = ephfm1.angle(2);
-        ephfmAngle[1] = ephfm2.angle(2);
-        ephfmAngle[2] = ephfm3.angle(2);
-        
-        ephfpQ[0] = ephfp1.q(2);
-        ephfpQ[1] = ephfp2.q(2);
-        ephfpQ[2] = ephfp3.q(2);
-        
-        ephfmQ[0] = ephfm1.q(2);
-        ephfmQ[1] = ephfm2.q(2);
-        ephfmQ[2] = ephfm3.q(2);
-        
-        ephfpSumW = ephfp2.sumw();
-        ephfmSumW = ephfm2.sumw();
+    if(!isEventPlane_) return;
+
+    constexpr float kInvalid = -99.f;
+    auto set3 = [&](float (&arr)[3]) { for (auto& v : arr) v = kInvalid; };
+    auto set2 = [&](float (&arr)[2]) { for (auto& v : arr) v = kInvalid; };
+
+    set3(ephfpAngle);
+    set3(ephfmAngle);
+    set3(ephfpQ);
+    set3(ephfmQ);
+    ephfpSumW = kInvalid;
+    ephfmSumW = kInvalid;
+    set2(ephfmAngleoff);
+    set2(ephfpAngleoff);
+
+    set2(ephfmAngleRaw);
+    set2(ephfmsumCosRaw);
+    set2(ephfmsumSinRaw);
+    set2(ephfmsumPtOrEt);
+
+    set2(ephfpAngleRaw);
+    set2(ephfpsumCosRaw);
+    set2(ephfpsumSinRaw);
+    set2(ephfpsumPtOrEt);
+
+    set2(eptrackmidAngle);
+    set2(eptrackmidQ);
+    eptrackmidSumW = kInvalid;
+
+    set2(ephfAngle);
+    set2(ephfAngleoff);
+    set2(ephfAngleRaw);
+    set2(ephfQ);
+    ephfSumW = kInvalid;
+    set2(ephfsumCos);
+    set2(ephfsumSin);
+    set2(ephfsumCosRaw);
+    set2(ephfsumSinRaw);
+    set2(ephfsumPtOrEt);
+
+    edm::Handle<reco::EvtPlaneCollection> eventplanes;
+    iEvent.getByToken(tok_eventplaneSrc_, eventplanes);
+
+    auto getEp = [&](size_t idx) -> const reco::EvtPlane* {
+      if (!eventplanes.isValid()) return nullptr;
+      if (eventplanes->size() <= idx) return nullptr;
+      return &(*eventplanes)[idx];
+    };
+
+    // Additional branches: raw/off/flat + track-mid, using common hiEvtPlane index layout.
+    const auto* hfMinusV2 = getEp(0);
+    const auto* hfPlusV2 = getEp(1);
+    const auto* hfV2 = getEp(2);
+    const auto* trkMidV2 = getEp(3);
+
+    const auto* hfMinusV3 = getEp(6);
+    const auto* hfPlusV3 = getEp(7);
+    const auto* hfV3 = getEp(8);
+    const auto* trkMidV3 = getEp(9);
+
+    // Legacy branches: keep the same indices/sign-convention as PATCompositeTreeProducer2.cc.
+    // (HF-: 0,6 ; HF+: 1,7 ; "HF" combined: 2,8)
+    if (hfMinusV2) { ephfmAngle[0] = hfMinusV2->angle(2); ephfmQ[0] = hfMinusV2->q(2); }
+    if (hfMinusV3) { ephfmAngle[1] = hfMinusV3->angle(2); ephfmQ[1] = hfMinusV3->q(2); ephfmSumW = hfMinusV3->sumw(); }
+
+    if (hfPlusV2) { ephfpAngle[0] = hfPlusV2->angle(2); ephfpQ[0] = hfPlusV2->q(2); }
+    if (hfPlusV3) { ephfpAngle[1] = hfPlusV3->angle(2); ephfpQ[1] = hfPlusV3->q(2); ephfpSumW = hfPlusV3->sumw(); }
+    if (hfMinusV2) { ephfmAngleoff[0] = hfMinusV2->angle(1); }
+    if (hfMinusV3) { ephfmAngleoff[1] = hfMinusV3->angle(1); }
+    if (hfPlusV2) { ephfpAngleoff[0] = hfPlusV2->angle(1); }
+    if (hfPlusV3) { ephfpAngleoff[1] = hfPlusV3->angle(1); }
+
+    if (hfMinusV2) {
+      ephfmAngleRaw[0] = hfMinusV2->angle(0);
+      ephfmsumCosRaw[0] = hfMinusV2->sumCos(0);
+      ephfmsumSinRaw[0] = hfMinusV2->sumSin(0);
+      ephfmsumPtOrEt[0] = hfMinusV2->sumPtOrEt();
+    }
+    if (hfMinusV3) {
+      ephfmAngleRaw[1] = hfMinusV3->angle(0);
+      ephfmsumCosRaw[1] = hfMinusV3->sumCos(0);
+      ephfmsumSinRaw[1] = hfMinusV3->sumSin(0);
+      ephfmsumPtOrEt[1] = hfMinusV3->sumPtOrEt();
+    }
+
+    if (hfPlusV2) {
+      ephfpAngleRaw[0] = hfPlusV2->angle(0);
+      ephfpsumCosRaw[0] = hfPlusV2->sumCos(0);
+      ephfpsumSinRaw[0] = hfPlusV2->sumSin(0);
+      ephfpsumPtOrEt[0] = hfPlusV2->sumPtOrEt();
+    }
+    if (hfPlusV3) {
+      ephfpAngleRaw[1] = hfPlusV3->angle(0);
+      ephfpsumCosRaw[1] = hfPlusV3->sumCos(0);
+      ephfpsumSinRaw[1] = hfPlusV3->sumSin(0);
+      ephfpsumPtOrEt[1] = hfPlusV3->sumPtOrEt();
+    }
+
+    if (trkMidV2) {
+      eptrackmidAngle[0] = trkMidV2->angle(2);
+      eptrackmidQ[0] = trkMidV2->q(2);
+      eptrackmidSumW = trkMidV2->sumw();
+    }
+    if (trkMidV3) {
+      eptrackmidAngle[1] = trkMidV3->angle(2);
+      eptrackmidQ[1] = trkMidV3->q(2);
+    }
+
+    if (hfV2) {
+      ephfAngle[0] = hfV2->angle(2);
+      ephfAngleoff[0] = hfV2->angle(1);
+      ephfAngleRaw[0] = hfV2->angle(0);
+      ephfQ[0] = hfV2->q(2);
+      ephfsumCos[0] = hfV2->sumCos(2);
+      ephfsumSin[0] = hfV2->sumSin(2);
+      ephfsumCosRaw[0] = hfV2->sumCos(0);
+      ephfsumSinRaw[0] = hfV2->sumSin(0);
+      ephfsumPtOrEt[0] = hfV2->sumPtOrEt();
+    }
+    if (hfV3) {
+      ephfAngle[1] = hfV3->angle(2);
+      ephfAngleoff[1] = hfV3->angle(1);
+      ephfAngleRaw[1] = hfV3->angle(0);
+      ephfQ[1] = hfV3->q(2);
+      ephfSumW = hfV3->sumw();
+      ephfsumCos[1] = hfV3->sumCos(2);
+      ephfsumSin[1] = hfV3->sumSin(2);
+      ephfsumCosRaw[1] = hfV3->sumCos(0);
+      ephfsumSinRaw[1] = hfV3->sumSin(0);
+      ephfsumPtOrEt[1] = hfV3->sumPtOrEt();
     }
 }
 

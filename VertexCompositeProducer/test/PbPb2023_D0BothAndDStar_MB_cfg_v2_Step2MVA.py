@@ -1,4 +1,5 @@
 import FWCore.ParameterSet.Config as cms
+import FWCore.PythonUtilities.LumiList as LumiList
 from Configuration.StandardSequences.Eras import eras
 process = cms.Process('ANASKIM', eras.Run3_2023)
 
@@ -9,9 +10,9 @@ process.load('Configuration.StandardSequences.Reconstruction_Data_cff')
 
 # Limit the output messages
 process.load('FWCore.MessageService.MessageLogger_cfi')
-process.MessageLogger.cerr.FwkReport.reportEvery = 10
-process.MessageLogger.cerr.threshold = "DEBUG"
-process.MessageLogger.debugModules=["*"]
+# process.MessageLogger.cerr.FwkReport.reportEvery = 1000
+# process.MessageLogger.cerr.threshold = "DEBUG"
+# process.MessageLogger.debugModules=["*"]
 #process.MessageLogger.cerr.threshold = cms.untracked.string('DEBUG')
 process.MessageLogger.cerr.DStarDebug = cms.untracked.PSet(
       limit = cms.untracked.int32(-1)
@@ -27,6 +28,12 @@ process.MessageLogger.cerr.DStarDecayFilter = cms.untracked.PSet(
 process.MessageLogger.cerr.PATCompositeTreeProducer = cms.untracked.PSet(
       limit = cms.untracked.int32(-1)
   )
+# Suppress CentralityDebug LogPrint messages.
+process.MessageLogger.suppressInfo = cms.untracked.vstring('CentralityDebug')
+process.MessageLogger.cerr.CentralityDebug = cms.untracked.PSet(limit=cms.untracked.int32(0))
+#process.MessageLogger.cerr.CentralityDebug = cms.untracked.PSet(
+#      limit = cms.untracked.int32(-1)
+#  )
 process.options = cms.untracked.PSet(wantSummary = cms.untracked.bool(True))
 process.FastTimerService = cms.Service("FastTimerService",
                                        printEventSummary = cms.untracked.bool(True),
@@ -37,11 +44,16 @@ process.FastTimerService = cms.Service("FastTimerService",
 
 # Define the input source
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring("file:/eos/cms/store/group/phys_heavyions/dileptons/Data2023/MINIAOD/HIPhysicsRawPrime0/Run375064/7ed5766f-6b1d-415e-8916-e62825a6347f.root"),
+    fileNames = cms.untracked.vstring("/store/hidata/HIRun2023A/HIPhysicsRawPrime0/MINIAOD/PromptReco-v2/000/375/823/00000/026d63e3-9ac6-43b1-adfb-a798c7987ca4.root","/store/hidata/HIRun2023A/HIPhysicsRawPrime0/MINIAOD/PromptReco-v2/000/375/823/00000/04596b09-c3e4-4401-84aa-9675b308f5c2.root"),
     #fileNames = cms.untracked.vstring("file:step4.root"),
     #fileNames = cms.untracked.vstring("/store/user/junseok/Genproduction/RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_081924_v1/DStarKpipiPU/crab_RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_081924_v1/240819_054039/0001/step4_1619.root"),
 )
-process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(10000))
+process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
+# Quick local timing estimate: set this to a small positive number (e.g. 200).
+timingEvents = 10000
+if timingEvents > 0:
+    process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(timingEvents))
+process.source.lumisToProcess = LumiList.LumiList(filename = '/eos/user/c/cmsdqm/www/CAF/certification/Collisions23HI/Cert_Collisions2023HI_374288_375823_Golden.json').getVLuminosityBlockRange()
 
 # Set the global tag
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
@@ -133,17 +145,18 @@ process.generalD0CandidatesNew.lVtxCut = cms.double(0.0)
 process.generalD0CandidatesNew.vtxSignificance2DCut = cms.double(0.0)
 process.generalD0CandidatesNew.vtxSignificance3DCut = cms.double(3.0)
 process.generalD0CandidatesNew.d0MassCut = cms.double(0.14)
-process.generalD0CandidatesNew.d0AbsYCut = cms.double(1.2)
+process.generalD0CandidatesNew.d0AbsYCut = cms.double(1.8)
 process.generalD0CandidatesNew.dPtCut = cms.double(0.0)
 
 process.generalD0CandidatesNew.useAnyMVA = cms.bool(True)
-process.generalD0CandidatesNew.mvaCut = cms.double(-1)
+process.generalD0CandidatesNew.mvaCut = cms.double(0.9)
 # process.generalD0CandidatesNew.GBRForestLabel = cms.string('D0InPbPbXGB')
 # #process.generalD0CandidatesNew.GBRForestFileName = cms.string('GBRForestfile_XGBDT_PromptD0InPbPb_15Params_v1_08Mar.root')
 # process.generalD0CandidatesNew.GBRForestFileName = cms.string('GBRForestfile_XGBDT_PromptD0InPbPb_pT_y_cBIN_19Params_v1_25Mar.root')
-process.generalD0CandidatesNew.input_names = cms.vstring('input')
+process.generalD0CandidatesNew.input_names = cms.vstring('float_input')
 process.generalD0CandidatesNew.output_names = cms.vstring('probabilities')
-process.generalD0CandidatesNew.onnxModelFileName = cms.string("XGBoost_Model_0428_0_OnlyPrompt.onnx")
+# process.generalD0CandidatesNew.onnxModelFileName = cms.string("Xgboost_woCent_y_01Dec25.onnx")
+process.generalD0CandidatesNew.onnxModelFileName = cms.string("Xgboost_new_16Jan01.onnx")
 
 process.generalD0CandidatesNew.mPiKCutMin = cms.double(1.70)
 process.generalD0CandidatesNew.mPiKCutMax = cms.double(2.00)
@@ -163,7 +176,7 @@ process.generalDStarCandidatesNew.VtxChiProbCut = cms.double(0.00)
 #process.generalDStarCandidatesNew.alpha2DCut = cms.double(1)
 process.generalDStarCandidatesNew.dauLongImpactSigCut = cms.double(0.0)
 process.generalDStarCandidatesNew.dauTransImpactSigCut = cms.double(0.0)# it will be cut of by 3 in selector 
-process.generalDStarCandidatesNew.dPtCut = cms.double(0.0)
+process.generalDStarCandidatesNew.dPtCut = cms.double(4.5)
 # process.generalDStarCandidatesNew.useAnyMVA=cms.bool(True)
 # process.generalDStarCandidatesNew.GBRForestFileName=cms.string('GBRForestfile_XGBDT_PromptDstarInPbPb_default_MB_OnlyMC.root')
 
@@ -208,15 +221,27 @@ process.eventplane.VertexCompositeCollection= cms.untracked.InputTag("generalDSt
 #process.d0ana_wrongsign_newreduced.MVACollection = cms.InputTag("d0selectorWSNewReduced:MVAValuesNewD0")
 #process.d0ana_wrongsign_newreduced.DCAValCollection = cms.InputTag("d0selectorWSNewReduced:DCAValuesNewD0")
 #process.d0ana_wrongsign_newreduced.DCAErrCollection = cms.InputTag("d0selectorWSNewReduced:DCAErrorsNewD0")
+process.d0candCountFilter = cms.EDFilter("CandViewCountFilter",
+    src = cms.InputTag("generalD0CandidatesNew", "D0"),
+    minNumber = cms.uint32(1),
+)
 
 
 
-process.dStarAna_step = cms.Path( process.eventFilter_HM * process.generalD0CandidatesNew* process.generalDStarCandidatesNew  *process.dStarana*process.eventplane)
+process.dStarAna_step = cms.Path( 
+    process.eventFilter_HM 
+    * process.generalD0CandidatesNew
+    * process.generalDStarCandidatesNew
+    * process.d0ana_newreduced  
+    * process.d0candCountFilter
+    * process.dStarana
+    * process.eventplane)
+#process.dStarAna_step = cms.Path( process.eventFilter_HM * process.generalD0CandidatesNew* process.generalDStarCandidatesNew*process.d0ana_newreduced*process.dStarana)
 # process.dStarAna_step = cms.Path( process.eventFilter_HM * process.generalD0CandidatesNew* process.d0ana_newreduced * process.eventplane)
 # process.dStarAna_step = cms.Path( process.eventFilter_HM * process.generalD0CandidatesNew* process.d0ana_newreduced)
 
-# eventinfoana must be in EndPath, and process.eventinfoana.selectEvents must be the name of eventFilter_HM Path
-process.eventinfoana.selectEvents = cms.untracked.string('eventFilter_HM_step')
+# eventinfoana must be in EndPath, and process.eventinfoana.selectEvents must be the name of a Path
+process.eventinfoana.selectEvents = cms.untracked.string('dStarAna_step')
 process.eventinfoana.triggerPathNames = cms.untracked.vstring(
     "HLT_HIMinimumBiasHF1AND_v*", #24
     "HLT_HIMinimumBiasHF1ANDZDC2nOR_v", #25
@@ -255,7 +280,7 @@ for P in eventFilterPaths:
     process.schedule.insert(0, P)
 
 changeToMiniAOD(process)
-process.options.numberOfThreads = 1
+process.options.numberOfThreads = 10
 
 #process.output = cms.OutputModule("PoolOutputModule",
 #    outputCommands = cms.untracked.vstring("keep *_*_*_ANASKIM"),

@@ -135,6 +135,7 @@ class DStarFitter {
   double collinCut2D;
   double collinCut3D;
   double dStarMassCut;
+  double dStarAbsYCut;
   double d0MassCut;
   double dauTransImpactSigCut;
   double dauLongImpactSigCut;

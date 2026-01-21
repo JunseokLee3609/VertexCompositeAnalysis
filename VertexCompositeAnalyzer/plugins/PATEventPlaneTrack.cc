@@ -73,9 +73,9 @@
 #define MAXTRG 1024
 #define MAXSEL 100
 
-typedef ROOT::Math::SMatrix<double, 3, 3, ROOT::Math::MatRepSym<double, 3> > SMatrixSym3D;
-typedef ROOT::Math::SVector<double, 3> SVector3;
-typedef ROOT::Math::SVector<double, 6> SVector6;
+typedef ROOT::Math::SMatrix<float, 3, 3, ROOT::Math::MatRepSym<float, 3> > SMatrixSym3D;
+typedef ROOT::Math::SVector<float, 3> SVector3;
+typedef ROOT::Math::SVector<float, 6> SVector6;
 
 
 //
@@ -134,21 +134,21 @@ private:
   float bestvyError;
   float bestvzError;
 
-  Double_t trkQx;
-  Double_t trkQy;
-  Double_t all_trkQx;
-  Double_t all_trkQy;
-  Double_t trkQx_forw;
-  Double_t trkQy_forw;
-  Double_t trkQx_afterw;
-  Double_t trkQy_afterw;
+  Float_t trkQx;
+  Float_t trkQy;
+  Float_t all_trkQx;
+  Float_t all_trkQy;
+  Float_t trkQx_forw;
+  Float_t trkQy_forw;
+  Float_t trkQx_afterw;
+  Float_t trkQy_afterw;
 
-  Double_t trkQx_v3;
-  Double_t trkQy_v3;
-  Double_t trkQx_v3_forw;
-  Double_t trkQy_v3_forw;
-  Double_t trkQx_v3_afterw;
-  Double_t trkQy_v3_afterw;
+  Float_t trkQx_v3;
+  Float_t trkQy_v3;
+  Float_t trkQx_v3_forw;
+  Float_t trkQy_v3_forw;
+  Float_t trkQx_v3_afterw;
+  Float_t trkQy_v3_afterw;
 
   //int nmuons = 0;
   bool isCentrality_;
@@ -185,9 +185,9 @@ private:
   edm::EDGetTokenT<int> tok_centBinLabel_;
   edm::EDGetTokenT<reco::Centrality> tok_centSrc_;
  
-  std::vector<double> dauEta;
-  std::vector<double> dauPhi;
-  std::vector<double> dauPt;
+  std::vector<float> dauEta;
+  std::vector<float> dauPhi;
+  std::vector<float> dauPt;
 
   void collectFinalStateDaughters(const reco::Candidate& cand);
 
@@ -255,9 +255,9 @@ PATEventPlaneTrack::collectFinalStateDaughters(const reco::Candidate& cand)
   {
     if(cand.charge()==0) return; // skip neutral leaves
     const reco::Track* bestTrack = cand.bestTrack();
-    const double eta = (bestTrack ? bestTrack->eta() : cand.eta());
-    const double phi = (bestTrack ? bestTrack->phi() : cand.phi());
-    const double pt  = (bestTrack ? bestTrack->pt()  : cand.pt());
+    const float eta = (bestTrack ? bestTrack->eta() : cand.eta());
+    const float phi = (bestTrack ? bestTrack->phi() : cand.phi());
+    const float pt  = (bestTrack ? bestTrack->pt()  : cand.pt());
     dauEta.push_back(eta);
     dauPhi.push_back(phi);
     dauPt.push_back(pt);
@@ -351,36 +351,36 @@ PATEventPlaneTrack::fillRECO(const edm::Event& iEvent, const edm::EventSetup& iS
   //nmuons += dauEta.size();
   
   //track info
-  double trkqx = 0;
-  double trkqy = 0;
-  double trkPt = 0;
+  float trkqx = 0;
+  float trkqy = 0;
+  float trkPt = 0;
   trkQx = -1;
   trkQy = -1;
-  double all_trkqx= 0;
-  double all_trkqy = 0;
-  double all_trkPt = 0;
+  float all_trkqx= 0;
+  float all_trkqy = 0;
+  float all_trkPt = 0;
   all_trkQx = -1;
   all_trkQy = -1;
 
   bool DauTrk = false;
 
-  double trkPt_forw = 0;
-  double trkPt_afterw = 0;
-  double trkqx_forw = 0;
-  double trkqy_forw = 0;
-  double trkqx_afterw = 0;
-  double trkqy_afterw = 0;
+  float trkPt_forw = 0;
+  float trkPt_afterw = 0;
+  float trkqx_forw = 0;
+  float trkqy_forw = 0;
+  float trkqx_afterw = 0;
+  float trkqy_afterw = 0;
   trkQx_forw = -1;
   trkQy_forw = -1;
   trkQx_afterw = -1;
   trkQy_afterw = -1;
 
-  double trkqx_v3 = 0;
-  double trkqy_v3 = 0;
-  double trkqx_v3_forw = 0;
-  double trkqy_v3_forw = 0;
-  double trkqx_v3_afterw = 0;
-  double trkqy_v3_afterw = 0;
+  float trkqx_v3 = 0;
+  float trkqy_v3 = 0;
+  float trkqx_v3_forw = 0;
+  float trkqy_v3_forw = 0;
+  float trkqx_v3_afterw = 0;
+  float trkqy_v3_afterw = 0;
   trkQx_v3 = -1;
   trkQy_v3 = -1;
   trkQx_v3_forw = -1;
@@ -391,13 +391,14 @@ PATEventPlaneTrack::fillRECO(const edm::Event& iEvent, const edm::EventSetup& iS
 
   uint subt = 0;
   for(unsigned it=0; it<trackColl->size(); ++it){
+
 	DauTrk = false;
 	reco::TrackRef track(trackColl, it);
 
-	double dzvtx = track->dz(bestvtx);
-        double dxyvtx = track->dxy(bestvtx);
-        double dzerror = sqrt(track->dzError()*track->dzError()+bestvzError*bestvzError);
-        double dxyerror = sqrt(track->d0Error()*track->d0Error()+bestvxError*bestvyError);
+	float dzvtx = track->dz(bestvtx);
+        float dxyvtx = track->dxy(bestvtx);
+        float dzerror = sqrt(track->dzError()*track->dzError()+bestvzError*bestvzError);
+        float dxyerror = sqrt(track->d0Error()*track->d0Error()+bestvxError*bestvyError);
         
         if(!track->quality(reco::TrackBase::highPurity)) continue;
         if(fabs(track->ptError())/track->pt()>0.10) continue;
@@ -409,20 +410,21 @@ PATEventPlaneTrack::fillRECO(const edm::Event& iEvent, const edm::EventSetup& iS
 	htrkpt->Fill(track->pt());
 	htrketa->Fill(track->eta());
 	  
-	double pt  = track->pt();
-	double phi = track->phi();
-	double eta = track->eta();
+	float pt  = track->pt();
+	float phi = track->phi();
+	float eta = track->eta();
 
     	all_trkqx += pt*cos(2*phi);
     	all_trkqy += pt*sin(2*phi);
     	all_trkPt += pt;
+      
 
     	for (unsigned i=0; i<dauEta.size(); ++i)
     	{
             if( abs(dauEta[i] - eta) < 1.E-3 && abs(reco::deltaPhi(dauPhi[i], phi)) < 1.E-3) DauTrk = true; 
-	    double deltaEta = std::abs(dauEta[i] - eta);
-    	    double deltaPhi = std::abs(reco::deltaPhi(dauPhi[i], phi));
-	    double deltaPt = std::abs(dauPt[i] - pt) / pt;
+	    float deltaEta = std::abs(dauEta[i] - eta);
+    	    float deltaPhi = std::abs(reco::deltaPhi(dauPhi[i], phi));
+	    float deltaPt = std::abs(dauPt[i] - pt) / pt;
 	    hdeltaEta->Fill(deltaEta);
 	    hdeltaPhi->Fill(deltaPhi);
 	    hdeltaPt->Fill(deltaPt);
@@ -461,6 +463,7 @@ PATEventPlaneTrack::fillRECO(const edm::Event& iEvent, const edm::EventSetup& iS
 	}
 
   }
+  
   trkQx = trkqx/trkPt;
   trkQy = trkqy/trkPt;
   all_trkQx = all_trkqx/all_trkPt;
@@ -518,20 +521,20 @@ PATEventPlaneTrack::initTree()
       PATEventPlaneNtuple->Branch("NtrkHP",&NtrkHP,"NtrkHP/I");
     }
     
-    PATEventPlaneNtuple->Branch("trkQx",&trkQx,"trkQx/D");
-    PATEventPlaneNtuple->Branch("trkQy",&trkQy,"trkQy/D");
-    PATEventPlaneNtuple->Branch("all_trkQx",&all_trkQx,"all_trkQx/D");
-    PATEventPlaneNtuple->Branch("all_trkQy",&all_trkQy,"all_trkQy/D");
-    PATEventPlaneNtuple->Branch("trkQx_forw",&trkQx_forw,"trkQx_forw/D");
-    PATEventPlaneNtuple->Branch("trkQy_forw",&trkQy_forw,"trkQy_forw/D");
-    PATEventPlaneNtuple->Branch("trkQx_afterw",&trkQx_afterw,"trkQx_afterw/D");
-    PATEventPlaneNtuple->Branch("trkQy_afterw",&trkQy_afterw,"trkQy_afterw/D");
-    PATEventPlaneNtuple->Branch("trkQx_v3",&trkQx_v3,"trkQx_v3/D");
-    PATEventPlaneNtuple->Branch("trkQy_v3",&trkQy_v3,"trkQy_v3/D");
-    PATEventPlaneNtuple->Branch("trkQx_v3_forw",&trkQx_v3_forw,"trkQx_v3_forw/D");
-    PATEventPlaneNtuple->Branch("trkQy_v3_forw",&trkQy_v3_forw,"trkQy_v3_forw/D");
-    PATEventPlaneNtuple->Branch("trkQx_v3_afterw",&trkQx_v3_afterw,"trkQx_v3_afterw/D");
-    PATEventPlaneNtuple->Branch("trkQy_v3_afterw",&trkQy_v3_afterw,"trkQy_v3_afterw/D");
+    PATEventPlaneNtuple->Branch("trkQx",&trkQx,"trkQx/F");
+    PATEventPlaneNtuple->Branch("trkQy",&trkQy,"trkQy/F");
+    PATEventPlaneNtuple->Branch("all_trkQx",&all_trkQx,"all_trkQx/F");
+    PATEventPlaneNtuple->Branch("all_trkQy",&all_trkQy,"all_trkQy/F");
+    PATEventPlaneNtuple->Branch("trkQx_forw",&trkQx_forw,"trkQx_forw/F");
+    PATEventPlaneNtuple->Branch("trkQy_forw",&trkQy_forw,"trkQy_forw/F");
+    PATEventPlaneNtuple->Branch("trkQx_afterw",&trkQx_afterw,"trkQx_afterw/F");
+    PATEventPlaneNtuple->Branch("trkQy_afterw",&trkQy_afterw,"trkQy_afterw/F");
+    PATEventPlaneNtuple->Branch("trkQx_v3",&trkQx_v3,"trkQx_v3/F");
+    PATEventPlaneNtuple->Branch("trkQy_v3",&trkQy_v3,"trkQy_v3/F");
+    PATEventPlaneNtuple->Branch("trkQx_v3_forw",&trkQx_v3_forw,"trkQx_v3_forw/F");
+    PATEventPlaneNtuple->Branch("trkQy_v3_forw",&trkQy_v3_forw,"trkQy_v3_forw/F");
+    PATEventPlaneNtuple->Branch("trkQx_v3_afterw",&trkQx_v3_afterw,"trkQx_v3_afterw/F");
+    PATEventPlaneNtuple->Branch("trkQy_v3_afterw",&trkQy_v3_afterw,"trkQy_v3_afterw/F");
 
   } // doRecoNtuple_
 

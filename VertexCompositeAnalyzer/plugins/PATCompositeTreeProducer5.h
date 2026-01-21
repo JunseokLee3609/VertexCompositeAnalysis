@@ -295,6 +295,36 @@ private:
     float ephfmQ[3];
     float ephfpSumW;
     float ephfmSumW;
+    float ephfmAngleoff[2];
+    float ephfpAngleoff[2];
+
+    // Additional event-plane info (raw/off/flat + track-mid), following common hiEvtPlane index layout:
+    //  v2: HF- [0], HF+ [1], HF [2], trkMid [3]
+    //  v3: HF- [6], HF+ [7], HF [8], trkMid [9]
+    float ephfmAngleRaw[2];
+    float ephfmsumCosRaw[2];
+    float ephfmsumSinRaw[2];
+    float ephfmsumPtOrEt[2];
+
+    float ephfpAngleRaw[2];
+    float ephfpsumCosRaw[2];
+    float ephfpsumSinRaw[2];
+    float ephfpsumPtOrEt[2];
+
+    float eptrackmidAngle[2];
+    float eptrackmidQ[2];
+    float eptrackmidSumW;
+
+    float ephfAngle[2];
+    float ephfAngleoff[2];
+    float ephfAngleRaw[2];
+    float ephfQ[2];
+    float ephfSumW;
+    float ephfsumCos[2];
+    float ephfsumSin[2];
+    float ephfsumCosRaw[2];
+    float ephfsumSinRaw[2];
+    float ephfsumPtOrEt[2];
     
     //Composite candidate info
     float mva[MAXCAN];
@@ -344,6 +374,7 @@ private:
     float grand_agl2D[MAXCAN];
     float grand_agl2D_abs[MAXCAN];
     float grand_dlos2D[MAXCAN];
+    float grand_dl2D[MAXCAN];
 
     //dau info
     float dzos1[MAXCAN];
@@ -374,9 +405,6 @@ private:
     int pid1[MAXCAN];
     int pid2[MAXCAN];
     int pid3[MAXCAN];
-    float matchDeltaR1[MAXCAN];
-    float matchDeltaR2[MAXCAN];
-    float matchDeltaR3[MAXCAN];
     float tof1[MAXCAN];
     float tof2[MAXCAN];
     float H2dedx1[MAXCAN];
@@ -399,10 +427,14 @@ private:
     float grand_pt2[MAXCAN];
     float grand_ptErr1[MAXCAN];
     float grand_ptErr2[MAXCAN];
+    float grand_mass1[MAXCAN];
+    float grand_mass2[MAXCAN];
     float grand_p1[MAXCAN];
     float grand_p2[MAXCAN];
     float grand_eta1[MAXCAN];
     float grand_eta2[MAXCAN];
+    float grand_phi1[MAXCAN];
+    float grand_phi2[MAXCAN];
     int grand_charge1[MAXCAN];
     int grand_charge2[MAXCAN];
     float grand_H2dedx1[MAXCAN];

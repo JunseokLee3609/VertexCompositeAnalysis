@@ -38,7 +38,7 @@ dStarana = cms.EDAnalyzer('PATCompositeTreeProducer5',
   isSkimMVA = cms.untracked.bool(False),
   MVACollection = cms.InputTag("generalD0CandidatesNew:MVAValues"),
 
-  isCentrality = cms.bool(False),
+  isCentrality = cms.bool(True),
   centralityBinLabel = cms.InputTag("centralityBin","HFtowers"),
   centralitySrc = cms.InputTag("hiCentrality")
                               )
@@ -76,10 +76,12 @@ dStarana_mc = cms.EDAnalyzer('PATCompositeTreeProducer5',
   yBins = cms.untracked.vdouble(-2.4,-1.0,0.0,1.0,2.4),
 
   useAnyMVA = cms.bool(False),
+  isEventPlane =cms.bool(True),
+  eventplaneSrc = cms.InputTag("hiEvtPlaneFlat"),
   isSkimMVA = cms.untracked.bool(False),
   MVACollection = cms.InputTag("generalD0CandidatesNew:MVAValues"),
 
-  isCentrality = cms.bool(False),
+  isCentrality = cms.bool(True),
   centralityBinLabel = cms.InputTag("centralityBin","HFtowers"),
   centralitySrc = cms.InputTag("hiCentrality")
                               )

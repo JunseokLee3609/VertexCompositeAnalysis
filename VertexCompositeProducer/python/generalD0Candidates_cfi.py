@@ -51,6 +51,35 @@ generalD0Candidates = cms.EDProducer("D0Producer",
     GBRForestFileName = cms.string('GBRForestfile.root'),
     onnxModelFileName = cms.string('ONNXModel.onnx'),
     input_names = cms.vstring('input'),
-    output_names = cms.vstring('probabilities')
+    output_names = cms.vstring('probabilities'),
+
+    # Feature order must match the ONNX model training.
+    # f0..f16:
+    # pT, y, VtxProb,
+    # 3DCosPointingAngle, 3DPointingAngle,
+    # 2DCosPointingAngle, 2DPointingAngle,
+    # 3DDecayLength, 3DDecayLengthSignificance,
+    # 2DDecayLength, 2DDecayLengthSignificance,
+    # pTD1, EtaD1, pTD2, EtaD2,
+    # Trk3DDCA, dEta_dau(=EtaD1-EtaD2)
+    onnxFeatureNames = cms.vstring(
+        'pT',
+        'y',
+        'VtxProb',
+        '3DCosPointingAngle',
+        '3DPointingAngle',
+        '2DCosPointingAngle',
+        '2DPointingAngle',
+        '3DDecayLength',
+        '3DDecayLengthSignificance',
+        '2DDecayLength',
+        '2DDecayLengthSignificance',
+        'pTD1',
+        'EtaD1',
+        'pTD2',
+        'EtaD2',
+        'Trk3DDCA',
+        'dEta_dau',
+    )
 
 )
