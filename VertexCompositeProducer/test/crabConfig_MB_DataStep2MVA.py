@@ -5,7 +5,7 @@ config = Configuration()
 config.section_("General")
 #config.General.requestName = "Ntuplizer_test_AOD_Z_Run2018HI_Data"
 #config.General.requestName = "DStarAna_Data_Step2MVA_HIPhysicsRawPrime0_7_wEvtplane_CMSSW_13_2_13_MVA0p9_18Jan26_v2"
-config.General.requestName = "DStarAna_Data_Step2MVA_HIPhysicsRawPrime8_15_wEvtplane_CMSSW_13_2_13_MVA0p9_18Jan26_v2"
+config.General.requestName = "DStarAna_Data_Step2MVA_HIPhysicsRawPrime16_23_wEvtplane_CMSSW_13_2_13_MVA0p9_18Jan26_v2"
 config.General.workArea = 'crab_projects'
 config.General.transferLogs = True
 
@@ -21,7 +21,7 @@ config.JobType.maxJobRuntimeMin = 2750    # request longer runtime, ~48 hours.
 config.section_("Data")
 #config.Data.inputDataset = '/HIDoubleMuon/HIRun2018A-04Apr2019-v1/AOD'
 #config.Data.inputDataset = '/HIPhysicsRawPrime1/HIRun2023A-PromptReco-v2/MINIAOD'
-config.Data.userInputFiles = open('files2023MB8_15.txt').readlines()
+config.Data.userInputFiles = open('files2023MB16_23.txt').readlines()
 #config.Data.runRange = '374288-375823'
 
 #config.Data.inputDataset = '/DStarKpipiPU/junseok-crab_RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_082724_v1-e7a893e470c0a14923ed410f031778e3/USER'
