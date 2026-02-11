@@ -260,9 +260,17 @@ PATCompositeTreeProducer5::PATCompositeTreeProducer5(const edm::ParameterSet& iC
 
     isEventPlane_ = false;
     if(iConfig.exists("isEventPlane")) isEventPlane_ = iConfig.getParameter<bool>("isEventPlane");
+    compareEventPlane_ = false;
     if(isEventPlane_)
     {
       tok_eventplaneSrc_ = consumes<reco::EvtPlaneCollection>(iConfig.getParameter<edm::InputTag>("eventplaneSrc"));
+      if (iConfig.exists("eventplaneSrcRecalc")) {
+        const auto recalcTag = iConfig.getParameter<edm::InputTag>("eventplaneSrcRecalc");
+        if (!recalcTag.label().empty()) {
+          tok_eventplaneSrcRecalc_ = consumes<reco::EvtPlaneCollection>(recalcTag);
+          compareEventPlane_ = true;
+        }
+      }
     }
 
     if(useAnyMVA_ && iConfig.exists("MVACollection"))
@@ -755,8 +763,28 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
                   genDecayLength(*theGenP, matchGen_D1decayLength2D_[it], matchGen_D1decayLength3D_[it], matchGen_D1angle2D_[it], matchGen_D1angle3D_[it] );
                   getAncestorId(*theGenP, matchGen_D1ancestorId_[it], matchGen_D1ancestorFlavor_[it] );
 
-                  const auto* genDau0 = theGenP->daughter(0);
-                  const auto* genDau1 = theGenP->daughter(1);
+                  const reco::Candidate* genDau0 = nullptr;
+                  const reco::Candidate* genDau1 = nullptr;
+                  const auto matchedIdxs = findDaughterPermutation(*theGenP, false);
+                  if (matchedIdxs.size() == 2) {
+                    genDau0 = theGenP->daughter(matchedIdxs[0]);  // PID_dau1_ (usually K)
+                    genDau1 = theGenP->daughter(matchedIdxs[1]);  // PID_dau2_ (usually pi)
+                  } else {
+                    // Fallback: pick first two non-gamma daughters to avoid FSR gamma assignment.
+                    for (size_t idau = 0; idau < theGenP->numberOfDaughters(); ++idau) {
+                      const auto* dau = theGenP->daughter(idau);
+                      if (!dau || std::abs(dau->pdgId()) == 22) continue;
+                      if (!genDau0) genDau0 = dau;
+                      else if (!genDau1) {
+                        genDau1 = dau;
+                        break;
+                      }
+                    }
+                  }
+                  if (!genDau0 || !genDau1) {
+                    edm::LogWarning("GenMatching") << "Single-layer matched candidate has insufficient non-gamma daughters";
+                    break;
+                  }
 
                   matchGen_D0Dau1_pT_[it] = genDau0->pt();
                   matchGen_D0Dau1_eta_[it] = genDau0->eta();
@@ -938,7 +966,7 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
               double dzbest1 = dau1->dz(bestvtx);
               double dxybest1 = dau1->dxy(bestvtx);
               double dzerror1 = sqrt(dau1->dzError()*dau1->dzError()+bestvzError*bestvzError);
-              double dxyerror1 = sqrt(dau1->d0Error()*dau1->d0Error()+bestvxError*bestvyError);
+              double dxyerror1 = sqrt(dau1->d0Error()*dau1->d0Error()+bestvxError*bestvxError+bestvyError*bestvyError);
               
               dzos1[it] = dzbest1/dzerror1;
               dxyos1[it] = dxybest1/dxyerror1;
@@ -977,7 +1005,7 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
           double dzbest2 = dau2->dz(bestvtx);
           double dxybest2 = dau2->dxy(bestvtx);
           double dzerror2 = sqrt(dau2->dzError()*dau2->dzError()+bestvzError*bestvzError);
-          double dxyerror2 = sqrt(dau2->d0Error()*dau2->d0Error()+bestvxError*bestvyError);
+          double dxyerror2 = sqrt(dau2->d0Error()*dau2->d0Error()+bestvxError*bestvxError+bestvyError*bestvyError);
           
           dzos2[it] = dzbest2/dzerror2;
           dxyos2[it] = dxybest2/dxyerror2;
@@ -1292,7 +1320,7 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
               double gdzbest1 = gdau1->dz(bestvtx);
               double gdxybest1 = gdau1->dxy(bestvtx);
               double gdzerror1 = sqrt(gdau1->dzError()*gdau1->dzError()+bestvzError*bestvzError);
-              double gdxyerror1 = sqrt(gdau1->d0Error()*gdau1->d0Error()+bestvxError*bestvyError);
+              double gdxyerror1 = sqrt(gdau1->d0Error()*gdau1->d0Error()+bestvxError*bestvxError+bestvyError*bestvyError);
               
               grand_dzos1[it] = gdzbest1/gdzerror1;
               grand_dxyos1[it] = gdxybest1/gdxyerror1;
@@ -1300,7 +1328,7 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
               double gdzbest2 = gdau2->dz(bestvtx);
               double gdxybest2 = gdau2->dxy(bestvtx);
               double gdzerror2 = sqrt(gdau2->dzError()*gdau2->dzError()+bestvzError*bestvzError);
-              double gdxyerror2 = sqrt(gdau2->d0Error()*gdau2->d0Error()+bestvxError*bestvyError);
+              double gdxyerror2 = sqrt(gdau2->d0Error()*gdau2->d0Error()+bestvxError*bestvxError+bestvyError*bestvyError);
               
               grand_dzos2[it] = gdzbest2/gdzerror2;
               grand_dxyos2[it] = gdxybest2/gdxyerror2;
@@ -1772,6 +1800,25 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
         PATCompositeNtuple->Branch("eptrackmidAngle", &eptrackmidAngle, "eptrackmidAngle[2]/F");
         PATCompositeNtuple->Branch("eptrackmidQ", &eptrackmidQ, "eptrackmidQ[2]/F");
         PATCompositeNtuple->Branch("eptrackmidSumW", &eptrackmidSumW, "eptrackmidSumW/F");
+        PATCompositeNtuple->Branch("eptrackpAngle", &eptrackpAngle, "eptrackpAngle[2]/F");
+        PATCompositeNtuple->Branch("eptrackpQ", &eptrackpQ, "eptrackpQ[2]/F");
+        PATCompositeNtuple->Branch("eptrackpSumW", &eptrackpSumW, "eptrackpSumW[2]/F");
+        PATCompositeNtuple->Branch("eptrackmAngle", &eptrackmAngle, "eptrackmAngle[2]/F");
+        PATCompositeNtuple->Branch("eptrackmQ", &eptrackmQ, "eptrackmQ[2]/F");
+        PATCompositeNtuple->Branch("eptrackmSumW", &eptrackmSumW, "eptrackmSumW[2]/F");
+        if (compareEventPlane_) {
+          PATCompositeNtuple->Branch("epStoredSize", &epStoredSize, "epStoredSize/I");
+          PATCompositeNtuple->Branch("epRecalcSize", &epRecalcSize, "epRecalcSize/I");
+          PATCompositeNtuple->Branch("epStoredAngle2", &epStoredAngle2, Form("epStoredAngle2[%d]/F", kCompareEPSize));
+          PATCompositeNtuple->Branch("epStoredQ2", &epStoredQ2, Form("epStoredQ2[%d]/F", kCompareEPSize));
+          PATCompositeNtuple->Branch("epStoredSumW", &epStoredSumW, Form("epStoredSumW[%d]/F", kCompareEPSize));
+          PATCompositeNtuple->Branch("epRecalcAngle2", &epRecalcAngle2, Form("epRecalcAngle2[%d]/F", kCompareEPSize));
+          PATCompositeNtuple->Branch("epRecalcQ2", &epRecalcQ2, Form("epRecalcQ2[%d]/F", kCompareEPSize));
+          PATCompositeNtuple->Branch("epRecalcSumW", &epRecalcSumW, Form("epRecalcSumW[%d]/F", kCompareEPSize));
+          PATCompositeNtuple->Branch("epDeltaAngle2", &epDeltaAngle2, Form("epDeltaAngle2[%d]/F", kCompareEPSize));
+          PATCompositeNtuple->Branch("epDeltaQ2", &epDeltaQ2, Form("epDeltaQ2[%d]/F", kCompareEPSize));
+          PATCompositeNtuple->Branch("epDeltaSumW", &epDeltaSumW, Form("epDeltaSumW[%d]/F", kCompareEPSize));
+        }
 
         // Full HF (v2,v3): flat(level2), offset(level1), raw(level0)
         PATCompositeNtuple->Branch("ephfAngle", &ephfAngle, "ephfAngle[2]/F");
@@ -2143,8 +2190,18 @@ void PATCompositeTreeProducer5::processEventPlaneInfo(const edm::Event& iEvent) 
     if(!isEventPlane_) return;
 
     constexpr float kInvalid = -99.f;
+    auto deltaPhiPeriodic = [](double a, double b, int order) {
+      const double period = (order > 0 ? 2.0 * M_PI / static_cast<double>(order) : 2.0 * M_PI);
+      double d = a - b;
+      while (d > period / 2.0)
+        d -= period;
+      while (d <= -period / 2.0)
+        d += period;
+      return d;
+    };
     auto set3 = [&](float (&arr)[3]) { for (auto& v : arr) v = kInvalid; };
     auto set2 = [&](float (&arr)[2]) { for (auto& v : arr) v = kInvalid; };
+    auto setN = [&](float* arr, int n) { for (int i = 0; i < n; ++i) arr[i] = kInvalid; };
 
     set3(ephfpAngle);
     set3(ephfmAngle);
@@ -2168,6 +2225,23 @@ void PATCompositeTreeProducer5::processEventPlaneInfo(const edm::Event& iEvent) 
     set2(eptrackmidAngle);
     set2(eptrackmidQ);
     eptrackmidSumW = kInvalid;
+    set2(eptrackpAngle);
+    set2(eptrackpQ);
+    set2(eptrackpSumW);
+    set2(eptrackmAngle);
+    set2(eptrackmQ);
+    set2(eptrackmSumW);
+    setN(epStoredAngle2, kCompareEPSize);
+    setN(epStoredQ2, kCompareEPSize);
+    setN(epStoredSumW, kCompareEPSize);
+    setN(epRecalcAngle2, kCompareEPSize);
+    setN(epRecalcQ2, kCompareEPSize);
+    setN(epRecalcSumW, kCompareEPSize);
+    setN(epDeltaAngle2, kCompareEPSize);
+    setN(epDeltaQ2, kCompareEPSize);
+    setN(epDeltaSumW, kCompareEPSize);
+    epStoredSize = -1;
+    epRecalcSize = -1;
 
     set2(ephfAngle);
     set2(ephfAngleoff);
@@ -2194,11 +2268,15 @@ void PATCompositeTreeProducer5::processEventPlaneInfo(const edm::Event& iEvent) 
     const auto* hfPlusV2 = getEp(1);
     const auto* hfV2 = getEp(2);
     const auto* trkMidV2 = getEp(3);
+    const auto* trkPlusV2 = getEp(4);
+    const auto* trkMinusV2 = getEp(5);
 
     const auto* hfMinusV3 = getEp(6);
     const auto* hfPlusV3 = getEp(7);
     const auto* hfV3 = getEp(8);
     const auto* trkMidV3 = getEp(9);
+    const auto* trkPlusV3 = getEp(10);
+    const auto* trkMinusV3 = getEp(11);
 
     // Legacy branches: keep the same indices/sign-convention as PATCompositeTreeProducer2.cc.
     // (HF-: 0,6 ; HF+: 1,7 ; "HF" combined: 2,8)
@@ -2247,6 +2325,26 @@ void PATCompositeTreeProducer5::processEventPlaneInfo(const edm::Event& iEvent) 
       eptrackmidAngle[1] = trkMidV3->angle(2);
       eptrackmidQ[1] = trkMidV3->q(2);
     }
+    if (trkPlusV2) {
+      eptrackpAngle[0] = trkPlusV2->angle(2);
+      eptrackpQ[0] = trkPlusV2->q(2);
+      eptrackpSumW[0] = trkPlusV2->sumw();
+    }
+    if (trkPlusV3) {
+      eptrackpAngle[1] = trkPlusV3->angle(2);
+      eptrackpQ[1] = trkPlusV3->q(2);
+      eptrackpSumW[1] = trkPlusV3->sumw();
+    }
+    if (trkMinusV2) {
+      eptrackmAngle[0] = trkMinusV2->angle(2);
+      eptrackmQ[0] = trkMinusV2->q(2);
+      eptrackmSumW[0] = trkMinusV2->sumw();
+    }
+    if (trkMinusV3) {
+      eptrackmAngle[1] = trkMinusV3->angle(2);
+      eptrackmQ[1] = trkMinusV3->q(2);
+      eptrackmSumW[1] = trkMinusV3->sumw();
+    }
 
     if (hfV2) {
       ephfAngle[0] = hfV2->angle(2);
@@ -2271,6 +2369,44 @@ void PATCompositeTreeProducer5::processEventPlaneInfo(const edm::Event& iEvent) 
       ephfsumSinRaw[1] = hfV3->sumSin(0);
       ephfsumPtOrEt[1] = hfV3->sumPtOrEt();
     }
+
+    if (compareEventPlane_) {
+      edm::Handle<reco::EvtPlaneCollection> storedEps;
+      edm::Handle<reco::EvtPlaneCollection> recalcEps;
+      iEvent.getByToken(tok_eventplaneSrc_, storedEps);
+      iEvent.getByToken(tok_eventplaneSrcRecalc_, recalcEps);
+
+      if (storedEps.isValid())
+        epStoredSize = static_cast<int>(storedEps->size());
+      if (recalcEps.isValid())
+        epRecalcSize = static_cast<int>(recalcEps->size());
+
+      for (int i = 0; i < kCompareEPSize; ++i) {
+        const reco::EvtPlane* s = (storedEps.isValid() && static_cast<int>(storedEps->size()) > i) ? &(*storedEps)[i] : nullptr;
+        const reco::EvtPlane* r = (recalcEps.isValid() && static_cast<int>(recalcEps->size()) > i) ? &(*recalcEps)[i] : nullptr;
+        if (s) {
+          epStoredAngle2[i] = s->angle(2);
+          epStoredQ2[i] = s->q(2);
+          epStoredSumW[i] = s->sumw();
+        }
+        if (r) {
+          epRecalcAngle2[i] = r->angle(2);
+          epRecalcQ2[i] = r->q(2);
+          epRecalcSumW[i] = r->sumw();
+        }
+        if (s && r) {
+          const bool sSentinel = (epStoredAngle2[i] <= -9.0f);
+          const bool rSentinel = (epRecalcAngle2[i] <= -9.0f);
+          if (sSentinel && rSentinel) {
+            epDeltaAngle2[i] = 0.0f;
+          } else if (!sSentinel && !rSentinel) {
+            epDeltaAngle2[i] = static_cast<float>(deltaPhiPeriodic(epStoredAngle2[i], epRecalcAngle2[i], 2));
+          }
+          epDeltaQ2[i] = epStoredQ2[i] - epRecalcQ2[i];
+          epDeltaSumW[i] = epStoredSumW[i] - epRecalcSumW[i];
+        }
+      }
+    }
 }
 
 void PATCompositeTreeProducer5::processVertexAndTrackInfo(const edm::Handle<reco::VertexCollection>& vertices,
@@ -2290,7 +2426,7 @@ void PATCompositeTreeProducer5::processVertexAndTrackInfo(const edm::Handle<reco
             double dzvtx = trk.dz(bestvtx);
             double dxyvtx = trk.dxy(bestvtx);
             double dzerror = sqrt(trk.dzError()*trk.dzError() + bestvzError*bestvzError);
-            double dxyerror = sqrt(trk.d0Error()*trk.d0Error() + bestvxError*bestvyError);
+            double dxyerror = sqrt(trk.d0Error()*trk.d0Error() + bestvxError*bestvxError+bestvyError*bestvyError);
             
             if(!trk.quality(reco::TrackBase::highPurity)) continue;
             if(fabs(trk.ptError())/trk.pt() > 0.10) continue;

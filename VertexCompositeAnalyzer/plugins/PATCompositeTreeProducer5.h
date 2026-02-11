@@ -314,6 +314,25 @@ private:
     float eptrackmidAngle[2];
     float eptrackmidQ[2];
     float eptrackmidSumW;
+    float eptrackpAngle[2];
+    float eptrackpQ[2];
+    float eptrackpSumW[2];
+    float eptrackmAngle[2];
+    float eptrackmQ[2];
+    float eptrackmSumW[2];
+
+    static constexpr int kCompareEPSize = 12;
+    float epStoredAngle2[kCompareEPSize];
+    float epStoredQ2[kCompareEPSize];
+    float epStoredSumW[kCompareEPSize];
+    float epRecalcAngle2[kCompareEPSize];
+    float epRecalcQ2[kCompareEPSize];
+    float epRecalcSumW[kCompareEPSize];
+    float epDeltaAngle2[kCompareEPSize];
+    float epDeltaQ2[kCompareEPSize];
+    float epDeltaSumW[kCompareEPSize];
+    int epStoredSize;
+    int epRecalcSize;
 
     float ephfAngle[2];
     float ephfAngleoff[2];
@@ -607,6 +626,7 @@ private:
     bool isSkimMVA_;
     bool isCentrality_;
     bool isEventPlane_;
+    bool compareEventPlane_;
 
     edm::Handle<int> cbin_;
 
@@ -626,6 +646,7 @@ private:
     edm::EDGetTokenT<reco::Centrality> tok_centSrc_;
 
     edm::EDGetTokenT<reco::EvtPlaneCollection> tok_eventplaneSrc_;
+    edm::EDGetTokenT<reco::EvtPlaneCollection> tok_eventplaneSrcRecalc_;
 };
 
 //

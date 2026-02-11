@@ -10,6 +10,23 @@ process.load('Configuration.StandardSequences.Reconstruction_Data_cff')
 # Limit the output messages
 process.load('FWCore.MessageService.MessageLogger_cfi')
 process.MessageLogger.cerr.FwkReport.reportEvery = 10
+process.MessageLogger.cerr.threshold = "DEBUG"
+process.MessageLogger.debugModules=["*"]
+#process.MessageLogger.cerr.threshold = cms.untracked.string('DEBUG')
+process.MessageLogger.cerr.DStarDebug = cms.untracked.PSet(
+      limit = cms.untracked.int32(-1)
+  )
+process.MessageLogger.cerr.D0DaughterOrder = cms.untracked.PSet(limit=cms.untracked.int32(-1))
+
+process.MessageLogger.cerr.GenMatching = cms.untracked.PSet(
+      limit = cms.untracked.int32(-1)
+  )
+process.MessageLogger.cerr.DStarDecayFilter = cms.untracked.PSet(
+      limit = cms.untracked.int32(-1)
+  )
+process.MessageLogger.cerr.PATCompositeTreeProducer = cms.untracked.PSet(
+      limit = cms.untracked.int32(-1)
+  )
 process.options = cms.untracked.PSet(wantSummary = cms.untracked.bool(True))
 process.FastTimerService = cms.Service("FastTimerService",
                                        printEventSummary = cms.untracked.bool(True),
@@ -24,7 +41,7 @@ process.source = cms.Source("PoolSource",
     #fileNames = cms.untracked.vstring("file:step4.root"),
     #fileNames = cms.untracked.vstring("/store/user/junseok/Genproduction/RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_081924_v1/DStarKpipiPU/crab_RECO_MINIAOD_DStarKpipiPU_CMSSW_13_2_10_081924_v1/240819_054039/0001/step4_1619.root"),
 )
-process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(1000))
+process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
 
 # Set the global tag
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
@@ -43,17 +60,20 @@ process.GlobalTag.globaltag = cms.string('132X_dataRun3_Prompt_v4')
 #    input = cms.VPSet(cms.PSet(object = cms.string('ElectronicsMap'), file = cms.FileInPath("emap_2023_newZDC_v3.txt")))
 #)
 
-# Add PbPb centrality
+# Add PbPb centrality (read from conditions DB instead of local sqlite), guarded by doCentrality if available
+# isMC = False
 process.load("RecoHI.HiCentralityAlgos.CentralityBin_cfi")
+process.centralityBin.Centrality = cms.InputTag("hiCentrality")
+process.centralityBin.centralityVariable = cms.string("HFtowers")
 process.GlobalTag.snapshotTime = cms.string("9999-12-31 23:59:59.000")
 process.GlobalTag.toGet.extend([
-    cms.PSet(record = cms.string("HeavyIonRcd"),
-        tag = cms.string("CentralityTable_HFtowers200_DataPbPb_periHYDJETshape_run3v1302x04_offline_374810"),
-        connect = cms.string("sqlite_file:CentralityTable_HFtowers200_DataPbPb_periHYDJETshape_run3v1302x04_offline_374810.db"),
+    cms.PSet(
+        record = cms.string("HeavyIonRcd"),
+        tag = cms.string("CentralityTable_HFtowers200_DataPbPb_periHYDJETshape_Run3v1302x04_Nominal_Offline"),
+        connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
         label = cms.untracked.string("HFtowers")
-        )
-    ]
-)
+    )
+])
 process.cent_seq = cms.Sequence(process.centralityBin)
 
 # =============== Import Sequences =====================
@@ -92,9 +112,11 @@ process.generalD0CandidatesNew = process.generalD0Candidates.clone()
 #process.generalD0CandidatesNew.trkPtSumCut = cms.double(1.6)
 process.generalD0CandidatesNew.tkChi2Cut = cms.double(5)
 process.generalD0CandidatesNew.tkNhitsCut = cms.int32(0)
-process.generalD0CandidatesNew.tkPtErrCut = cms.double(0.03)
-process.generalD0CandidatesNew.tkPtCut = cms.double(1.0)
+process.generalD0CandidatesNew.tkPtErrCut = cms.double(0.1)
+# process.generalD0CandidatesNew.tkPtCut = cms.double(0.8)
+process.generalD0CandidatesNew.tkPtCut = cms.double(1.5)
 process.generalD0CandidatesNew.tkEtaCut = cms.double(2.4)
+#process.generalD0CandidatesNew.tkEtaCut = cms.double(1.8)
 process.generalD0CandidatesNew.tkPtSumCut = cms.double(0.0)
 process.generalD0CandidatesNew.tkEtaDiffCut = cms.double(1.0)
 process.generalD0CandidatesNew.dauTransImpactSigCut = cms.double(0.)
@@ -108,20 +130,22 @@ process.generalD0CandidatesNew.alphaCut = cms.double(1.0)
 process.generalD0CandidatesNew.alpha2DCut = cms.double(999.0)
 process.generalD0CandidatesNew.rVtxCut = cms.double(0.0)
 process.generalD0CandidatesNew.lVtxCut = cms.double(0.0)
-process.generalD0CandidatesNew.vtxSignificance2DCut = cms.double(1.0)
-process.generalD0CandidatesNew.vtxSignificance3DCut = cms.double(1.0)
-process.generalD0CandidatesNew.d0MassCut = cms.double(0.15)
-process.generalD0CandidatesNew.d0AbsYCut = cms.double(1.6)
+process.generalD0CandidatesNew.vtxSignificance2DCut = cms.double(0.0)
+process.generalD0CandidatesNew.vtxSignificance3DCut = cms.double(3.0)
+process.generalD0CandidatesNew.d0MassCut = cms.double(0.14)
+process.generalD0CandidatesNew.d0AbsYCut = cms.double(1.2)
 process.generalD0CandidatesNew.dPtCut = cms.double(0.0)
 
 process.generalD0CandidatesNew.useAnyMVA = cms.bool(True)
-process.generalD0CandidatesNew.mvaCut = cms.double(-0.9)
+process.generalD0CandidatesNew.mvaCut = cms.double(-1)
 # process.generalD0CandidatesNew.GBRForestLabel = cms.string('D0InPbPbXGB')
-# process.generalD0CandidatesNew.GBRForestFileName = cms.string('GBRForestfile_XGBDT_PromptD0InPbPb_15Params_v1_08Mar.root')
+# #process.generalD0CandidatesNew.GBRForestFileName = cms.string('GBRForestfile_XGBDT_PromptD0InPbPb_15Params_v1_08Mar.root')
+# process.generalD0CandidatesNew.GBRForestFileName = cms.string('GBRForestfile_XGBDT_PromptD0InPbPb_pT_y_cBIN_19Params_v1_25Mar.root')
 process.generalD0CandidatesNew.input_names = cms.vstring('input')
-process.generalD0CandidatesNew.onnxModelFileName = cms.string("XGBoost_Model_0324_27.onnx")
+process.generalD0CandidatesNew.output_names = cms.vstring('probabilities')
+process.generalD0CandidatesNew.onnxModelFileName = cms.string("XGBoost_Model_0428_0_OnlyPrompt.onnx")
 
-process.generalD0CandidatesNew.mPiKCutMin = cms.double(1.74)
+process.generalD0CandidatesNew.mPiKCutMin = cms.double(1.70)
 process.generalD0CandidatesNew.mPiKCutMax = cms.double(2.00)
 #process.generalD0CandidatesNewWrongSign = process.generalD0CandidatesNew.clone(isWrongSign = cms.bool(True))
 
@@ -131,15 +155,15 @@ process.generalDStarCandidatesNew.trkPtSumCut = cms.double(0.0)
 process.generalDStarCandidatesNew.trkEtaDiffCut = cms.double(99.0)
 process.generalDStarCandidatesNew.tkNhitsCut = cms.int32(0)
 process.generalDStarCandidatesNew.tkPtErrCut = cms.double(0.1)
-process.generalDStarCandidatesNew.tkPtCut = cms.double(0.4)
-process.generalDStarCandidatesNew.tkChi2Cut = cms.double(3)
+process.generalDStarCandidatesNew.tkPtCut = cms.double(0.3)
+process.generalDStarCandidatesNew.tkChi2Cut = cms.double(5)
 process.generalDStarCandidatesNew.VtxChiProbCut = cms.double(0.00)
 #process.generalDStarCandidatesNew.vtxSignificance3DCut = cms.double(3)
 #process.generalDStarCandidatesNew.alphaCut = cms.double(1)
 #process.generalDStarCandidatesNew.alpha2DCut = cms.double(1)
 process.generalDStarCandidatesNew.dauLongImpactSigCut = cms.double(0.0)
 process.generalDStarCandidatesNew.dauTransImpactSigCut = cms.double(0.0)# it will be cut of by 3 in selector 
-process.generalDStarCandidatesNew.dPtCut = cms.double(3.7)
+process.generalDStarCandidatesNew.dPtCut = cms.double(0.0)
 # process.generalDStarCandidatesNew.useAnyMVA=cms.bool(True)
 # process.generalDStarCandidatesNew.GBRForestFileName=cms.string('GBRForestfile_XGBDT_PromptDstarInPbPb_default_MB_OnlyMC.root')
 
@@ -155,6 +179,8 @@ process.load("VertexCompositeAnalysis.VertexCompositeAnalyzer.dStarselector_cfi"
 process.load("VertexCompositeAnalysis.VertexCompositeAnalyzer.dStaranalyzer_tree_cff")
 process.load("VertexCompositeAnalysis.VertexCompositeAnalyzer.eventinfotree_cff")
 process.load("VertexCompositeAnalysis.VertexCompositeAnalyzer.eventplaneanalyzer_cfi")
+process.load("RecoHI.HiEvtPlaneAlgos.HiEvtPlane_cfi")
+process.load("RecoHI.HiEvtPlaneAlgos.hiEvtPlaneFlat_cfi")
 
 process.TFileService = cms.Service("TFileService",
     fileName =
@@ -177,6 +203,38 @@ process.d0ana_newreduced.CompositeCollection = cms.untracked.InputTag("generalD0
 process.dStarana.useAnyMVA = cms.bool(False)
 process.dStarana.CompositeCollection = cms.untracked.InputTag("generalDStarCandidatesNew:DStar")
 process.dStarana.MVACollection = cms.InputTag("generalDStarCandidatesNew:MVAValuesNewDStar")
+process.dStarana.eventplaneSrc = cms.InputTag("hiEvtPlaneFlat")
+process.dStarana.eventplaneSrcRecalc = cms.InputTag("hiEvtPlaneFlatRecalc")
+process.eventplane.VertexCompositeCollection= cms.untracked.InputTag("generalDStarCandidatesNew:DStar")
+
+process.hiEvtPlaneRecalc = process.hiEvtPlane.clone(
+    trackTag=cms.InputTag("packedPFCandidates"),
+    lostTag=cms.InputTag("lostTracks"),
+    chi2MapTag=cms.InputTag("packedPFCandidateTrackChi2"),
+    chi2MapLostTag=cms.InputTag("lostTrackChi2"),
+    caloTag=cms.InputTag("particleFlow"),
+    vertexTag=cms.InputTag("offlineSlimmedPrimaryVertices"),
+    centralityVariable=cms.string("HFtowers"),
+    centralityBinTag=cms.InputTag("centralityBin", "HFtowers"),
+    # Keep tracker-side behavior aligned with miniAOD production style.
+    cutEra=cms.int32(0),
+    minet=cms.double(0.01),
+    minpt=cms.double(0.5),
+    dzdzerror_pix=cms.double(40.0),
+    caloCentRef=cms.double(-1.0),
+    caloCentRefWidth=cms.double(-1.0),
+)
+
+process.hiEvtPlaneFlatRecalc = process.hiEvtPlaneFlat.clone(
+    inputPlanesTag=cms.InputTag("hiEvtPlaneRecalc"),
+    centralityTag=cms.InputTag("hiCentrality"),
+    centralityVariable=cms.string("HFtowers"),
+    centralityBinTag=cms.InputTag("centralityBin", "HFtowers"),
+    trackTag=cms.InputTag("packedPFCandidates"),
+    vertexTag=cms.InputTag("offlineSlimmedPrimaryVertices"),
+    caloCentRef=cms.double(-1.0),
+    caloCentRefWidth=cms.double(-1.0),
+)
 
 #process.d0ana_wrongsign_newreduced = process.d0ana_wrongsign.clone()
 #process.d0ana_wrongsign_newreduced.VertexCompositeCollection = cms.untracked.InputTag("d0selectorWSNewReduced:D0")
@@ -186,9 +244,17 @@ process.dStarana.MVACollection = cms.InputTag("generalDStarCandidatesNew:MVAValu
 
 
 
-#process.dStarAna_step = cms.Path( process.eventFilter_HM * process.generalD0CandidatesNew* process.generalDStarCandidatesNew * process.d0ana_newreduced *process.dStarana)
+process.dStarAna_step = cms.Path(
+    process.eventFilter_HM
+    * process.generalD0CandidatesNew
+    * process.generalDStarCandidatesNew
+    * process.hiEvtPlaneRecalc
+    * process.hiEvtPlaneFlatRecalc
+    * process.dStarana
+    * process.eventplane
+)
 # process.dStarAna_step = cms.Path( process.eventFilter_HM * process.generalD0CandidatesNew* process.d0ana_newreduced * process.eventplane)
-process.dStarAna_step = cms.Path( process.eventFilter_HM * process.generalD0CandidatesNew* process.d0ana_newreduced)
+# process.dStarAna_step = cms.Path( process.eventFilter_HM * process.generalD0CandidatesNew* process.d0ana_newreduced)
 
 # eventinfoana must be in EndPath, and process.eventinfoana.selectEvents must be the name of eventFilter_HM Path
 process.eventinfoana.selectEvents = cms.untracked.string('eventFilter_HM_step')
@@ -204,6 +270,8 @@ process.eventinfoana.eventFilterNames = cms.untracked.vstring(
     )
 process.eventinfoana.triggerFilterNames = cms.untracked.vstring()
 process.eventinfoana.stageL1Trigger = cms.uint32(2)
+process.eventinfoana.isEventPlane = cms.bool(True)
+process.eventinfoana.eventplaneSrc = cms.InputTag("hiEvtPlaneFlatRecalc")
 process.pevt = cms.EndPath(process.eventinfoana)
 
 process.c = cms.Path(process.cent_seq)
@@ -213,6 +281,7 @@ process.c = cms.Path(process.cent_seq)
 
 # Define the process schedule
 process.schedule = cms.Schedule(
+    process.c,
     process.eventFilter_HM_step,
     process.dStarAna_step,
    process.pevt,
