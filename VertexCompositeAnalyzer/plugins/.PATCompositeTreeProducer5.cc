@@ -2017,7 +2017,7 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
               PATCompositeNtuple->Branch("pTD2",&pt2,"pTD2[candSize]/F");
               PATCompositeNtuple->Branch("EtaD2",&eta2,"EtaD2[candSize]/F");
               PATCompositeNtuple->Branch("PhiD2",&phi2,"PhiD2[candSize]/F");
-              PATCompositeNtuple->Branch("pTerrD1",&ptErr2,"pTerrD1[candSize]/F");
+              PATCompositeNtuple->Branch("pTerrD1",&ptErr1,"pTerrD1[candSize]/F");
               PATCompositeNtuple->Branch("pTerrD2",&ptErr2,"pTerrD2[candSize]/F");
               PATCompositeNtuple->Branch("dedxHarmonic2D2",&H2dedx2,"dedxHarmonic2D2[candSize]/F");
               PATCompositeNtuple->Branch("zDCASignificanceGrandDaugther1",&grand_dzos1,"zDCASignificanceGrandDaugther1[candSize]/F");
@@ -2202,6 +2202,11 @@ void PATCompositeTreeProducer5::processCentralityInfo(const edm::Event& iEvent) 
         Npixel = cent->multiplicityPixel();
         ZDCPlus = cent->zdcSumPlus();
         ZDCMinus = cent->zdcSumMinus();
+        LogPrint("CentralityDebug") << "PATCompositeTreeProducer5 centrality run="
+                                    << iEvent.id().run() << " lumi="
+                                    << iEvent.luminosityBlock() << " event="
+                                    << iEvent.id().event() << " cbin="
+                                    << centrality;
     }
 }
 

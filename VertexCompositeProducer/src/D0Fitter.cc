@@ -322,7 +322,7 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
       double dzvtx = tmpRef->dz(bestvtx);
       double dxyvtx = tmpRef->dxy(bestvtx);      
       double dzerror = sqrt(tmpRef->dzError()*tmpRef->dzError()+zVtxError*zVtxError);
-      double dxyerror = sqrt(tmpRef->d0Error()*tmpRef->d0Error()+xVtxError*yVtxError);
+      double dxyerror = sqrt(tmpRef->d0Error()*tmpRef->d0Error()+xVtxError*xVtxError+yVtxError*yVtxError);
 
       double dauLongImpactSig = dzvtx/dzerror;
       double dauTransImpactSig = dxyvtx/dxyerror;
@@ -401,14 +401,14 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
       double dzvtx_pos = positiveTrackRef->dz(bestvtx);
       double dxyvtx_pos = positiveTrackRef->dxy(bestvtx);
       double dzerror_pos = sqrt(positiveTrackRef->dzError()*positiveTrackRef->dzError()+zVtxError*zVtxError);
-      double dxyerror_pos = sqrt(positiveTrackRef->d0Error()*positiveTrackRef->d0Error()+xVtxError*yVtxError);
+      double dxyerror_pos = sqrt(positiveTrackRef->d0Error()*positiveTrackRef->d0Error()+xVtxError*xVtxError+yVtxError*yVtxError);
       double dauLongImpactSig_pos = dzvtx_pos/dzerror_pos;
       double dauTransImpactSig_pos = dxyvtx_pos/dxyerror_pos;
 
       double dzvtx_neg = negativeTrackRef->dz(bestvtx);
       double dxyvtx_neg = negativeTrackRef->dxy(bestvtx);
       double dzerror_neg = sqrt(negativeTrackRef->dzError()*negativeTrackRef->dzError()+zVtxError*zVtxError);
-      double dxyerror_neg = sqrt(negativeTrackRef->d0Error()*negativeTrackRef->d0Error()+xVtxError*yVtxError);
+      double dxyerror_neg = sqrt(negativeTrackRef->d0Error()*negativeTrackRef->d0Error()+xVtxError*xVtxError+yVtxError*yVtxError);
       double dauLongImpactSig_neg = dzvtx_neg/dzerror_neg;
       double dauTransImpactSig_neg = dxyvtx_neg/dxyerror_neg;
 

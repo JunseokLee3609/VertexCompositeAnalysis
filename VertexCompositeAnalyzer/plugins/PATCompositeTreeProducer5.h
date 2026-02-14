@@ -158,8 +158,6 @@ private:
                         const edm::Handle<reco::GenParticleCollection>& genpars);
   
   // Error handling and safety functions
-  bool isValidCandidateIndex(unsigned int index) const;
-  void validateArrayAccess(unsigned int index, const std::string& arrayName) const;
   int muAssocToTrack( const reco::TrackRef& trackref, const edm::Handle<reco::MuonCollection>& muonh) const;
   
   // Centralized decay selection policy
