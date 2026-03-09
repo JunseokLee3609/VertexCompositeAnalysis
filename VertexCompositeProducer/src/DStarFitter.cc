@@ -223,6 +223,7 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
     zVtxError = 0.0;
   }
   math::XYZPoint bestvtx(xVtx,yVtx,zVtx);
+  const auto bestvtxCov = (isVtxPV ? vtxPrimary->covariance() : theBeamSpotHandle->rotatedCovariance3D());
 
   // Fill vectors of TransientTracks and TrackRefs after applying preselection cuts.
   for(unsigned int indx = 0; indx < theTrackHandle->size(); indx++) {
@@ -248,7 +249,7 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
       double dzvtx = tmpRef->dz(bestvtx);
       double dxyvtx = tmpRef->dxy(bestvtx);
       double dzerror = sqrt(tmpRef->dzError()*tmpRef->dzError()+zVtxError*zVtxError);
-      double dxyerror = sqrt(tmpRef->d0Error()*tmpRef->d0Error()+xVtxError*xVtxError+yVtxError*yVtxError);
+      double dxyerror = tmpRef->dxyError(bestvtx, bestvtxCov);
 
       double dauLongImpactSig = dzvtx/dzerror;
       double dauTransImpactSig = dxyvtx/dxyerror;
@@ -315,14 +316,14 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
 //      double dzvtx_pos = positiveTrackRef->dz(bestvtx);
 //      double dxyvtx_pos = positiveTrackRef->dxy(bestvtx);
 //      double dzerror_pos = sqrt(positiveTrackRef->dzError()*positiveTrackRef->dzError()+zVtxError*zVtxError);
-//      double dxyerror_pos = sqrt(positiveTrackRef->d0Error()*positiveTrackRef->d0Error()+xVtxError*xVtxError+yVtxError*yVtxError);
+//      double dxyerror_pos = positiveTrackRef->dxyError(bestvtx, bestvtxCov);
 //      double dauLongImpactSig_pos = dzvtx_pos/dzerror_pos;
 //      double dauTransImpactSig_pos = dxyvtx_pos/dxyerror_pos;
 //
 //      double dzvtx_neg = negativeTrackRef->dz(bestvtx);
 //      double dxyvtx_neg = negativeTrackRef->dxy(bestvtx);
 //      double dzerror_neg = sqrt(negativeTrackRef->dzError()*negativeTrackRef->dzError()+zVtxError*zVtxError);
-//      double dxyerror_neg = sqrt(negativeTrackRef->d0Error()*negativeTrackRef->d0Error()+xVtxError*xVtxError+yVtxError*yVtxError);
+//      double dxyerror_neg = negativeTrackRef->dxyError(bestvtx, bestvtxCov);
 //      double dauLongImpactSig_neg = dzvtx_neg/dzerror_neg;
 //      double dauTransImpactSig_neg = dxyvtx_neg/dxyerror_neg;
 //
@@ -549,12 +550,13 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
        sigmaLvtxMag = sqrt(ROOT::Math::Similarity(dStarTotalCov, distanceVector3D)) / lVtxMag;
        sigmaRvtxMag = sqrt(ROOT::Math::Similarity(dStarTotalCov, distanceVector2D)) / rVtxMag;
 
-       // DCA error
-       GlobalPoint refVtxPos(xVtx, yVtx, zVtx);
-       tsos = extrapolator.extrapolate(dStarCand->currentState().freeTrajectoryState(), refVtxPos);
-       Measurement1D cur3DIP;
-       VertexDistance3D a3d;
-       GlobalPoint refPoint          = tsos.globalPosition();
+	       // DCA error
+	       GlobalPoint refVtxPos(xVtx, yVtx, zVtx);
+	       tsos = extrapolator.extrapolate(dStarCand->currentState().freeTrajectoryState(), refVtxPos);
+	       if( !tsos.isValid() ) continue;
+	       Measurement1D cur3DIP;
+	       VertexDistance3D a3d;
+	       GlobalPoint refPoint          = tsos.globalPosition();
        GlobalError refPointErr       = tsos.cartesianError().position();
        GlobalPoint vertexPosition    = refVtxPos;
        GlobalError vertexPositionErr = isVtxPV ? RecoVertex::convertError(vtxPrimary->error())
@@ -584,6 +586,12 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
                                                   negCandTotalP.y(), negCandTotalP.z(),
                                                   negCandTotalE), dStarVtx);
        theNegCand.setTrack(pionTrackRef);
+       const double slowPiDz = pionTrackRef->dz(bestvtx);
+       const double slowPiDxy = pionTrackRef->dxy(bestvtx);
+       const double slowPiDzErr = sqrt(pionTrackRef->dzError() * pionTrackRef->dzError() + zVtxError * zVtxError);
+       const double slowPiDxyErr = pionTrackRef->dxyError(bestvtx, bestvtxCov);
+       const double slowPiDzSig = slowPiDz / slowPiDzErr;
+       const double slowPiDxySig = slowPiDxy / slowPiDxyErr;
 
 
 
@@ -605,6 +613,12 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
        theDStar->addUserFloat("decaylengthsignif3D", lVtxMag/sigmaLvtxMag );
        theDStar->addUserFloat("dca3D", cur3DIP.value());
        theDStar->addUserFloat("dca3DErr", cur3DIP.error());
+       theDStar->addUserFloat("slowPiDz", slowPiDz);
+       theDStar->addUserFloat("slowPiDxy", slowPiDxy);
+       theDStar->addUserFloat("slowPiDzErr", slowPiDzErr);
+       theDStar->addUserFloat("slowPiDxyErr", slowPiDxyErr);
+       theDStar->addUserFloat("slowPiDzSig", slowPiDzSig);
+       theDStar->addUserFloat("slowPiDxySig", slowPiDxySig);
        if(theD0.hasUserFloat("mva")) theDStar->addUserFloat("D0mva", theD0.userFloat("mva"));
 //        theDStar->addUserFloat("D03DDCA", dca);
 //        theDStar->addUserFloat("D03DDCAErr", dcaError);

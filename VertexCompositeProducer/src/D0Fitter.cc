@@ -47,9 +47,6 @@
 #include "PhysicsTools/ONNXRuntime/interface/ONNXRuntime.h"
 
 #include <cmath>
-#include <chrono>
-using namespace std::chrono;
-
 
 const size_t VARSIZE = 17;
 const float piMassD0 = 0.13957018;
@@ -59,7 +56,6 @@ const float kaonMassD0Squared = kaonMassD0*kaonMassD0;
 const float d0MassD0 = 1.86484;
 float piMassD0_sigma = 3.5E-7f;
 float kaonMassD0_sigma = 1.6E-5f;
-float d0MassD0_sigma = d0MassD0*1.e-6;
 
 using CC = pat::CompositeCandidate;
 using CCC = pat::CompositeCandidateCollection;
@@ -120,24 +116,6 @@ D0Fitter::D0Fitter(const edm::ParameterSet& theParameters,  edm::ConsumesCollect
 
   if(theParameters.exists("useAnyMVA")) useAnyMVA_ = theParameters.getParameter<bool>("useAnyMVA");
 
-  //if(useAnyMVA_){
-  //  if(theParameters.exists("mvaType"))type = theParameters.getParameter<std::string>("mvaType");
-  //  if(theParameters.exists("GBRForestLabel"))forestLabel_ = theParameters.getParameter<std::string>("GBRForestLabel");
-  //  if(theParameters.exists("GBRForestFileName")){
-  //    dbFileName_ = theParameters.getParameter<std::string>("GBRForestFileName");
-  //    useForestFromDB_ = false;
-  //  }
-
-  //  if(!useForestFromDB_){
-  //    edm::FileInPath fip(Form("VertexCompositeAnalysis/VertexCompositeProducer/data/%s",dbFileName_.c_str()));
-  //    TFile gbrfile(fip.fullPath().c_str(),"READ");
-  //    forest_ = (GBRForest*)gbrfile.Get(forestLabel_.c_str());
-  //    gbrfile.Close();
-  //  }
-
-  //  mvaType_ = type;
-  //  mvaToken_ = iC.esConsumes<GBRForest, GBRWrapperRcd>(edm::ESInputTag("", forestLabel_));
-  //}
   if (useAnyMVA_) {
     if (theParameters.exists("input_names")||theParameters.exists("output_names")) {
       input_names_ = theParameters.getParameter<std::vector<std::string>>("input_names");
@@ -149,24 +127,6 @@ D0Fitter::D0Fitter(const edm::ParameterSet& theParameters,  edm::ConsumesCollect
     if (theParameters.exists("onnxFeatureNames")) {
       onnxFeatureNames_ = theParameters.getParameter<std::vector<std::string>>("onnxFeatureNames");
     } else {
-      // Default feature order for the trained ONNX BDT model
-      // f0 -> pT
-      // f1 -> y
-      // f2 -> VtxProb
-      // f3 -> 3DCosPointingAngle
-      // f4 -> 3DPointingAngle
-      // f5 -> 2DCosPointingAngle
-      // f6 -> 2DPointingAngle
-      // f7 -> 3DDecayLength
-      // f8 -> 3DDecayLengthSignificance
-      // f9 -> 2DDecayLength
-      // f10 -> 2DDecayLengthSignificance
-      // f11 -> pTD1
-      // f12 -> EtaD1
-      // f13 -> pTD2
-      // f14 -> EtaD2
-      // f15 -> Trk3DDCA
-      // f16 -> dEta_dau (= EtaD1 - EtaD2)
       onnxFeatureNames_ = {
           "pT",
           "y",
@@ -190,23 +150,6 @@ D0Fitter::D0Fitter(const edm::ParameterSet& theParameters,  edm::ConsumesCollect
 
     input_shapes_.clear();
     input_shapes_.push_back({1, static_cast<int64_t>(onnxFeatureNames_.size())});
-//  Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "D0Fitter");
-//    Ort::SessionOptions sessionOptions;
-//    sessionOptions.SetIntraOpNumThreads(1); // Single-threaded for simplicity
-    // edm::FileInPath fip(Form("VertexCompositeAnalysis/VertexCompositeProducer/data/%s",onnxModelPath_.c_str()));    // Path relative to CMSSW_BASE
-    // onnxModel_ = std::make_unique<cms::Ort::ONNXRuntime>(fip.fullPath());
-    // Retrieve input and output names
-    //Ort::AllocatorWithDefaultOptions allocator;
-    //auto numInputNodes = onnxSession_->GetInputCount();
-    //for (size_t i = 0; i < numInputNodes; i++) {
-    //  auto inputName = onnxSession_->GetInputNameAllocated(i, allocator);
-    //  inputNames_.push_back(inputName.get());
-    //}
-    //auto numOutputNodes = onnxSession_->GetOutputCount();
-    //for (size_t i = 0; i < numOutputNodes; i++) {
-    //  auto outputName = onnxSession_->GetOutputNameAllocated(i, allocator);
-    //  outputNames_.push_back(outputName.get());
-    //}
   }
 
   std::vector<std::string> qual = theParameters.getParameter<std::vector<std::string> >("trackQualities");
@@ -296,6 +239,7 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
     zVtxError = 0.0;
   }
   math::XYZPoint bestvtx(xVtx,yVtx,zVtx);
+  const auto bestvtxCov = (isVtxPV ? vtxPrimary->covariance() : theBeamSpotHandle->rotatedCovariance3D());
 
   // Fill vectors of TransientTracks and TrackRefs after applying preselection cuts.
   for(unsigned int indx = 0; indx < theTrackHandle->size(); indx++) {
@@ -322,7 +266,7 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
       double dzvtx = tmpRef->dz(bestvtx);
       double dxyvtx = tmpRef->dxy(bestvtx);      
       double dzerror = sqrt(tmpRef->dzError()*tmpRef->dzError()+zVtxError*zVtxError);
-      double dxyerror = sqrt(tmpRef->d0Error()*tmpRef->d0Error()+xVtxError*xVtxError+yVtxError*yVtxError);
+      double dxyerror = tmpRef->dxyError(bestvtx, bestvtxCov);
 
       double dauLongImpactSig = dzvtx/dzerror;
       double dauTransImpactSig = dxyvtx/dxyerror;
@@ -340,8 +284,6 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
   float negCandMass_sigma[2] = {kaonMassD0_sigma, piMassD0_sigma};
   int   pdg_id[2] = {421, -421};
 
-  double totaltime = 0.0;
-  int nloop = 0;
   // Loop over tracks and vertex good charged track pairs
   // std::vector<CC*> tmpD0s;
   // cms::Ort::FloatArrays data_(1);
@@ -401,14 +343,14 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
       double dzvtx_pos = positiveTrackRef->dz(bestvtx);
       double dxyvtx_pos = positiveTrackRef->dxy(bestvtx);
       double dzerror_pos = sqrt(positiveTrackRef->dzError()*positiveTrackRef->dzError()+zVtxError*zVtxError);
-      double dxyerror_pos = sqrt(positiveTrackRef->d0Error()*positiveTrackRef->d0Error()+xVtxError*xVtxError+yVtxError*yVtxError);
+      double dxyerror_pos = positiveTrackRef->dxyError(bestvtx, bestvtxCov);
       double dauLongImpactSig_pos = dzvtx_pos/dzerror_pos;
       double dauTransImpactSig_pos = dxyvtx_pos/dxyerror_pos;
 
       double dzvtx_neg = negativeTrackRef->dz(bestvtx);
       double dxyvtx_neg = negativeTrackRef->dxy(bestvtx);
       double dzerror_neg = sqrt(negativeTrackRef->dzError()*negativeTrackRef->dzError()+zVtxError*zVtxError);
-      double dxyerror_neg = sqrt(negativeTrackRef->d0Error()*negativeTrackRef->d0Error()+xVtxError*xVtxError+yVtxError*yVtxError);
+      double dxyerror_neg = negativeTrackRef->dxyError(bestvtx, bestvtxCov);
       double dauLongImpactSig_neg = dzvtx_neg/dzerror_neg;
       double dauTransImpactSig_neg = dxyvtx_neg/dxyerror_neg;
 
@@ -440,11 +382,10 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
       if( !posTransTkPtr->impactPointTSCP().isValid() || !negTransTkPtr->impactPointTSCP().isValid() ) continue;
 
       // Measure distance between tracks at their closest approach
-      ClosestApproachInRPhi cApp;
-      cApp.calculate(posState, negState);
-      if( !cApp.status() ) continue;
-      float dca =  cApp.distance();
-      GlobalPoint cxPt = cApp.crossingPoint();
+      TwoTrackMinimumDistance minDistCalculator;
+      if (!minDistCalculator.calculate(posState, negState)) continue;
+      float dca = minDistCalculator.distance();
+      GlobalPoint cxPt = minDistCalculator.crossingPoint();
 
       // TrajectoryStateClosestToPoint posTsctp = posTransTkPtr->trajectoryStateClosestToPoint(bestvtx);
       // TrajectoryStateClosestToPoint negTsctp = negTransTkPtr->trajectoryStateClosestToPoint(bestvtx);
@@ -455,9 +396,6 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
       // TwoTrackMinimumDistanceHelixHelix minDistCalculator;
       // minDistCalculator.calculate(posState.parameters(), negState.parameters());
-      TwoTrackMinimumDistance minDistCalculator;
-      minDistCalculator.calculate(posState, negState);
-      dca = minDistCalculator.distance(); 
       // std::cout << "(pca,dca) : " << minDistCalculator.distance() << ", " << dca << std::endl;
       
 
@@ -633,13 +571,9 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
         FreeTrajectoryState posStateNew = posTransTkPtr->impactPointTSCP().theState();
         FreeTrajectoryState negStateNew = negTransTkPtr->impactPointTSCP().theState();
-        ClosestApproachInRPhi cApp;
-        cApp.calculate(posStateNew, negStateNew);
-        if( !cApp.status() ) continue;
-        float dca = fabs( cApp.distance() );
         TwoTrackMinimumDistance minDistCalculator;
-        minDistCalculator.calculate(posState, negState);
-        dca = minDistCalculator.distance(); 
+        if (!minDistCalculator.calculate(posStateNew, negStateNew)) continue;
+        float dca = minDistCalculator.distance();
         cxPt = minDistCalculator.crossingPoint();
         GlobalError posErr = posStateNew.cartesianError().position();
         GlobalError negErr = negStateNew.cartesianError().position();
@@ -696,6 +630,18 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
         theD0->addUserFloat("dca3DErr", cur3DIP.error());
         theD0->addUserFloat("track3DDCA", dca);
         theD0->addUserFloat("track3DDCAErr", dcaError);
+        theD0->addUserFloat("posDauDz", dzvtx_pos);
+        theD0->addUserFloat("posDauDxy", dxyvtx_pos);
+        theD0->addUserFloat("posDauDzErr", dzerror_pos);
+        theD0->addUserFloat("posDauDxyErr", dxyerror_pos);
+        theD0->addUserFloat("posDauDzSig", dauLongImpactSig_pos);
+        theD0->addUserFloat("posDauDxySig", dauTransImpactSig_pos);
+        theD0->addUserFloat("negDauDz", dzvtx_neg);
+        theD0->addUserFloat("negDauDxy", dxyvtx_neg);
+        theD0->addUserFloat("negDauDzErr", dzerror_neg);
+        theD0->addUserFloat("negDauDxyErr", dxyerror_neg);
+        theD0->addUserFloat("negDauDzSig", dauLongImpactSig_neg);
+        theD0->addUserFloat("negDauDxySig", dauTransImpactSig_neg);
 
         addp4.set( *theD0 );
         if( theD0->mass() < d0MassD0 + d0MassCut &&
@@ -752,8 +698,8 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
             if (name == "Trk3DDCA" || name == "track3DDCA") return dca;
             if (name == "dEta_dau" || name == "dEtaDau") return dEta_dau;
             if (name == "cent" || name == "centrality") return static_cast<float>(centrality);
-            if (name == "ptErrD1") return ptErr_pos;
-            if (name == "ptErrD2") return ptErr_neg;
+            if (name == "ptErrD1" || name == "pTerrD1") return ptErr_pos;
+            if (name == "ptErrD2" || name == "pTerrD2") return ptErr_neg;
             return 0.f;
           };
 
@@ -824,10 +770,6 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
           // std::cout << std::endl << "output data -> ";
           // for (auto &i: outputs) { std::cout << i << " "; }
           // std::cout << std::endl;
-          // auto stop = high_resolution_clock::now();
-          // auto duration = duration_cast<microseconds>(stop - start);
-          // totaltime += duration.count();
-          // nloop++;
           if (onnxVal > mvaCut) {
             theD0->addUserFloat("mva", onnxVal);
             mvaVals_.push_back(onnxVal);
@@ -881,7 +823,6 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
     }
   }
   // if (useAnyMVA_ && onnxRuntime_ && data_[0].size() > 0) {
-  //   // auto start = high_resolution_clock::now();
   //   // cout << input_names_.size() << " " << data_.size() << " " << input_shapes_.size() << " " << output_names_.size() << endl;
   //   int nInput = data_[0].size()/VARSIZE;
   //   input_shapes_[0] ={nInput, VARSIZE};
@@ -897,15 +838,8 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
   //     }
   //     if(tmpD0s[idx]) delete tmpD0s[idx];
   //   }
-  //   // auto stop = high_resolution_clock::now();
-  //   // auto duration = duration_cast<microseconds>(stop - start);
-  //   // cout << "onnxRuntime_->run() time: " << duration.count() << " microseconds" << endl;
   // }
     // float onnxVal = outputs[1]; // Adjust if your model has multiple outputs
-
-  // std::cout << "Total time for MVA: " << totaltime << " microseconds" << std::endl;
-  // std::cout << "Number of loops: " << nloop << std::endl;
-  // std::cout << "Average time per loop: " << (totaltime/nloop) << " microseconds" << std::endl;
 
 //  mvaFiller.insert(theD0s,mvaVals_.begin(),mvaVals_.end());
 //  mvaFiller.fill();

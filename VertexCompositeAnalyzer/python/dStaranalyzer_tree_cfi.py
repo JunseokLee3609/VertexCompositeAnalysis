@@ -1,6 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 
-dStarana = cms.EDAnalyzer('PATCompositeTreeProducer5',
+dStarana = cms.EDAnalyzer('PATCompositeTreeProducer6',
   doRecoNtuple = cms.untracked.bool(True),
   doGenNtuple = cms.untracked.bool(False),
   doGenMatching = cms.untracked.bool(False),
@@ -44,7 +44,7 @@ dStarana = cms.EDAnalyzer('PATCompositeTreeProducer5',
   centralitySrc = cms.InputTag("hiCentrality")
                               )
 
-dStarana_mc = cms.EDAnalyzer('PATCompositeTreeProducer5',
+dStarana_mc = cms.EDAnalyzer('PATCompositeTreeProducer6',
   doRecoNtuple = cms.untracked.bool(True),
   doGenNtuple = cms.untracked.bool(True),
   doGenMatching = cms.untracked.bool(True),

@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <algorithm>
 #include <math.h>
 
 #include <TH1.h>
@@ -27,6 +28,7 @@
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/Common/interface/TriggerNames.h"
+#include "DataFormats/Provenance/interface/ProductID.h"
 
 #include "DataFormats/TrackReco/interface/DeDxData.h"
 #include "DataFormats/MuonReco/interface/Muon.h"
@@ -115,6 +117,8 @@ private:
 
   //options
   bool doRecoNtuple_;
+  double massMinForExclusion_;
+  double massMaxForExclusion_;
 
   //cut variables
 
@@ -138,6 +142,31 @@ private:
   Float_t trkQy;
   Float_t all_trkQx;
   Float_t all_trkQy;
+  Float_t all_trkW;
+  Float_t all_trkQx_forw;
+  Float_t all_trkQy_forw;
+  Float_t all_trkW_forw;
+  Float_t all_trkQx_afterw;
+  Float_t all_trkQy_afterw;
+  Float_t all_trkW_afterw;
+  Float_t all_trkQx_eta16;
+  Float_t all_trkQy_eta16;
+  Float_t all_trkW_eta16;
+  Float_t all_trkQx_forw_eta16;
+  Float_t all_trkQy_forw_eta16;
+  Float_t all_trkW_forw_eta16;
+  Float_t all_trkQx_afterw_eta16;
+  Float_t all_trkQy_afterw_eta16;
+  Float_t all_trkW_afterw_eta16;
+  Float_t all_trkQx_eta08;
+  Float_t all_trkQy_eta08;
+  Float_t all_trkW_eta08;
+  Float_t all_trkQx_forw_eta08;
+  Float_t all_trkQy_forw_eta08;
+  Float_t all_trkW_forw_eta08;
+  Float_t all_trkQx_afterw_eta08;
+  Float_t all_trkQy_afterw_eta08;
+  Float_t all_trkW_afterw_eta08;
   Float_t trkQx_forw;
   Float_t trkQy_forw;
   Float_t trkQx_afterw;
@@ -149,6 +178,33 @@ private:
   Float_t trkQy_v3_forw;
   Float_t trkQx_v3_afterw;
   Float_t trkQy_v3_afterw;
+
+  // Additional tracker eta windows for gap/systematics studies
+  Float_t trkQx_eta16;
+  Float_t trkQy_eta16;
+  Float_t trkQx_forw_eta16;
+  Float_t trkQy_forw_eta16;
+  Float_t trkQx_afterw_eta16;
+  Float_t trkQy_afterw_eta16;
+  Float_t trkQx_v3_eta16;
+  Float_t trkQy_v3_eta16;
+  Float_t trkQx_v3_forw_eta16;
+  Float_t trkQy_v3_forw_eta16;
+  Float_t trkQx_v3_afterw_eta16;
+  Float_t trkQy_v3_afterw_eta16;
+
+  Float_t trkQx_eta08;
+  Float_t trkQy_eta08;
+  Float_t trkQx_forw_eta08;
+  Float_t trkQy_forw_eta08;
+  Float_t trkQx_afterw_eta08;
+  Float_t trkQy_afterw_eta08;
+  Float_t trkQx_v3_eta08;
+  Float_t trkQy_v3_eta08;
+  Float_t trkQx_v3_forw_eta08;
+  Float_t trkQy_v3_forw_eta08;
+  Float_t trkQx_v3_afterw_eta08;
+  Float_t trkQy_v3_afterw_eta08;
 
   //int nmuons = 0;
   bool isCentrality_;
@@ -188,6 +244,9 @@ private:
   std::vector<float> dauEta;
   std::vector<float> dauPhi;
   std::vector<float> dauPt;
+  std::vector<bool> dauHasTrackRef;
+  std::vector<edm::ProductID> dauTrackProductId;
+  std::vector<unsigned int> dauTrackKey;
 
   void collectFinalStateDaughters(const reco::Candidate& cand);
 
@@ -208,6 +267,21 @@ PATEventPlaneTrack::PATEventPlaneTrack(const edm::ParameterSet& iConfig) :
   doRecoNtuple_ = iConfig.getUntrackedParameter<bool>("doRecoNtuple");
   saveTree_ = iConfig.getUntrackedParameter<bool>("saveTree");
   saveHistogram_ = iConfig.getUntrackedParameter<bool>("saveHistogram");
+  if (iConfig.existsAs<double>("massMinForExclusion")) {
+    massMinForExclusion_ = iConfig.getParameter<double>("massMinForExclusion");
+  } else {
+    massMinForExclusion_ = iConfig.getUntrackedParameter<double>("massMinForExclusion", 1.7);
+  }
+  if (iConfig.existsAs<double>("massMaxForExclusion")) {
+    massMaxForExclusion_ = iConfig.getParameter<double>("massMaxForExclusion");
+  } else {
+    massMaxForExclusion_ = iConfig.getUntrackedParameter<double>("massMaxForExclusion", 2.1);
+  }
+  if (!(massMinForExclusion_ < massMaxForExclusion_)) {
+    throw cms::Exception("PATEventPlaneTrack")
+      << "Invalid exclusion mass window: massMinForExclusion (" << massMinForExclusion_
+      << ") must be smaller than massMaxForExclusion (" << massMaxForExclusion_ << ").";
+  }
 
   //input tokens
   tok_offlineBS_ = consumes<reco::BeamSpot>(iConfig.getUntrackedParameter<edm::InputTag>("beamSpotSrc"));
@@ -254,6 +328,18 @@ PATEventPlaneTrack::collectFinalStateDaughters(const reco::Candidate& cand)
   if(cand.numberOfDaughters()==0)
   {
     if(cand.charge()==0) return; // skip neutral leaves
+    bool hasTrackRef = false;
+    edm::ProductID productId;
+    unsigned int key = 0;
+    const auto* recoCand = dynamic_cast<const reco::RecoCandidate*>(&cand);
+    if (recoCand) {
+      const reco::TrackRef trkRef = recoCand->track();
+      if (trkRef.isNonnull()) {
+        hasTrackRef = true;
+        productId = trkRef.id();
+        key = trkRef.key();
+      }
+    }
     const reco::Track* bestTrack = cand.bestTrack();
     const float eta = (bestTrack ? bestTrack->eta() : cand.eta());
     const float phi = (bestTrack ? bestTrack->phi() : cand.phi());
@@ -261,6 +347,9 @@ PATEventPlaneTrack::collectFinalStateDaughters(const reco::Candidate& cand)
     dauEta.push_back(eta);
     dauPhi.push_back(phi);
     dauPt.push_back(pt);
+    dauHasTrackRef.push_back(hasTrackRef);
+    dauTrackProductId.push_back(productId);
+    dauTrackKey.push_back(key);
     return;
   }
 
@@ -325,12 +414,13 @@ PATEventPlaneTrack::fillRECO(const edm::Event& iEvent, const edm::EventSetup& iS
   //RECO Candidate info
   candSize = v0candidates->size();
   if(candSize>MAXCAN) throw cms::Exception("PATEventPlaneTrack") << "Number of candidates (" << candSize << ") exceeds limit!" << std::endl; 
-  float cohJpsiMassMin = 1.7;
-  float cohJpsiMassMax = 2.1;
 
   dauEta.clear();
   dauPhi.clear();
   dauPt.clear();
+  dauHasTrackRef.clear();
+  dauTrackProductId.clear();
+  dauTrackKey.clear();
   for(uint it=0; it<candSize; ++it)
   { 
     const auto& trk = (*v0candidates)[it];
@@ -342,25 +432,74 @@ PATEventPlaneTrack::fillRECO(const edm::Event& iEvent, const edm::EventSetup& iS
     pt[it] = trk.pt();
     mass[it] = trk.mass();
 
-    if (mass[it] > cohJpsiMassMin && mass[it] < cohJpsiMassMax) isJpsi = true;
+    if (mass[it] > massMinForExclusion_ && mass[it] < massMaxForExclusion_) isJpsi = true;
     if (isJpsi == false) continue;
 
     
     collectFinalStateDaughters(trk);
   }
   //nmuons += dauEta.size();
-  
+
   //track info
   float trkqx = 0;
   float trkqy = 0;
   float trkPt = 0;
-  trkQx = -1;
-  trkQy = -1;
+  trkQx = -999;
+  trkQy = -999;
   float all_trkqx= 0;
   float all_trkqy = 0;
   float all_trkPt = 0;
-  all_trkQx = -1;
-  all_trkQy = -1;
+  float all_trkqx_forw = 0;
+  float all_trkqy_forw = 0;
+  float all_trkPt_forw = 0;
+  float all_trkqx_afterw = 0;
+  float all_trkqy_afterw = 0;
+  float all_trkPt_afterw = 0;
+  float all_trkqx_16 = 0;
+  float all_trkqy_16 = 0;
+  float all_trkPt_16 = 0;
+  float all_trkqx_forw_16 = 0;
+  float all_trkqy_forw_16 = 0;
+  float all_trkPt_forw_16 = 0;
+  float all_trkqx_afterw_16 = 0;
+  float all_trkqy_afterw_16 = 0;
+  float all_trkPt_afterw_16 = 0;
+  float all_trkqx_08 = 0;
+  float all_trkqy_08 = 0;
+  float all_trkPt_08 = 0;
+  float all_trkqx_forw_08 = 0;
+  float all_trkqy_forw_08 = 0;
+  float all_trkPt_forw_08 = 0;
+  float all_trkqx_afterw_08 = 0;
+  float all_trkqy_afterw_08 = 0;
+  float all_trkPt_afterw_08 = 0;
+  all_trkQx = -999;
+  all_trkQy = -999;
+  all_trkW = 0;
+  all_trkQx_forw = -999;
+  all_trkQy_forw = -999;
+  all_trkW_forw = 0;
+  all_trkQx_afterw = -999;
+  all_trkQy_afterw = -999;
+  all_trkW_afterw = 0;
+  all_trkQx_eta16 = -999;
+  all_trkQy_eta16 = -999;
+  all_trkW_eta16 = 0;
+  all_trkQx_forw_eta16 = -999;
+  all_trkQy_forw_eta16 = -999;
+  all_trkW_forw_eta16 = 0;
+  all_trkQx_afterw_eta16 = -999;
+  all_trkQy_afterw_eta16 = -999;
+  all_trkW_afterw_eta16 = 0;
+  all_trkQx_eta08 = -999;
+  all_trkQy_eta08 = -999;
+  all_trkW_eta08 = 0;
+  all_trkQx_forw_eta08 = -999;
+  all_trkQy_forw_eta08 = -999;
+  all_trkW_forw_eta08 = 0;
+  all_trkQx_afterw_eta08 = -999;
+  all_trkQy_afterw_eta08 = -999;
+  all_trkW_afterw_eta08 = 0;
 
   bool DauTrk = false;
 
@@ -370,10 +509,10 @@ PATEventPlaneTrack::fillRECO(const edm::Event& iEvent, const edm::EventSetup& iS
   float trkqy_forw = 0;
   float trkqx_afterw = 0;
   float trkqy_afterw = 0;
-  trkQx_forw = -1;
-  trkQy_forw = -1;
-  trkQx_afterw = -1;
-  trkQy_afterw = -1;
+  trkQx_forw = -999;
+  trkQy_forw = -999;
+  trkQx_afterw = -999;
+  trkQy_afterw = -999;
 
   float trkqx_v3 = 0;
   float trkqy_v3 = 0;
@@ -381,15 +520,70 @@ PATEventPlaneTrack::fillRECO(const edm::Event& iEvent, const edm::EventSetup& iS
   float trkqy_v3_forw = 0;
   float trkqx_v3_afterw = 0;
   float trkqy_v3_afterw = 0;
-  trkQx_v3 = -1;
-  trkQy_v3 = -1;
-  trkQx_v3_forw = -1;
-  trkQy_v3_forw = -1;
-  trkQx_v3_afterw = -1;
-  trkQy_v3_afterw = -1;
+  trkQx_v3 = -999;
+  trkQy_v3 = -999;
+  trkQx_v3_forw = -999;
+  trkQy_v3_forw = -999;
+  trkQx_v3_afterw = -999;
+  trkQy_v3_afterw = -999;
+
+  float trkqx_16 = 0;
+  float trkqy_16 = 0;
+  float trkPt_16 = 0;
+  float trkqx_forw_16 = 0;
+  float trkqy_forw_16 = 0;
+  float trkPt_forw_16 = 0;
+  float trkqx_afterw_16 = 0;
+  float trkqy_afterw_16 = 0;
+  float trkPt_afterw_16 = 0;
+  float trkqx_v3_16 = 0;
+  float trkqy_v3_16 = 0;
+  float trkqx_v3_forw_16 = 0;
+  float trkqy_v3_forw_16 = 0;
+  float trkqx_v3_afterw_16 = 0;
+  float trkqy_v3_afterw_16 = 0;
+  trkQx_eta16 = -999;
+  trkQy_eta16 = -999;
+  trkQx_forw_eta16 = -999;
+  trkQy_forw_eta16 = -999;
+  trkQx_afterw_eta16 = -999;
+  trkQy_afterw_eta16 = -999;
+  trkQx_v3_eta16 = -999;
+  trkQy_v3_eta16 = -999;
+  trkQx_v3_forw_eta16 = -999;
+  trkQy_v3_forw_eta16 = -999;
+  trkQx_v3_afterw_eta16 = -999;
+  trkQy_v3_afterw_eta16 = -999;
+
+  float trkqx_08 = 0;
+  float trkqy_08 = 0;
+  float trkPt_08 = 0;
+  float trkqx_forw_08 = 0;
+  float trkqy_forw_08 = 0;
+  float trkPt_forw_08 = 0;
+  float trkqx_afterw_08 = 0;
+  float trkqy_afterw_08 = 0;
+  float trkPt_afterw_08 = 0;
+  float trkqx_v3_08 = 0;
+  float trkqy_v3_08 = 0;
+  float trkqx_v3_forw_08 = 0;
+  float trkqy_v3_forw_08 = 0;
+  float trkqx_v3_afterw_08 = 0;
+  float trkqy_v3_afterw_08 = 0;
+  trkQx_eta08 = -999;
+  trkQy_eta08 = -999;
+  trkQx_forw_eta08 = -999;
+  trkQy_forw_eta08 = -999;
+  trkQx_afterw_eta08 = -999;
+  trkQy_afterw_eta08 = -999;
+  trkQx_v3_eta08 = -999;
+  trkQy_v3_eta08 = -999;
+  trkQx_v3_forw_eta08 = -999;
+  trkQy_v3_forw_eta08 = -999;
+  trkQx_v3_afterw_eta08 = -999;
+  trkQy_v3_afterw_eta08 = -999;
 
 
-  uint subt = 0;
   for(unsigned it=0; it<trackColl->size(); ++it){
 
 	DauTrk = false;
@@ -398,7 +592,7 @@ PATEventPlaneTrack::fillRECO(const edm::Event& iEvent, const edm::EventSetup& iS
 	float dzvtx = track->dz(bestvtx);
         float dxyvtx = track->dxy(bestvtx);
         float dzerror = sqrt(track->dzError()*track->dzError()+bestvzError*bestvzError);
-        float dxyerror = sqrt(track->d0Error()*track->d0Error()+bestvxError*bestvyError);
+        float dxyerror = track->dxyError(bestvtx, vtx.covariance());
         
         if(!track->quality(reco::TrackBase::highPurity)) continue;
         if(fabs(track->ptError())/track->pt()>0.10) continue;
@@ -414,26 +608,75 @@ PATEventPlaneTrack::fillRECO(const edm::Event& iEvent, const edm::EventSetup& iS
 	float phi = track->phi();
 	float eta = track->eta();
 
-    	all_trkqx += pt*cos(2*phi);
-    	all_trkqy += pt*sin(2*phi);
-    	all_trkPt += pt;
+	    all_trkqx += pt*cos(2*phi);
+	    all_trkqy += pt*sin(2*phi);
+	    all_trkPt += pt;
+            if (eta>0.05&&eta<2.4) {
+              all_trkPt_forw += pt;
+              all_trkqx_forw += pt*cos(2*phi);
+              all_trkqy_forw += pt*sin(2*phi);
+            }
+            if (eta>-2.4&&eta<-0.05) {
+              all_trkPt_afterw += pt;
+              all_trkqx_afterw += pt*cos(2*phi);
+              all_trkqy_afterw += pt*sin(2*phi);
+            }
+            if (std::abs(eta) < 1.6f) {
+              all_trkqx_16 += pt*cos(2*phi);
+              all_trkqy_16 += pt*sin(2*phi);
+              all_trkPt_16 += pt;
+              if (eta>0.05&&eta<1.6) {
+                all_trkPt_forw_16 += pt;
+                all_trkqx_forw_16 += pt*cos(2*phi);
+                all_trkqy_forw_16 += pt*sin(2*phi);
+              }
+              if (eta>-1.6&&eta<-0.05) {
+                all_trkPt_afterw_16 += pt;
+                all_trkqx_afterw_16 += pt*cos(2*phi);
+                all_trkqy_afterw_16 += pt*sin(2*phi);
+              }
+            }
+            if (std::abs(eta) < 0.8f) {
+              all_trkqx_08 += pt*cos(2*phi);
+              all_trkqy_08 += pt*sin(2*phi);
+              all_trkPt_08 += pt;
+              if (eta>0.05&&eta<0.8) {
+                all_trkPt_forw_08 += pt;
+                all_trkqx_forw_08 += pt*cos(2*phi);
+                all_trkqy_forw_08 += pt*sin(2*phi);
+              }
+              if (eta>-0.8&&eta<-0.05) {
+                all_trkPt_afterw_08 += pt;
+                all_trkqx_afterw_08 += pt*cos(2*phi);
+                all_trkqy_afterw_08 += pt*sin(2*phi);
+              }
+            }
       
 
-    	for (unsigned i=0; i<dauEta.size(); ++i)
+	for (unsigned i=0; i<dauEta.size(); ++i)
     	{
-            if( abs(dauEta[i] - eta) < 1.E-3 && abs(reco::deltaPhi(dauPhi[i], phi)) < 1.E-3) DauTrk = true; 
-	    float deltaEta = std::abs(dauEta[i] - eta);
-    	    float deltaPhi = std::abs(reco::deltaPhi(dauPhi[i], phi));
-	    float deltaPt = std::abs(dauPt[i] - pt) / pt;
-	    hdeltaEta->Fill(deltaEta);
-	    hdeltaPhi->Fill(deltaPhi);
-	    hdeltaPt->Fill(deltaPt);
+            const bool refMatch = (
+              i < dauHasTrackRef.size() &&
+              i < dauTrackProductId.size() &&
+              i < dauTrackKey.size() &&
+              dauHasTrackRef[i] &&
+              dauTrackProductId[i] == track.id() &&
+              dauTrackKey[i] == track.key()
+            );
+            const float dEta = std::abs(dauEta[i] - eta);
+            const float dPhi = std::abs(reco::deltaPhi(dauPhi[i], phi));
+            if(refMatch) {
+              DauTrk = true;
+              const float dPtRel = (pt > 0.f ? std::abs(dauPt[i] - pt) / pt : -999.f);
+              hdeltaEta->Fill(dEta);
+              hdeltaPhi->Fill(dPhi);
+              hdeltaPt->Fill(dPtRel);
+            }
    	}
 
     	if (DauTrk == true) {
 	    //cout << "it = " << it << "; DauTrk = "<< DauTrk << endl;
            // cout << "Matched track Pt Eta Phi = " << track->pt() <<' '<< track->eta()<<' '<<track->phi()<<endl;
-            subt++;
       	    continue;
             
     	}
@@ -445,7 +688,7 @@ PATEventPlaneTrack::fillRECO(const edm::Event& iEvent, const edm::EventSetup& iS
 	trkqx_v3 += pt*cos(3*phi);
 	trkqy_v3 += pt*sin(3*phi);
 
-	if (eta>0.5&&eta<2.4) {
+	if (eta>0.05&&eta<2.4) {
 	   trkPt_forw += pt;
 	   trkqx_forw += pt*cos(2*phi);
 	   trkqy_forw += pt*sin(2*phi);
@@ -453,7 +696,7 @@ PATEventPlaneTrack::fillRECO(const edm::Event& iEvent, const edm::EventSetup& iS
 	   trkqy_v3_forw += pt*sin(3*phi);
            htrketa_forw->Fill(eta);
 	}
-	if (eta>-2.4&&eta<-0.5) {
+	if (eta>-2.4&&eta<-0.05) {
 	   trkPt_afterw += pt;
 	   trkqx_afterw += pt*cos(2*phi);
 	   trkqy_afterw += pt*sin(2*phi);
@@ -462,23 +705,122 @@ PATEventPlaneTrack::fillRECO(const edm::Event& iEvent, const edm::EventSetup& iS
      	   htrketa_afterw->Fill(eta);
 	}
 
-  }
-  
-  trkQx = trkqx/trkPt;
-  trkQy = trkqy/trkPt;
-  all_trkQx = all_trkqx/all_trkPt;
-  all_trkQy = all_trkqy/all_trkPt;
-  trkQx_v3 = trkqx_v3/trkPt;
-  trkQy_v3 = trkqy_v3/trkPt;
+        if (abs(eta) < 1.6) {
+          trkqx_16 += pt*cos(2*phi);
+          trkqy_16 += pt*sin(2*phi);
+          trkPt_16 += pt;
+          trkqx_v3_16 += pt*cos(3*phi);
+          trkqy_v3_16 += pt*sin(3*phi);
+          if (eta>0.05&&eta<1.6) {
+            trkPt_forw_16 += pt;
+            trkqx_forw_16 += pt*cos(2*phi);
+            trkqy_forw_16 += pt*sin(2*phi);
+            trkqx_v3_forw_16 += pt*cos(3*phi);
+            trkqy_v3_forw_16 += pt*sin(3*phi);
+          }
+          if (eta>-1.6&&eta<-0.05) {
+            trkPt_afterw_16 += pt;
+            trkqx_afterw_16 += pt*cos(2*phi);
+            trkqy_afterw_16 += pt*sin(2*phi);
+            trkqx_v3_afterw_16 += pt*cos(3*phi);
+            trkqy_v3_afterw_16 += pt*sin(3*phi);
+          }
+        }
 
-  trkQx_forw = trkqx_forw/trkPt_forw;
-  trkQy_forw = trkqy_forw/trkPt_forw;
-  trkQx_v3_forw = trkqx_v3_forw/trkPt_forw;
-  trkQy_v3_forw = trkqy_v3_forw/trkPt_forw;
-  trkQx_afterw = trkqx_afterw/trkPt_afterw;
-  trkQy_afterw = trkqy_afterw/trkPt_afterw;
-  trkQx_v3_afterw = trkqx_v3_afterw/trkPt_afterw;
-  trkQy_v3_afterw = trkqy_v3_afterw/trkPt_afterw;
+        if (abs(eta) < 0.8) {
+          trkqx_08 += pt*cos(2*phi);
+          trkqy_08 += pt*sin(2*phi);
+          trkPt_08 += pt;
+          trkqx_v3_08 += pt*cos(3*phi);
+          trkqy_v3_08 += pt*sin(3*phi);
+          if (eta>0.05&&eta<0.8) {
+            trkPt_forw_08 += pt;
+            trkqx_forw_08 += pt*cos(2*phi);
+            trkqy_forw_08 += pt*sin(2*phi);
+            trkqx_v3_forw_08 += pt*cos(3*phi);
+            trkqy_v3_forw_08 += pt*sin(3*phi);
+          }
+          if (eta>-0.8&&eta<-0.05) {
+            trkPt_afterw_08 += pt;
+            trkqx_afterw_08 += pt*cos(2*phi);
+            trkqy_afterw_08 += pt*sin(2*phi);
+            trkqx_v3_afterw_08 += pt*cos(3*phi);
+            trkqy_v3_afterw_08 += pt*sin(3*phi);
+          }
+        }
+
+  }
+
+  auto safeNorm = [](float q, float w) -> float {
+    return (w > 0 ? q / w : -999.f);
+  };
+  
+  trkQx = safeNorm(trkqx, trkPt);
+  trkQy = safeNorm(trkqy, trkPt);
+  all_trkQx = safeNorm(all_trkqx, all_trkPt);
+  all_trkQy = safeNorm(all_trkqy, all_trkPt);
+  all_trkW = all_trkPt;
+  all_trkQx_forw = safeNorm(all_trkqx_forw, all_trkPt_forw);
+  all_trkQy_forw = safeNorm(all_trkqy_forw, all_trkPt_forw);
+  all_trkW_forw = all_trkPt_forw;
+  all_trkQx_afterw = safeNorm(all_trkqx_afterw, all_trkPt_afterw);
+  all_trkQy_afterw = safeNorm(all_trkqy_afterw, all_trkPt_afterw);
+  all_trkW_afterw = all_trkPt_afterw;
+  all_trkQx_eta16 = safeNorm(all_trkqx_16, all_trkPt_16);
+  all_trkQy_eta16 = safeNorm(all_trkqy_16, all_trkPt_16);
+  all_trkW_eta16 = all_trkPt_16;
+  all_trkQx_forw_eta16 = safeNorm(all_trkqx_forw_16, all_trkPt_forw_16);
+  all_trkQy_forw_eta16 = safeNorm(all_trkqy_forw_16, all_trkPt_forw_16);
+  all_trkW_forw_eta16 = all_trkPt_forw_16;
+  all_trkQx_afterw_eta16 = safeNorm(all_trkqx_afterw_16, all_trkPt_afterw_16);
+  all_trkQy_afterw_eta16 = safeNorm(all_trkqy_afterw_16, all_trkPt_afterw_16);
+  all_trkW_afterw_eta16 = all_trkPt_afterw_16;
+  all_trkQx_eta08 = safeNorm(all_trkqx_08, all_trkPt_08);
+  all_trkQy_eta08 = safeNorm(all_trkqy_08, all_trkPt_08);
+  all_trkW_eta08 = all_trkPt_08;
+  all_trkQx_forw_eta08 = safeNorm(all_trkqx_forw_08, all_trkPt_forw_08);
+  all_trkQy_forw_eta08 = safeNorm(all_trkqy_forw_08, all_trkPt_forw_08);
+  all_trkW_forw_eta08 = all_trkPt_forw_08;
+  all_trkQx_afterw_eta08 = safeNorm(all_trkqx_afterw_08, all_trkPt_afterw_08);
+  all_trkQy_afterw_eta08 = safeNorm(all_trkqy_afterw_08, all_trkPt_afterw_08);
+  all_trkW_afterw_eta08 = all_trkPt_afterw_08;
+  trkQx_v3 = safeNorm(trkqx_v3, trkPt);
+  trkQy_v3 = safeNorm(trkqy_v3, trkPt);
+
+  trkQx_forw = safeNorm(trkqx_forw, trkPt_forw);
+  trkQy_forw = safeNorm(trkqy_forw, trkPt_forw);
+  trkQx_v3_forw = safeNorm(trkqx_v3_forw, trkPt_forw);
+  trkQy_v3_forw = safeNorm(trkqy_v3_forw, trkPt_forw);
+  trkQx_afterw = safeNorm(trkqx_afterw, trkPt_afterw);
+  trkQy_afterw = safeNorm(trkqy_afterw, trkPt_afterw);
+  trkQx_v3_afterw = safeNorm(trkqx_v3_afterw, trkPt_afterw);
+  trkQy_v3_afterw = safeNorm(trkqy_v3_afterw, trkPt_afterw);
+
+  trkQx_eta16 = safeNorm(trkqx_16, trkPt_16);
+  trkQy_eta16 = safeNorm(trkqy_16, trkPt_16);
+  trkQx_forw_eta16 = safeNorm(trkqx_forw_16, trkPt_forw_16);
+  trkQy_forw_eta16 = safeNorm(trkqy_forw_16, trkPt_forw_16);
+  trkQx_afterw_eta16 = safeNorm(trkqx_afterw_16, trkPt_afterw_16);
+  trkQy_afterw_eta16 = safeNorm(trkqy_afterw_16, trkPt_afterw_16);
+  trkQx_v3_eta16 = safeNorm(trkqx_v3_16, trkPt_16);
+  trkQy_v3_eta16 = safeNorm(trkqy_v3_16, trkPt_16);
+  trkQx_v3_forw_eta16 = safeNorm(trkqx_v3_forw_16, trkPt_forw_16);
+  trkQy_v3_forw_eta16 = safeNorm(trkqy_v3_forw_16, trkPt_forw_16);
+  trkQx_v3_afterw_eta16 = safeNorm(trkqx_v3_afterw_16, trkPt_afterw_16);
+  trkQy_v3_afterw_eta16 = safeNorm(trkqy_v3_afterw_16, trkPt_afterw_16);
+
+  trkQx_eta08 = safeNorm(trkqx_08, trkPt_08);
+  trkQy_eta08 = safeNorm(trkqy_08, trkPt_08);
+  trkQx_forw_eta08 = safeNorm(trkqx_forw_08, trkPt_forw_08);
+  trkQy_forw_eta08 = safeNorm(trkqy_forw_08, trkPt_forw_08);
+  trkQx_afterw_eta08 = safeNorm(trkqx_afterw_08, trkPt_afterw_08);
+  trkQy_afterw_eta08 = safeNorm(trkqy_afterw_08, trkPt_afterw_08);
+  trkQx_v3_eta08 = safeNorm(trkqx_v3_08, trkPt_08);
+  trkQy_v3_eta08 = safeNorm(trkqy_v3_08, trkPt_08);
+  trkQx_v3_forw_eta08 = safeNorm(trkqx_v3_forw_08, trkPt_forw_08);
+  trkQy_v3_forw_eta08 = safeNorm(trkqy_v3_forw_08, trkPt_forw_08);
+  trkQx_v3_afterw_eta08 = safeNorm(trkqx_v3_afterw_08, trkPt_afterw_08);
+  trkQy_v3_afterw_eta08 = safeNorm(trkqy_v3_afterw_08, trkPt_afterw_08);
 }
 
 
@@ -525,6 +867,31 @@ PATEventPlaneTrack::initTree()
     PATEventPlaneNtuple->Branch("trkQy",&trkQy,"trkQy/F");
     PATEventPlaneNtuple->Branch("all_trkQx",&all_trkQx,"all_trkQx/F");
     PATEventPlaneNtuple->Branch("all_trkQy",&all_trkQy,"all_trkQy/F");
+    PATEventPlaneNtuple->Branch("all_trkW",&all_trkW,"all_trkW/F");
+    PATEventPlaneNtuple->Branch("all_trkQx_forw",&all_trkQx_forw,"all_trkQx_forw/F");
+    PATEventPlaneNtuple->Branch("all_trkQy_forw",&all_trkQy_forw,"all_trkQy_forw/F");
+    PATEventPlaneNtuple->Branch("all_trkW_forw",&all_trkW_forw,"all_trkW_forw/F");
+    PATEventPlaneNtuple->Branch("all_trkQx_afterw",&all_trkQx_afterw,"all_trkQx_afterw/F");
+    PATEventPlaneNtuple->Branch("all_trkQy_afterw",&all_trkQy_afterw,"all_trkQy_afterw/F");
+    PATEventPlaneNtuple->Branch("all_trkW_afterw",&all_trkW_afterw,"all_trkW_afterw/F");
+    PATEventPlaneNtuple->Branch("all_trkQx_eta16",&all_trkQx_eta16,"all_trkQx_eta16/F");
+    PATEventPlaneNtuple->Branch("all_trkQy_eta16",&all_trkQy_eta16,"all_trkQy_eta16/F");
+    PATEventPlaneNtuple->Branch("all_trkW_eta16",&all_trkW_eta16,"all_trkW_eta16/F");
+    PATEventPlaneNtuple->Branch("all_trkQx_forw_eta16",&all_trkQx_forw_eta16,"all_trkQx_forw_eta16/F");
+    PATEventPlaneNtuple->Branch("all_trkQy_forw_eta16",&all_trkQy_forw_eta16,"all_trkQy_forw_eta16/F");
+    PATEventPlaneNtuple->Branch("all_trkW_forw_eta16",&all_trkW_forw_eta16,"all_trkW_forw_eta16/F");
+    PATEventPlaneNtuple->Branch("all_trkQx_afterw_eta16",&all_trkQx_afterw_eta16,"all_trkQx_afterw_eta16/F");
+    PATEventPlaneNtuple->Branch("all_trkQy_afterw_eta16",&all_trkQy_afterw_eta16,"all_trkQy_afterw_eta16/F");
+    PATEventPlaneNtuple->Branch("all_trkW_afterw_eta16",&all_trkW_afterw_eta16,"all_trkW_afterw_eta16/F");
+    PATEventPlaneNtuple->Branch("all_trkQx_eta08",&all_trkQx_eta08,"all_trkQx_eta08/F");
+    PATEventPlaneNtuple->Branch("all_trkQy_eta08",&all_trkQy_eta08,"all_trkQy_eta08/F");
+    PATEventPlaneNtuple->Branch("all_trkW_eta08",&all_trkW_eta08,"all_trkW_eta08/F");
+    PATEventPlaneNtuple->Branch("all_trkQx_forw_eta08",&all_trkQx_forw_eta08,"all_trkQx_forw_eta08/F");
+    PATEventPlaneNtuple->Branch("all_trkQy_forw_eta08",&all_trkQy_forw_eta08,"all_trkQy_forw_eta08/F");
+    PATEventPlaneNtuple->Branch("all_trkW_forw_eta08",&all_trkW_forw_eta08,"all_trkW_forw_eta08/F");
+    PATEventPlaneNtuple->Branch("all_trkQx_afterw_eta08",&all_trkQx_afterw_eta08,"all_trkQx_afterw_eta08/F");
+    PATEventPlaneNtuple->Branch("all_trkQy_afterw_eta08",&all_trkQy_afterw_eta08,"all_trkQy_afterw_eta08/F");
+    PATEventPlaneNtuple->Branch("all_trkW_afterw_eta08",&all_trkW_afterw_eta08,"all_trkW_afterw_eta08/F");
     PATEventPlaneNtuple->Branch("trkQx_forw",&trkQx_forw,"trkQx_forw/F");
     PATEventPlaneNtuple->Branch("trkQy_forw",&trkQy_forw,"trkQy_forw/F");
     PATEventPlaneNtuple->Branch("trkQx_afterw",&trkQx_afterw,"trkQx_afterw/F");
@@ -535,6 +902,32 @@ PATEventPlaneTrack::initTree()
     PATEventPlaneNtuple->Branch("trkQy_v3_forw",&trkQy_v3_forw,"trkQy_v3_forw/F");
     PATEventPlaneNtuple->Branch("trkQx_v3_afterw",&trkQx_v3_afterw,"trkQx_v3_afterw/F");
     PATEventPlaneNtuple->Branch("trkQy_v3_afterw",&trkQy_v3_afterw,"trkQy_v3_afterw/F");
+
+    PATEventPlaneNtuple->Branch("trkQx_eta16",&trkQx_eta16,"trkQx_eta16/F");
+    PATEventPlaneNtuple->Branch("trkQy_eta16",&trkQy_eta16,"trkQy_eta16/F");
+    PATEventPlaneNtuple->Branch("trkQx_forw_eta16",&trkQx_forw_eta16,"trkQx_forw_eta16/F");
+    PATEventPlaneNtuple->Branch("trkQy_forw_eta16",&trkQy_forw_eta16,"trkQy_forw_eta16/F");
+    PATEventPlaneNtuple->Branch("trkQx_afterw_eta16",&trkQx_afterw_eta16,"trkQx_afterw_eta16/F");
+    PATEventPlaneNtuple->Branch("trkQy_afterw_eta16",&trkQy_afterw_eta16,"trkQy_afterw_eta16/F");
+    PATEventPlaneNtuple->Branch("trkQx_v3_eta16",&trkQx_v3_eta16,"trkQx_v3_eta16/F");
+    PATEventPlaneNtuple->Branch("trkQy_v3_eta16",&trkQy_v3_eta16,"trkQy_v3_eta16/F");
+    PATEventPlaneNtuple->Branch("trkQx_v3_forw_eta16",&trkQx_v3_forw_eta16,"trkQx_v3_forw_eta16/F");
+    PATEventPlaneNtuple->Branch("trkQy_v3_forw_eta16",&trkQy_v3_forw_eta16,"trkQy_v3_forw_eta16/F");
+    PATEventPlaneNtuple->Branch("trkQx_v3_afterw_eta16",&trkQx_v3_afterw_eta16,"trkQx_v3_afterw_eta16/F");
+    PATEventPlaneNtuple->Branch("trkQy_v3_afterw_eta16",&trkQy_v3_afterw_eta16,"trkQy_v3_afterw_eta16/F");
+
+    PATEventPlaneNtuple->Branch("trkQx_eta08",&trkQx_eta08,"trkQx_eta08/F");
+    PATEventPlaneNtuple->Branch("trkQy_eta08",&trkQy_eta08,"trkQy_eta08/F");
+    PATEventPlaneNtuple->Branch("trkQx_forw_eta08",&trkQx_forw_eta08,"trkQx_forw_eta08/F");
+    PATEventPlaneNtuple->Branch("trkQy_forw_eta08",&trkQy_forw_eta08,"trkQy_forw_eta08/F");
+    PATEventPlaneNtuple->Branch("trkQx_afterw_eta08",&trkQx_afterw_eta08,"trkQx_afterw_eta08/F");
+    PATEventPlaneNtuple->Branch("trkQy_afterw_eta08",&trkQy_afterw_eta08,"trkQy_afterw_eta08/F");
+    PATEventPlaneNtuple->Branch("trkQx_v3_eta08",&trkQx_v3_eta08,"trkQx_v3_eta08/F");
+    PATEventPlaneNtuple->Branch("trkQy_v3_eta08",&trkQy_v3_eta08,"trkQy_v3_eta08/F");
+    PATEventPlaneNtuple->Branch("trkQx_v3_forw_eta08",&trkQx_v3_forw_eta08,"trkQx_v3_forw_eta08/F");
+    PATEventPlaneNtuple->Branch("trkQy_v3_forw_eta08",&trkQy_v3_forw_eta08,"trkQy_v3_forw_eta08/F");
+    PATEventPlaneNtuple->Branch("trkQx_v3_afterw_eta08",&trkQx_v3_afterw_eta08,"trkQx_v3_afterw_eta08/F");
+    PATEventPlaneNtuple->Branch("trkQy_v3_afterw_eta08",&trkQy_v3_afterw_eta08,"trkQy_v3_afterw_eta08/F");
 
   } // doRecoNtuple_
 

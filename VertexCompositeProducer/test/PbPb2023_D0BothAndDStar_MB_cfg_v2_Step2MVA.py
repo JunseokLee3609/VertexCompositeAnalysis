@@ -1,7 +1,12 @@
 import FWCore.ParameterSet.Config as cms
 import FWCore.PythonUtilities.LumiList as LumiList
 from Configuration.StandardSequences.Eras import eras
-process = cms.Process('ANASKIM', eras.Run3_2023)
+from Configuration.ProcessModifiers.pp_on_AA_cff import pp_on_AA
+
+process = cms.Process('ANASKIM', eras.Run3_pp_on_PbPb_2023)
+# This cfg targets Run-3 PbPb conditions through the pp-on-PbPb era chain.
+if not process.isUsingModifier(pp_on_AA):
+    raise RuntimeError("Expected pp_on_AA modifier from Run3_pp_on_PbPb_2023 era.")
 
 process.load('Configuration.StandardSequences.Services_cff')
 process.load('Configuration.StandardSequences.GeometryRecoDB_cff')
@@ -10,7 +15,7 @@ process.load('Configuration.StandardSequences.Reconstruction_Data_cff')
 
 # Limit the output messages
 process.load('FWCore.MessageService.MessageLogger_cfi')
-# process.MessageLogger.cerr.FwkReport.reportEvery = 1000
+process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 # process.MessageLogger.cerr.threshold = "DEBUG"
 # process.MessageLogger.debugModules=["*"]
 #process.MessageLogger.cerr.threshold = cms.untracked.string('DEBUG')
@@ -50,14 +55,14 @@ process.source = cms.Source("PoolSource",
 )
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
 # Quick local timing estimate: set this to a small positive number (e.g. 200).
-timingEvents = 10000
+timingEvents = -1
 if timingEvents > 0:
     process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(timingEvents))
 process.source.lumisToProcess = LumiList.LumiList(filename = '/eos/user/c/cmsdqm/www/CAF/certification/Collisions23HI/Cert_Collisions2023HI_374288_375823_Golden.json').getVLuminosityBlockRange()
 
 # Set the global tag
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
-process.GlobalTag.globaltag = cms.string('132X_dataRun3_Prompt_v4')
+process.GlobalTag.globaltag = cms.string('132X_dataRun3_Prompt_v7')
 #process.GlobalTag.globaltag = cms.string('132X_mcRun3_2023_realistic_HI_v9')
 
 ## Set ZDC information
@@ -155,8 +160,29 @@ process.generalD0CandidatesNew.mvaCut = cms.double(0.9)
 # process.generalD0CandidatesNew.GBRForestFileName = cms.string('GBRForestfile_XGBDT_PromptD0InPbPb_pT_y_cBIN_19Params_v1_25Mar.root')
 process.generalD0CandidatesNew.input_names = cms.vstring('float_input')
 process.generalD0CandidatesNew.output_names = cms.vstring('probabilities')
-# process.generalD0CandidatesNew.onnxModelFileName = cms.string("Xgboost_woCent_y_01Dec25.onnx")
-process.generalD0CandidatesNew.onnxModelFileName = cms.string("Xgboost_new_16Jan01.onnx")
+process.generalD0CandidatesNew.onnxModelFileName = cms.string("XGBoost_Model_OnlyNonPrompt_05Mar26_Centrality_pTerr_ptErr011_1.onnx")
+process.generalD0CandidatesNew.onnxFeatureNames = cms.vstring(
+    'pT',
+    'y',
+    'centrality',
+    'VtxProb',
+    '3DCosPointingAngle',
+    '3DPointingAngle',
+    '2DCosPointingAngle',
+    '2DPointingAngle',
+    '3DDecayLength',
+    '3DDecayLengthSignificance',
+    '2DDecayLength',
+    '2DDecayLengthSignificance',
+    'pTD1',
+    'EtaD1',
+    'pTerrD1',
+    'pTD2',
+    'EtaD2',
+    'pTerrD2',
+    'Trk3DDCA',
+    'dEta_dau',
+)
 
 process.generalD0CandidatesNew.mPiKCutMin = cms.double(1.70)
 process.generalD0CandidatesNew.mPiKCutMax = cms.double(2.00)
@@ -192,16 +218,23 @@ process.load("VertexCompositeAnalysis.VertexCompositeAnalyzer.dStarselector_cfi"
 process.load("VertexCompositeAnalysis.VertexCompositeAnalyzer.dStaranalyzer_tree_cff")
 process.load("VertexCompositeAnalysis.VertexCompositeAnalyzer.eventinfotree_cff")
 process.load("VertexCompositeAnalysis.VertexCompositeAnalyzer.eventplaneanalyzer_cfi")
+process.load("RecoHI.HiEvtPlaneAlgos.HiEvtPlane_cfi")
+process.load("RecoHI.HiEvtPlaneAlgos.hiEvtPlaneFlat_cfi")
+
+# Keep the same config parameters from legacy modules, but run PAT6 plugin type.
+process.d0ana = cms.EDAnalyzer("PATCompositeTreeProducer6", **process.d0ana.parameters_())
+process.dStarana = cms.EDAnalyzer("PATCompositeTreeProducer6", **process.dStarana.parameters_())
 
 process.TFileService = cms.Service("TFileService",
     fileName =
     cms.string('d0ana_tree_step2.root')
     )
 
-process.d0ana.useAnyMVA = cms.bool(True)
 process.d0ana.multMin = cms.untracked.double(0)
 process.d0ana.multMax = cms.untracked.double(100000)
-process.d0ana.MVACollection = cms.InputTag("generalD0CandidatesNew:MVAValuesD0")
+process.d0ana.useAnyMVA = cms.untracked.bool(True)
+process.d0ana.isCentrality = cms.untracked.bool(False)
+process.d0ana.MVACollection = cms.untracked.InputTag("generalD0CandidatesNew:MVAValuesD0")
 #process.d0ana_wrongsign.useAnyMVA = cms.bool(False)
 #process.d0ana_wrongsign.multMin = cms.untracked.double(0)
 #process.d0ana_wrongsign.multMax = cms.untracked.double(100000)
@@ -211,10 +244,50 @@ process.generalDStarCandidatesNew.d0Collection = cms.InputTag("generalD0Candidat
 
 process.d0ana_newreduced = process.d0ana.clone()
 process.d0ana_newreduced.CompositeCollection = cms.untracked.InputTag("generalD0CandidatesNew:D0")
-process.dStarana.useAnyMVA = cms.bool(False)
+process.dStarana.useAnyMVA = cms.untracked.bool(False)
+process.dStarana.isEventPlane = cms.untracked.bool(True)
+process.dStarana.isCentrality = cms.untracked.bool(True)
+process.dStarana.centralityBinLabel = cms.untracked.InputTag("centralityBin","HFtowers")
+process.dStarana.centralitySrc = cms.untracked.InputTag("hiCentrality")
 process.dStarana.CompositeCollection = cms.untracked.InputTag("generalDStarCandidatesNew:DStar")
-process.dStarana.MVACollection = cms.InputTag("generalDStarCandidatesNew:MVAValuesNewDStar")
+process.dStarana.MVACollection = cms.untracked.InputTag("generalDStarCandidatesNew:MVAValuesNewDStar")
+# Use recalculated event planes for the main ntuple EP branches.
+process.dStarana.eventplaneSrc = cms.untracked.InputTag("hiEvtPlaneFlatRecalc")
+# Disable EP stored-vs-recalc comparison branches in final output.
+# Leave empty so compareEventPlane_ stays false (debug-only path disabled for tree).
+process.dStarana.eventplaneSrcRecalc = cms.untracked.InputTag("hiEvtPlaneFlatRecalc")
 process.eventplane.VertexCompositeCollection= cms.untracked.InputTag("generalDStarCandidatesNew:DStar")
+# Cover full D* fitter mass range (2.010 +/- 0.22) when removing candidate daughters.
+process.eventplane.massMinForExclusion = cms.untracked.double(1.79)
+process.eventplane.massMaxForExclusion = cms.untracked.double(2.25)
+
+process.hiEvtPlaneRecalc = process.hiEvtPlane.clone(
+    trackTag=cms.InputTag("packedPFCandidates"),
+    lostTag=cms.InputTag("lostTracks"),
+    chi2MapTag=cms.InputTag("packedPFCandidateTrackChi2"),
+    chi2MapLostTag=cms.InputTag("lostTrackChi2"),
+    caloTag=cms.InputTag("particleFlow"),
+    vertexTag=cms.InputTag("offlineSlimmedPrimaryVertices"),
+    centralityVariable=cms.string("HFtowers"),
+    centralityBinTag=cms.InputTag("centralityBin", "HFtowers"),
+    cutEra=cms.int32(0),
+    minet=cms.double(0.01),
+    minpt=cms.double(0.5),
+    dzdzerror_pix=cms.double(40.0),
+    caloCentRef=cms.double(-1.0),
+    caloCentRefWidth=cms.double(-1.0),
+)
+
+process.hiEvtPlaneFlatRecalc = process.hiEvtPlaneFlat.clone(
+    inputPlanesTag=cms.InputTag("hiEvtPlaneRecalc"),
+    centralityTag=cms.InputTag("hiCentrality"),
+    centralityVariable=cms.string("HFtowers"),
+    centralityBinTag=cms.InputTag("centralityBin", "HFtowers"),
+    trackTag=cms.InputTag("packedPFCandidates"),
+    vertexTag=cms.InputTag("offlineSlimmedPrimaryVertices"),
+    caloCentRef=cms.double(-1.0),
+    caloCentRefWidth=cms.double(-1.0),
+)
 
 #process.d0ana_wrongsign_newreduced = process.d0ana_wrongsign.clone()
 #process.d0ana_wrongsign_newreduced.VertexCompositeCollection = cms.untracked.InputTag("d0selectorWSNewReduced:D0")
@@ -232,8 +305,10 @@ process.dStarAna_step = cms.Path(
     process.eventFilter_HM 
     * process.generalD0CandidatesNew
     * process.generalDStarCandidatesNew
-    * process.d0ana_newreduced  
     * process.d0candCountFilter
+    * process.hiEvtPlaneRecalc
+    * process.hiEvtPlaneFlatRecalc
+    * process.d0ana_newreduced  
     * process.dStarana
     * process.eventplane)
 #process.dStarAna_step = cms.Path( process.eventFilter_HM * process.generalD0CandidatesNew* process.generalDStarCandidatesNew*process.d0ana_newreduced*process.dStarana)
@@ -254,6 +329,8 @@ process.eventinfoana.eventFilterNames = cms.untracked.vstring(
     )
 process.eventinfoana.triggerFilterNames = cms.untracked.vstring()
 process.eventinfoana.stageL1Trigger = cms.uint32(2)
+process.eventinfoana.isEventPlane = cms.bool(True)
+process.eventinfoana.eventplaneSrc = cms.InputTag("hiEvtPlaneFlatRecalc")
 process.pevt = cms.EndPath(process.eventinfoana)
 
 process.c = cms.Path(process.cent_seq)
