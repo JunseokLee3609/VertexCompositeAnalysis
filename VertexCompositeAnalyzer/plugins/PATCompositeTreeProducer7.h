@@ -1,5 +1,5 @@
-#ifndef VertexCompositeAnalysis_VertexCompositeAnalyzer_PATCompositeTreeProducer6_h
-#define VertexCompositeAnalysis_VertexCompositeAnalyzer_PATCompositeTreeProducer6_h
+#ifndef VertexCompositeAnalysis_VertexCompositeAnalyzer_PATCompositeTreeProducer7_h
+#define VertexCompositeAnalysis_VertexCompositeAnalyzer_PATCompositeTreeProducer7_h
 
 #include <array>
 #include <cmath>
@@ -35,10 +35,10 @@ static constexpr int kPdgD0 = 421;
 static constexpr int kMaxGenCand = 50000;
 static constexpr float kInvalidValue = -99.f;
 
-class PATCompositeTreeProducer6 : public edm::one::EDAnalyzer<> {
+class PATCompositeTreeProducer7 : public edm::one::EDAnalyzer<> {
 public:
-  explicit PATCompositeTreeProducer6(const edm::ParameterSet& iConfig);
-  ~PATCompositeTreeProducer6() override = default;
+  explicit PATCompositeTreeProducer7(const edm::ParameterSet& iConfig);
+  ~PATCompositeTreeProducer7() override = default;
   using CC = pat::CompositeCandidate;
   using CCC = pat::CompositeCandidateCollection;
   using MVACollection = std::vector<float>;
@@ -139,6 +139,17 @@ private:
     return dmeson->pdgId() != gen.pdgId();
   }
   void countDstarGenMatchTail(double deltaMass, bool strictNoFSR, bool swap, double slowPionDR);
+  void countDstarSlowPionRecoDiagnosis(double deltaMass,
+                                       double rawSlowPionDeltaMass,
+                                       bool strictNoFSR,
+                                       bool swap,
+                                       bool candidateMatched,
+                                       bool rawTrackMatched,
+                                       double candidateSlowPionDR,
+                                       double rawTrackSlowPionDR,
+                                       double rawTrackToCandidateDR,
+                                       double candidatePtOverGenPt,
+                                       double rawTrackPtOverGenPt);
   void countDstarTailAncestry(double deltaMass,
                               const reco::Candidate* recoSlowPi,
                               const reco::GenParticle* genDStar,
@@ -513,6 +524,15 @@ private:
   int matchGen_D1charge_[kMaxGenCand];
   int matchGen_D1pdgId_[kMaxGenCand];
   float matchGen_slowPion_dR_[kMaxGenCand];
+  float matchGen_slowPion_rawTrack_dR_[kMaxGenCand];
+  float matchGen_slowPion_rawTrackToCandidate_dR_[kMaxGenCand];
+  float matchGen_slowPion_rawTrackPt_[kMaxGenCand];
+  float matchGen_slowPion_candidatePtOverGenPt_[kMaxGenCand];
+  float matchGen_slowPion_rawTrackPtOverGenPt_[kMaxGenCand];
+  float matchGen_deltaMass_current_[kMaxGenCand];
+  float matchGen_deltaMass_rawSlowPion_[kMaxGenCand];
+  bool matchGen_slowPion_candidateMatched_[kMaxGenCand];
+  bool matchGen_slowPion_rawTrackMatched_[kMaxGenCand];
   int matchGen_D0Dau1_motherPdgId_[kMaxGenCand];
   int matchGen_D0Dau1_motherNDau_[kMaxGenCand];
   int matchGen_D0Dau2_motherPdgId_[kMaxGenCand];
@@ -529,7 +549,11 @@ private:
   unsigned int nEventsFillGEN_;
   std::array<std::array<unsigned long long, 4>, 5> dstarGenMatchTailCounts_;
   std::array<std::array<unsigned long long, 4>, 4> dstarTailAncestryCounts_;
+  std::array<std::array<unsigned long long, 4>, 9> dstarSlowPionRecoDiagnosisCounts_;
+  std::array<std::array<unsigned long long, 4>, 4> dstarCurrentVsRawDeltaMassCounts_;
+  int dstarTailMaxPrint_;
   unsigned int dstarTailAncestryPrintCount_;
+  unsigned int dstarSlowPionDiagnosisPrintCount_;
 };
 
 #endif
