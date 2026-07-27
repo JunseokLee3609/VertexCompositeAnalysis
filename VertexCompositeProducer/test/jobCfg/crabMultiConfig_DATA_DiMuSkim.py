@@ -16,7 +16,7 @@ config.section_('JobType')
 config.JobType.pluginName = 'Analysis'
 #config.JobType.psetName = 'PbPbSkimAndTree2018_DiMuContBoth_ZDC_ALLDIMU_cfg.py'
 config.JobType.psetName = 'PbPbSkimAndTree2018_DiMuContBoth_ZDC_cfg.py'
-config.JobType.inputFiles = ['HeavyIonRPRcd_PbPb2018_offline.db']
+config.JobType.inputFiles = ['../conditions/reaction_plane/HeavyIonRPRcd_PbPb2018_offline.db']
 
 config.section_('Data')
 config.Data.inputDBS = 'global'

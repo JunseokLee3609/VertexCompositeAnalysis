@@ -10,8 +10,8 @@ config.General.transferLogs = False
 
 config.section_('JobType')
 config.JobType.pluginName = 'Analysis'
-config.JobType.psetName = 'VCTree_PbPb2023_UPCDiMu_mc_cfg.py'
-# config.JobType.inputFiles = ['HeavyIonRPRcd_PbPb2018_offline.db']
+config.JobType.psetName = '../legacy/channels/upc_dimu/VCTree_PbPb2023_UPCDiMu_mc_cfg.py'
+# config.JobType.inputFiles = ['../conditions/reaction_plane/HeavyIonRPRcd_PbPb2018_offline.db']
 #config.JobType.numCores = 1
 config.JobType.allowUndistributedCMSSW = True
 

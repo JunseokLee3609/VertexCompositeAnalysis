@@ -16,7 +16,7 @@ config.General.transferLogs = False
 
 config.section_('JobType')
 config.JobType.pluginName = 'Analysis'
-config.JobType.inputFiles = ['../../CentralityTable_HFtowers200_DataPbPb_periHYDJETshape_run3v1302x04_offline_374810.db']
+config.JobType.inputFiles = ['../../conditions/centrality/CentralityTable_HFtowers200_DataPbPb_periHYDJETshape_run3v1302x04_offline_374810.db']
 config.JobType.psetName = '../../legacy/configs/PbPb2023_D0BothAndDStar_MB_cfg_v1.py'
 
 config.section_('Data')

@@ -21,7 +21,7 @@ config.JobType.psetName = "../../production/pbpb2023/mc/PbPb2023_D0BothAndDStar_
 config.JobType.numCores = 1
 #config.JobType.maxJobRuntimeMin = 2400
 config.JobType.maxMemoryMB = 3000         # request high memory machines.
-# config.JobType.inputFiles=['CentralityTable_HFtowers200_HydjetDrum5F_v1302x04_HYD2023_official.db']
+# config.JobType.inputFiles=['../../conditions/centrality/CentralityTable_HFtowers200_HydjetDrum5F_v1302x04_HYD2023_official.db']
 config.JobType.maxJobRuntimeMin = 2750    # request longer runtime, ~48 hours.
 
 config.section_("Data")

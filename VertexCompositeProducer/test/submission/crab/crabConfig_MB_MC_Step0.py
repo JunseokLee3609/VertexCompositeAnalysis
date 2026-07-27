@@ -15,7 +15,7 @@ config.JobType.pluginName = "Analysis"
 config.JobType.psetName = "../../legacy/configs/PbPb2023_D0BothAndDStar_MB_cfg_mc_v1_Step0.py"
 config.JobType.numCores = 1
 config.JobType.maxMemoryMB = 4000         # request high memory machines.
-config.JobType.inputFiles=['../../CentralityTable_HFtowers200_DataPbPb_periHYDJETshape_run3v1302x04_offline_374810.db']
+config.JobType.inputFiles=['../../conditions/centrality/CentralityTable_HFtowers200_DataPbPb_periHYDJETshape_run3v1302x04_offline_374810.db']
 config.JobType.maxJobRuntimeMin = 2750    # request longer runtime, ~48 hours.
 
 config.section_("Data")

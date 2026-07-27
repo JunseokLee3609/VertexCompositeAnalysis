@@ -16,7 +16,7 @@ if __name__ == '__main__':
 #    config.JobType.maxMemoryMB = 4000
 #    config.JobType.maxJobRuntimeMin = 2750
     config.JobType.psetName = '../test/PbPbSkimAndTree2018_DiMuContBoth_cfg.py'
-    config.JobType.inputFiles=['../test/HeavyIonRPRcd_PbPb2018_offline.db']
+    config.JobType.inputFiles=['../test/conditions/reaction_plane/HeavyIonRPRcd_PbPb2018_offline.db']
 #    config.Data.unitsPerJob = 20
 #    config.Data.totalUnits = 100
 #    config.Data.splitting = 'LumiBased'

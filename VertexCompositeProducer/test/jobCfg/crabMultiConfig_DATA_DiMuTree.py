@@ -14,7 +14,7 @@ config.General.transferLogs = False
 
 config.section_('JobType')
 config.JobType.pluginName = 'Analysis'
-config.JobType.inputFiles = ['HeavyIonRPRcd_PbPb2018_offline.db']
+config.JobType.inputFiles = ['../conditions/reaction_plane/HeavyIonRPRcd_PbPb2018_offline.db']
 
 config.section_('Data')
 config.Data.inputDBS = 'global'

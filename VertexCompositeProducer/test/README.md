@@ -28,10 +28,13 @@ baselines and override only the settings needed by the check.
 - `submission/condor/`: Condor cfg files, wrappers, and submit descriptions.
 - `validation/`: D* mass, gen-matching, event-plane, MVA, and slow-pion checks.
 - `scripts/`: plotting, ROOT macros, and input-list generators.
+- `conditions/`: versioned SQLite payloads needed by older local and submission workflows.
 - `legacy/configs/`: superseded full D0/D* configurations retained for reproducibility.
+- `legacy/channels/`: non-main D04P/D*5P, D0-only, D+, UPC dimuon, and pp2024 test configurations.
 - `Old/` and `legacy/`: older workflows that are not current production baselines.
 
-Payload databases and user-generated input lists remain at the top level for backward compatibility.
+The tracked source at the `test/` top level contains only this index. Generated input lists remain
+local and are ignored; versioned condition payloads are under `conditions/`.
 
 ## CRAB
 

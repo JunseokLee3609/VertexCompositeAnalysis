@@ -15,8 +15,8 @@ config.General.transferLogs = False
 
 config.section_('JobType')
 config.JobType.pluginName = 'Analysis'
-#config.JobType.inputFiles = ['HeavyIonRPRcd_PbPb2018_offline.db']
-config.JobType.psetName = '../PbPb2023_DPlusMinus_MB_cfg_v0.py'
+#config.JobType.inputFiles = ['../conditions/reaction_plane/HeavyIonRPRcd_PbPb2018_offline.db']
+config.JobType.psetName = '../legacy/channels/dplus/PbPb2023_DPlusMinus_MB_cfg_v0.py'
 
 config.section_('Data')
 config.Data.inputDBS = 'global'
@@ -29,7 +29,7 @@ config.Data.publication = False
 config.JobType.allowUndistributedCMSSW = True
 config.Data.allowNonValidInputDataset = False
 
-config.JobType.inputFiles = ["../CentralityTable_HFtowers200_DataPbPb_periHYDJETshape_run3v1302x04_offline_374810.db"]
+config.JobType.inputFiles = ["../conditions/centrality/CentralityTable_HFtowers200_DataPbPb_periHYDJETshape_run3v1302x04_offline_374810.db"]
 
 config.section_('Site')
 #config.Data.ignoreLocality = True

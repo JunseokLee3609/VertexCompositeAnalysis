@@ -168,18 +168,18 @@ vomsout
 This creates a `myProxy` file in your current directory which will be used by condor jobs.
 
 ## Generate file lists with filegenerator.sh
-The `filegenerator.sh` script helps generate indexed file lists from DAS queries or existing files. Each line in the output contains: `<file_path> <index> [<dataset_or_subdir>]`
+The `scripts/input_lists/filegenerator.sh` script helps generate indexed file lists from DAS queries or existing files. Each line in the output contains: `<file_path> <index> [<dataset_or_subdir>]`
 
 ### Basic usage:
 ```bash
 # Direct from DAS query with range filtering for HIPhysicsRawPrime datasets
-./filegenerator.sh -Q 'file dataset=/HIPhysicsRawPrime*/HIRun2023A-PromptReco-v2/MINIAOD instance=prod/global' -r '0:3' -o files_rawprime_0_3.list
+scripts/input_lists/filegenerator.sh -Q 'file dataset=/HIPhysicsRawPrime*/HIRun2023A-PromptReco-v2/MINIAOD instance=prod/global' -r '0:3' -o files_rawprime_0_3.list
 
 # From existing file list
-./filegenerator.sh -i files.txt -o files_indexed.txt
+scripts/input_lists/filegenerator.sh -i files.txt -o files_indexed.txt
 
 # With custom subdirectory tag (useful for MC)
-./filegenerator.sh -i files.txt -d nonprompt -o files_nonpromptMC.list
+scripts/input_lists/filegenerator.sh -i files.txt -d nonprompt -o files_nonpromptMC.list
 ```
 
 ### Options:
@@ -202,7 +202,7 @@ Example output format:
 ### For Data:
 1. Generate the file list:
 ```bash
-./filegenerator.sh -Q 'file dataset=/HIPhysicsRawPrime13/HIRun2023A-PromptReco-v2/MINIAOD instance=prod/global' -o file_Data_HIPhysicsRawPrime13.list -d HIPhysicsRawPrime13
+scripts/input_lists/filegenerator.sh -Q 'file dataset=/HIPhysicsRawPrime13/HIRun2023A-PromptReco-v2/MINIAOD instance=prod/global' -o file_Data_HIPhysicsRawPrime13.list -d HIPhysicsRawPrime13
 ```
 
 2. **Copy and edit your config file** (do not modify the original):
@@ -226,7 +226,7 @@ condor_submit condor_Data.sub
 ### For MC:
 1. Generate the file list with subdirectory tag:
 ```bash
-./filegenerator.sh -i your_mc_files.txt -d nonprompt -o files_nonpromptMC.list
+scripts/input_lists/filegenerator.sh -i your_mc_files.txt -d nonprompt -o files_nonpromptMC.list
 ```
 
 2. **Copy and edit your config file** (do not modify the original):

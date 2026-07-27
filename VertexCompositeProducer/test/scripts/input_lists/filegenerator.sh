@@ -10,13 +10,13 @@ usage() {
   cat <<'USAGE'
 Usage:
   1) From existing file:
-     ./filegenerator.sh -i files.txt -o files_indexed.txt
+     scripts/input_lists/filegenerator.sh -i files.txt -o files_indexed.txt
   2) Direct from DAS query:
-     ./filegenerator.sh -Q 'file dataset=/Your/Dataset/Name' -o files_indexed.txt
+     scripts/input_lists/filegenerator.sh -Q 'file dataset=/Your/Dataset/Name' -o files_indexed.txt
   3) No padding, 1-based, tab separator:
-     ./filegenerator.sh -i files.txt -b 1 -p 0 -t > out.txt
+     scripts/input_lists/filegenerator.sh -i files.txt -b 1 -p 0 -t > out.txt
   4) Filter by physics rawprime index range:
-     ./filegenerator.sh -Q 'file dataset=/HIPhysicsRawPrime*/HIRun2023A-PromptReco-v2/MINIAOD instance=prod/global' -r '0:9' -o files_rawprime.txt
+     scripts/input_lists/filegenerator.sh -Q 'file dataset=/HIPhysicsRawPrime*/HIRun2023A-PromptReco-v2/MINIAOD instance=prod/global' -r '0:9' -o files_rawprime.txt
 
 Options:
   -i <path>     Input file (default: stdin)
@@ -35,7 +35,7 @@ Options:
 Notes:
 - Uses an in-memory buffer to compute total count; fine for typical DAS file lists.
 - For in-place overwrite: write to a temp then mv, e.g.,
-    ./filegenerator.sh -i files.txt -o files.txt.tmp && mv files.txt.tmp files.txt
+    scripts/input_lists/filegenerator.sh -i files.txt -o files.txt.tmp && mv files.txt.tmp files.txt
 - When using -r with -Q for HIPhysicsRawPrime*/HIRun2023A-PromptReco-v*/MINIAOD, it filters datasets by RawPrime index before fetching files; otherwise -r filters by line index.
 USAGE
 }

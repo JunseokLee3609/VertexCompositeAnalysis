@@ -87,7 +87,9 @@ are not D* alternatives.
 | `test/validation/` | Question-specific D* mass, dxy, gen matching, event-plane, MVA, and slow-pion checks |
 | `test/submission/` | CRAB and Condor submission material |
 | `test/scripts/` | Plotting, ROOT macros, and input-list helpers |
-| `test/legacy/` | Superseded full configurations |
+| `test/conditions/` | Versioned centrality and reaction-plane SQLite payloads |
+| `test/legacy/configs/` | Superseded full D0/D* configurations |
+| `test/legacy/channels/` | Older non-main-channel and one-off test configurations |
 | `legacy/dstar/` | DStarFitter point-in-time source backups; never compiled |
 
 See `test/README.md` for the configuration entry points and
