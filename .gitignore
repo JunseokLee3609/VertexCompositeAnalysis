@@ -7,3 +7,33 @@ __init__.py
 *.root
 *.log
 .DS_Store
+*.txt
+*.list
+*.list.*
+
+# Local CMSSW test runtime artifacts
+**/test/**/__pycache__/
+**/test/**/crab_projects/
+**/test/**/crab_runtime_*/
+**/test/**/logs/
+**/test/**/plots_*/
+**/test/**/hist_cut_validation_*/
+**/test/**/rp_calib_check_*/
+**/test/**/backup/
+**/test/**/artifacts/
+**/test/**/.__afs*
+**/test/**/myProxy
+**/test/**/*.err
+**/test/**/*.out
+**/test/**/*.png
+**/test/.codex
+
+# Local credentials and copied runtime work areas
+**/myProxy
+**/krb5cc*
+**/*.ccache
+VertexCompositeProducer/test/junseok.cc
+VertexCompositeAnalyzer/test/pat7_gendca_validation/
+
+# User-generated input lists without a conventional extension
+VertexCompositeProducer/test/files_*

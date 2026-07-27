@@ -1,0 +1,885 @@
+
+// system include files
+#include <memory>
+#include <string>
+#include <vector>
+#include <iostream>
+#include <math.h>
+
+#include <TH1.h>
+#include <TH2.h>
+#include <TTree.h>
+#include <TFile.h>
+#include <TROOT.h>
+#include <TSystem.h>
+#include <TString.h>
+#include <TObjString.h>
+#include <TCanvas.h>
+#include <TVector3.h>
+#include <TMatrixD.h>
+#include <TRandom.h>
+#include <TMath.h>
+#include <limits>
+
+// user include files
+#include "FWCore/Framework/interface/Frameworkfwd.h"
+#include "FWCore/Framework/interface/one/EDAnalyzer.h"
+
+#include "FWCore/Framework/interface/Event.h"
+#include "FWCore/Framework/interface/MakerMacros.h"
+
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "FWCore/Utilities/interface/InputTag.h"
+
+#include "DataFormats/TrackReco/interface/Track.h"
+#include "DataFormats/TrackReco/interface/TrackFwd.h"
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
+
+#include "DataFormats/VertexReco/interface/Vertex.h"
+#include "DataFormats/VertexReco/interface/VertexFwd.h"
+
+#include "DataFormats/RecoCandidate/interface/RecoCandidate.h"
+
+#include "DataFormats/Candidate/interface/Candidate.h"
+// #include "DataFormats/Candidate/interface/PATCompositeCandidate.h"
+// #include "DataFormats/Candidate/interface/PATCompositeCandidateFwd.h"
+
+#include "DataFormats/PatCandidates/interface/CompositeCandidate.h"
+
+#include "FWCore/ServiceRegistry/interface/Service.h"
+#include "CommonTools/UtilAlgos/interface/TFileService.h"
+
+#include "DataFormats/TrackReco/interface/DeDxData.h"
+
+#include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
+#include "TrackingTools/Records/interface/TransientTrackRecord.h"
+#include "TrackingTools/PatternTools/interface/ClosestApproachInRPhi.h"
+#include "TrackingTools/PatternTools/interface/TSCBLBuilderNoMaterial.h"
+
+#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+#include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
+#include "DataFormats/PatCandidates/interface/Muon.h"
+#include "DataFormats/MuonReco/interface/Muon.h"
+#include "DataFormats/MuonReco/interface/MuonFwd.h"
+#include "DataFormats/MuonReco/interface/MuonChamberMatch.h"
+#include "DataFormats/MuonReco/interface/MuonSegmentMatch.h"
+#include "DataFormats/MuonReco/interface/MuonSelectors.h"
+
+#include "DataFormats/HeavyIonEvent/interface/CentralityBins.h"
+#include "DataFormats/HeavyIonEvent/interface/Centrality.h"
+#include "DataFormats/HeavyIonEvent/interface/EvtPlane.h"
+#include "VertexCompositeAnalysis/VertexCompositeAnalyzer/plugins/PATCompositeUtils.h"
+
+//#include "RecoHI/HiEvtPlaneAlgos/interface/HiEvtPlaneFlatten.h"
+//#include "RecoHI/HiEvtPlaneAlgos/interface/HiEvtPlaneList.h"
+//#include "RecoHI/HiEvtPlaneAlgos/interface/LoadEPDB.h"
+
+#include <Math/Functions.h>
+#include <Math/SVector.h>
+#include <Math/SMatrix.h>
+
+// Validation utility for debugging and testing
+#include "ValidationUtility.h"
+
+//#define DEBUG true
+
+// Debug macros for improved logging (should match the .cc file)
+#ifdef DEBUG
+    #define DEBUG_MSG(msg) std::cout << "DEBUG: " << msg << std::endl
+#else
+    #define DEBUG_MSG(msg) do {} while(0)
+#endif
+
+// Logging macros for event processing
+//#define LOG_DEBUG_EVENT(msg) LogDebug("PATCompositeTreeProducer") << "[Event] " << msg
+//#define LOG_DEBUG_GEN(msg) LogDebug("GenMatching") << "[GenMatch] " << msg
+
+
+//
+// class decleration
+//
+
+// Constants
+static constexpr double PI = TMath::Pi();
+static constexpr int MAXCAN = 50000;
+static constexpr double INVALID_VALUE = -999.9;
+static constexpr double PT_ERROR_THRESHOLD = 0.10;
+static constexpr double DZ_SIGNIFICANCE_CUT = 3.0;
+static constexpr double DXY_SIGNIFICANCE_CUT = 3.0;
+static constexpr double ETA_CUT = 2.4;
+static constexpr double PT_CUT = 0.4;
+// PDG ID constants for particle identification
+static constexpr int PION_PDG_ID = 211;
+static constexpr int KAON_PDG_ID = 321;
+static constexpr int D0_PDG_ID = 421;
+
+// Specific using declarations instead of namespace pollution
+using CC = pat::CompositeCandidate;
+using CCC = pat::CompositeCandidateCollection;
+
+class PATCompositeTreeProducer2Refactored : public edm::one::EDAnalyzer<> {
+public:
+  explicit PATCompositeTreeProducer2Refactored(const edm::ParameterSet&);
+  ~PATCompositeTreeProducer2Refactored();
+
+  using MVACollection = std::vector<float>;
+
+private:
+  virtual void beginJob() ;
+  virtual void analyze(const edm::Event&, const edm::EventSetup&);
+  virtual void fillRECO(const edm::Event&, const edm::EventSetup&) ;
+  virtual void fillGEN(const edm::Event&, const edm::EventSetup&) ;
+  virtual void endJob() ;
+  virtual void initHistogram();
+  virtual void initTree();
+  
+  // Helper functions for fillRECO refactoring
+  void processEventInfo(const edm::Event& iEvent);
+  void processEventPlaneInfo(const edm::Event& iEvent);
+  void resetRecoCandidate(unsigned int index);
+  void resetGenCandidate(unsigned int index);
+  std::vector<reco::GenParticleRef> processGenMatching(const edm::Handle<reco::GenParticleCollection>& genpars);
+  void processTwoLayerDecayMatching(const CC& trk, unsigned it, 
+                                   const std::vector<reco::GenParticleRef>& genRefs);
+  void processRegularMatching(const CC& trk, unsigned it,
+                             const std::vector<reco::GenParticleRef>& genRefs);
+  
+  // Main candidate processing function
+  void processCandidates(const CCC* v0candidates_,
+                        const edm::Handle<MVACollection>& mvavalues,
+                        const std::vector<reco::GenParticleRef>& genRefs,
+                        const edm::Handle<edm::ValueMap<reco::DeDxData>>& dEdxHandle1,
+                        const edm::Handle<edm::ValueMap<reco::DeDxData>>& dEdxHandle2,
+                        const edm::Event& iEvent,
+                        const edm::Handle<reco::VertexCollection>& vertices,
+                        const edm::Handle<reco::GenParticleCollection>& genpars);
+  
+  // Error handling and safety functions
+  int muAssocToTrack( const reco::TrackRef& trackref, const edm::Handle<reco::MuonCollection>& muonh) const;
+  
+  // Centralized decay selection policy
+  patcomp::DecaySelectionConfig decayConfig_;
+  
+  // Improved permutation matching functions
+  bool findDaughterPermutation(const reco::GenParticle& genParticle, std::vector<unsigned int>& matchedIndices);
+  bool checkTwoLayerDecayPermutation(const reco::Candidate* daughter, std::vector<unsigned int>& subIndices);
+  
+  // Helper function for finding correct daughter permutation (for code deduplication)
+  std::vector<unsigned int> findDaughterPermutation(const reco::GenParticle& particle, bool twoLayerDecay);
+  
+	  // Strict D* → D0 + π → K + π + π decay chain validation
+	  bool isValidDStarDecayChain(const reco::Candidate* Dd1, const reco::Candidate* Dd2) const;
+
+	  // Gen-matching helper utilities (kept here for refactored plugin)
+	  struct D0DaughterSummary {
+	    int gammaCount = 0;
+	    int nonGammaCount = 0;
+	    bool hasKaon = false;
+	    bool hasPion = false;
+	  };
+	  D0DaughterSummary summarizeD0Daughters(const reco::Candidate* d0) const;
+	  const reco::GenParticle* findAncestor(const reco::GenParticle* particle, int absPdgId) const;
+	  bool matchD0WithFSR(const reco::Candidate* recoDau1,
+	                      const reco::Candidate* recoDau2,
+	                      const reco::GenParticle* genD0,
+	                      double maxDr) const;
+	  void resetRecoGenMatch(unsigned int index);
+  
+  // Validation and debugging functions (delegated to ValidationUtility)
+  void performSelfDiagnostics() const;
+
+  void genDecayLength(const uint&, const reco::GenParticle&) const;
+
+  bool matchHadron(const reco::Candidate* _dmeson_, const reco::GenParticle& _gen_, bool isMatchD0) const;
+  bool matchHadron(const reco::Candidate* _dmeson_, const reco::Candidate& _gen_, bool isMatchD0) const;
+  bool matchTrackdR(const reco::Candidate* _recoTrk_, const reco::Candidate* _genTrk_, bool chkchrg = true) const;
+  bool checkSwap(const reco::Candidate* _dmeson_, const reco::GenParticle& _gen_) const;
+  bool checkSwap(const reco::Candidate* _dmeson_, const reco::Candidate& _gen_) const;
+
+
+  reco::GenParticleRef findMother(const reco::GenParticleRef&);
+  void genDecayLength(const reco::Candidate& gCand, float& gen_decayLength2D_, float& gen_decayLength3D_, float& gen_angle2D_, float& gen_angle3D_);
+  void getAncestorId(const reco::Candidate& gCand, int& gen_ancestorId_, int& gen_ancestorFlavor_ );
+
+  // ----------member data ---------------------------
+    
+    edm::Service<TFileService> fs;
+
+    TTree* PATCompositeNtuple;
+    TH2F*  hMassVsMVA[6][10];
+    TH2F*  hpTVsMVA[6][10];
+    TH2F*  hetaVsMVA[6][10];
+    TH2F*  hyVsMVA[6][10];
+    TH2F*  hVtxProbVsMVA[6][10];
+    TH2F*  h3DCosPointingAngleVsMVA[6][10];
+    TH2F*  h3DPointingAngleVsMVA[6][10];
+    TH2F*  h2DCosPointingAngleVsMVA[6][10];
+    TH2F*  h2DPointingAngleVsMVA[6][10];
+    TH2F*  h3DDecayLengthSignificanceVsMVA[6][10];
+    TH2F*  h3DDecayLengthVsMVA[6][10];
+    TH2F*  h2DDecayLengthSignificanceVsMVA[6][10];
+    TH2F*  h2DDecayLengthVsMVA[6][10];
+    TH2F*  h3DDCAVsMVA[6][10];
+    TH2F*  h2DDCAVsMVA[6][10];
+    TH2F*  hzDCASignificanceDaugther1VsMVA[6][10];
+    TH2F*  hxyDCASignificanceDaugther1VsMVA[6][10];
+    TH2F*  hNHitD1VsMVA[6][10];
+    TH2F*  hpTD1VsMVA[6][10];
+    TH2F*  hpTerrD1VsMVA[6][10];
+    TH2F*  hEtaD1VsMVA[6][10];
+    TH2F*  hdedxHarmonic2D1VsMVA[6][10];
+    TH2F*  hdedxHarmonic2D1VsP[6][10];
+    TH2F*  hzDCASignificanceDaugther2VsMVA[6][10];
+    TH2F*  hxyDCASignificanceDaugther2VsMVA[6][10];
+    TH2F*  hNHitD2VsMVA[6][10];
+    TH2F*  hpTD2VsMVA[6][10];
+    TH2F*  hpTerrD2VsMVA[6][10];
+    TH2F*  hEtaD2VsMVA[6][10];
+    TH2F*  hdedxHarmonic2D2VsMVA[6][10];
+    TH2F*  hdedxHarmonic2D2VsP[6][10];
+
+    bool   saveTree_;
+    bool   saveHistogram_;
+    bool   saveAllHistogram_;
+    double massHistPeak_;
+    double massHistWidth_;
+    int    massHistBins_;
+
+    //options
+    bool doRecoNtuple_;
+    bool doGenNtuple_;   
+    bool doGenMatching_;
+    bool doGenMatchingTOF_;
+    bool hasSwap_;
+    bool decayInGen_;
+    bool twoLayerDecay_;
+    bool doMuon_;
+    bool doMuonFull_;
+    int PID_;
+    int PID_dau1_;
+    int PID_dau2_;
+    
+    //cut variables
+    double multMax_;
+    double multMin_;
+    double deltaR_; //deltaR for Gen matching
+    
+    // Debug control variables
+    bool debugGenMatching_; // Runtime control for gen matching debug
+    bool verboseDebug_;     // Extra verbose debug output
+
+    std::vector<double> pTBins_;
+    std::vector<double> yBins_;
+
+    //tree branches
+    //event info
+    int centrality;
+    int Ntrkoffline;
+    int Npixel;
+    float HFsumETPlus;
+    float HFsumETMinus;
+    float ZDCPlus;
+    float ZDCMinus;
+    float bestvx;
+    float bestvy;
+    float bestvz;
+    int candSize;
+    float ephfpAngle[3];
+    float ephfmAngle[3];
+    float ephfpQ[3];
+    float ephfmQ[3];
+    float ephfpSumW;
+    float ephfmSumW;
+    float ephfmAngleoff[2];
+    float ephfpAngleoff[2];
+
+    // Additional event-plane info (raw/off/flat + track-mid), following common hiEvtPlane index layout:
+    //  v2: HF- [0], HF+ [1], HF [2], trkMid [3]
+    //  v3: HF- [6], HF+ [7], HF [8], trkMid [9]
+    float ephfmAngleRaw[2];
+    float ephfmsumCosRaw[2];
+    float ephfmsumSinRaw[2];
+    float ephfmsumPtOrEt[2];
+
+    float ephfpAngleRaw[2];
+    float ephfpsumCosRaw[2];
+    float ephfpsumSinRaw[2];
+    float ephfpsumPtOrEt[2];
+
+    float eptrackmidAngle[2];
+    float eptrackmidQ[2];
+    float eptrackmidSumW;
+    float eptrackpAngle[2];
+    float eptrackpQ[2];
+    float eptrackpSumW[2];
+    float eptrackmAngle[2];
+    float eptrackmQ[2];
+    float eptrackmSumW[2];
+
+    static constexpr int kCompareEPSize = 12;
+    float epStoredAngle2[kCompareEPSize];
+    float epStoredQ2[kCompareEPSize];
+    float epStoredSumW[kCompareEPSize];
+    float epRecalcAngle2[kCompareEPSize];
+    float epRecalcQ2[kCompareEPSize];
+    float epRecalcSumW[kCompareEPSize];
+    float epDeltaAngle2[kCompareEPSize];
+    float epDeltaQ2[kCompareEPSize];
+    float epDeltaSumW[kCompareEPSize];
+    int epStoredSize;
+    int epRecalcSize;
+
+    float ephfAngle[2];
+    float ephfAngleoff[2];
+    float ephfAngleRaw[2];
+    float ephfQ[2];
+    float ephfSumW;
+    float ephfsumCos[2];
+    float ephfsumSin[2];
+    float ephfsumCosRaw[2];
+    float ephfsumSinRaw[2];
+    float ephfsumPtOrEt[2];
+    
+    //Composite candidate info
+    float mva[MAXCAN];
+    float pt[MAXCAN];
+    float eta[MAXCAN];
+    float phi[MAXCAN];
+    float flavor[MAXCAN];
+    float y[MAXCAN];
+    float mass[MAXCAN];
+    float VtxProb[MAXCAN];
+    float dlos[MAXCAN];
+    float dl[MAXCAN];
+    float dlerror[MAXCAN];
+    float agl[MAXCAN];
+    float vtxChi2[MAXCAN];
+    float ndf[MAXCAN];
+    float agl_abs[MAXCAN];
+    float agl2D[MAXCAN];
+    float agl2D_abs[MAXCAN];
+    float dlos2D[MAXCAN];
+    float dl2D[MAXCAN];
+    float trk3Ddca[MAXCAN];
+    float trk3DdcaErr[MAXCAN];
+    float dca3D[MAXCAN];
+    float dca3DErr[MAXCAN];
+    float dca2D[MAXCAN];
+    bool isSwap[MAXCAN];
+    bool matchGEN[MAXCAN];
+    int idBAnc_reco[MAXCAN];
+    int pionFlavor[MAXCAN];
+    int idmom_reco[MAXCAN];
+    float gen_agl_abs[MAXCAN];
+    float gen_agl2D_abs[MAXCAN];
+    float gen_dl[MAXCAN];
+    float gen_dl2D[MAXCAN];
+    
+    //dau candidate info
+    float grand_mass[MAXCAN];
+    float grand_VtxProb[MAXCAN];
+    float grand_dlos[MAXCAN];
+    float grand_dl[MAXCAN];
+    float grand_dlerror[MAXCAN];
+    float grand_agl[MAXCAN];
+    float grand_vtxChi2[MAXCAN];
+    float grand_ndf[MAXCAN];
+    float grand_agl_abs[MAXCAN];
+    float grand_agl2D[MAXCAN];
+    float grand_agl2D_abs[MAXCAN];
+    float grand_dlos2D[MAXCAN];
+    float grand_dl2D[MAXCAN];
+
+    //dau info
+    float dzos1[MAXCAN];
+    float dzos2[MAXCAN];
+    float dxyos1[MAXCAN];
+    float dxyos2[MAXCAN];
+    float dzval1[MAXCAN];
+    float dzval2[MAXCAN];
+    float dxyval1[MAXCAN];
+    float dxyval2[MAXCAN];
+    float nhit1[MAXCAN];
+    float nhit2[MAXCAN];
+    bool trkquality1[MAXCAN];
+    bool trkquality2[MAXCAN];
+    float pt1[MAXCAN];
+    float pt2[MAXCAN];
+    float ptErr1[MAXCAN];
+    float ptErr2[MAXCAN];
+    float p1[MAXCAN];
+    float p2[MAXCAN];
+    float massD2[MAXCAN];
+    float eta1[MAXCAN];
+    float eta2[MAXCAN];
+    float phi1[MAXCAN];
+    float phi2[MAXCAN];
+    int charge1[MAXCAN];
+    int charge2[MAXCAN];
+    int pid1[MAXCAN];
+    int pid2[MAXCAN];
+    int pid3[MAXCAN];
+    float tof1[MAXCAN];
+    float tof2[MAXCAN];
+    float H2dedx1[MAXCAN];
+    float H2dedx2[MAXCAN];
+    float T4dedx1[MAXCAN];
+    float T4dedx2[MAXCAN];
+    float trkChi1[MAXCAN];
+    float trkChi2[MAXCAN];
+   
+    //grand-dau info
+    float grand_dzos1[MAXCAN];
+    float grand_dzos2[MAXCAN];
+    float grand_dxyos1[MAXCAN];
+    float grand_dxyos2[MAXCAN];
+    float grand_nhit1[MAXCAN];
+    float grand_nhit2[MAXCAN];
+    bool grand_trkquality1[MAXCAN];
+    bool grand_trkquality2[MAXCAN];
+    float grand_pt1[MAXCAN];
+    float grand_pt2[MAXCAN];
+    float grand_ptErr1[MAXCAN];
+    float grand_ptErr2[MAXCAN];
+    float grand_mass1[MAXCAN];
+    float grand_mass2[MAXCAN];
+    float grand_p1[MAXCAN];
+    float grand_p2[MAXCAN];
+    float grand_eta1[MAXCAN];
+    float grand_eta2[MAXCAN];
+    float grand_phi1[MAXCAN];
+    float grand_phi2[MAXCAN];
+    int grand_charge1[MAXCAN];
+    int grand_charge2[MAXCAN];
+    float grand_H2dedx1[MAXCAN];
+    float grand_H2dedx2[MAXCAN];
+    float grand_T4dedx1[MAXCAN];
+    float grand_T4dedx2[MAXCAN];
+    float grand_trkChi1[MAXCAN];
+    float grand_trkChi2[MAXCAN];
+    
+    //dau muon info
+    bool  onestmuon1[MAXCAN];
+    bool  onestmuon2[MAXCAN];
+    bool  pfmuon1[MAXCAN];
+    bool  pfmuon2[MAXCAN];
+    bool  glbmuon1[MAXCAN];
+    bool  glbmuon2[MAXCAN];
+    bool  trkmuon1[MAXCAN];
+    bool  trkmuon2[MAXCAN];
+    bool  calomuon1[MAXCAN];
+    bool  calomuon2[MAXCAN];
+    bool  softmuon1[MAXCAN];
+    bool  softmuon2[MAXCAN];
+    float nmatchedst1[MAXCAN];
+    float nmatchedch1[MAXCAN];
+    float ntrackerlayer1[MAXCAN];
+    float npixellayer1[MAXCAN];
+    float matchedenergy1[MAXCAN];
+    float nmatchedst2[MAXCAN];
+    float nmatchedch2[MAXCAN];
+    float ntrackerlayer2[MAXCAN];
+    float npixellayer2[MAXCAN];
+    float matchedenergy2[MAXCAN];
+    float dx1_seg_[MAXCAN];
+    float dy1_seg_[MAXCAN];
+    float dxSig1_seg_[MAXCAN];
+    float dySig1_seg_[MAXCAN];
+    float ddxdz1_seg_[MAXCAN];
+    float ddydz1_seg_[MAXCAN];
+    float ddxdzSig1_seg_[MAXCAN];
+    float ddydzSig1_seg_[MAXCAN];
+    float dx2_seg_[MAXCAN];
+    float dy2_seg_[MAXCAN];
+    float dxSig2_seg_[MAXCAN];
+    float dySig2_seg_[MAXCAN];
+    float ddxdz2_seg_[MAXCAN];
+    float ddydz2_seg_[MAXCAN];
+    float ddxdzSig2_seg_[MAXCAN];
+    float ddydzSig2_seg_[MAXCAN];
+
+
+    // gen info    
+    int candSize_gen;
+    float gen_weight;
+    float mass_gen[MAXCAN];
+    float pt_gen[MAXCAN];
+    float eta_gen[MAXCAN];
+    float phi_gen[MAXCAN];
+    int status_gen[MAXCAN];
+    int pdgId_gen[MAXCAN];
+    int charge_gen[MAXCAN];
+    int idmom[MAXCAN];
+    float y_gen[MAXCAN];
+    int iddau1[MAXCAN];
+    int iddau2[MAXCAN];
+
+    float matchGen_DStarpT_[MAXCAN];
+		float matchGen_DStareta_[MAXCAN];
+		float matchGen_DStarphi_[MAXCAN];
+		float matchGen_DStarmass_[MAXCAN];
+		float matchGen_DStary_[MAXCAN];
+		int matchGen_DStarcharge_[MAXCAN];
+		int matchGen_DStarpdgId_[MAXCAN];
+
+		float matchGen_D0pT_[MAXCAN];
+		float matchGen_D0eta_[MAXCAN];
+		float matchGen_D0phi_[MAXCAN];
+		float matchGen_D0mass_[MAXCAN];
+		float matchGen_D0y_[MAXCAN];
+		int matchGen_D0charge_[MAXCAN];
+		int matchGen_D0pdgId_[MAXCAN];
+
+		float matchGen_D0Dau1_pT_[MAXCAN];
+		float matchGen_D0Dau1_eta_[MAXCAN];
+		float matchGen_D0Dau1_phi_[MAXCAN];
+		float matchGen_D0Dau1_mass_[MAXCAN];
+		float matchGen_D0Dau1_y_[MAXCAN];
+		int matchGen_D0Dau1_charge_[MAXCAN];
+		int matchGen_D0Dau1_pdgId_[MAXCAN];
+
+		float matchGen_D0Dau2_pT_[MAXCAN];
+		float matchGen_D0Dau2_eta_[MAXCAN];
+		float matchGen_D0Dau2_phi_[MAXCAN];
+		float matchGen_D0Dau2_mass_[MAXCAN];
+		float matchGen_D0Dau2_y_[MAXCAN];
+		int matchGen_D0Dau2_charge_[MAXCAN];
+		int matchGen_D0Dau2_pdgId_[MAXCAN];
+
+		float matchGen_D1pT_[MAXCAN];
+		float matchGen_D1eta_[MAXCAN];
+		float matchGen_D1phi_[MAXCAN];
+		float matchGen_D1mass_[MAXCAN];
+		float matchGen_D1y_[MAXCAN];
+		float matchGen_D1decayLength2D_[MAXCAN];
+		float matchGen_D1decayLength3D_[MAXCAN];
+		float matchGen_D1angle2D_[MAXCAN];
+		float matchGen_D1angle3D_[MAXCAN];
+		int matchGen_D1ancestorId_[MAXCAN];
+		int matchGen_D1ancestorFlavor_[MAXCAN];
+		int matchGen_D1charge_[MAXCAN];
+		int matchGen_D1pdgId_[MAXCAN];
+		float matchGen_slowPion_dR_[MAXCAN];
+
+		// Extra provenance for matched gen tracks
+		int matchGen_D0Dau1_motherPdgId_[MAXCAN];
+		int matchGen_D0Dau1_motherNDau_[MAXCAN];
+		int matchGen_D0Dau2_motherPdgId_[MAXCAN];
+		int matchGen_D0Dau2_motherNDau_[MAXCAN];
+			int matchGen_D1_motherPdgId_[MAXCAN]; // slow pion mother PDG
+			int matchGen_D1_motherNDau_[MAXCAN];
+			bool matchGen_validDstarChain_[MAXCAN];
+			bool matchGen_validD0chain_[MAXCAN];
+
+
+		float gen_D0pT_[MAXCAN];
+		float gen_D0eta_[MAXCAN];
+		float gen_D0phi_[MAXCAN];
+		float gen_D0mass_[MAXCAN];
+		float gen_D0y_[MAXCAN];
+		int gen_D0charge_[MAXCAN];
+		int gen_D0pdgId_[MAXCAN];
+		int gen_D0ancestorId_[MAXCAN];
+		int gen_D0ancestorFlavor_[MAXCAN];
+
+		float gen_D0Dau1_pT_[MAXCAN];
+		float gen_D0Dau1_eta_[MAXCAN];
+		float gen_D0Dau1_phi_[MAXCAN];
+		float gen_D0Dau1_mass_[MAXCAN];
+		float gen_D0Dau1_y_[MAXCAN];
+		int gen_D0Dau1_charge_[MAXCAN];
+		int gen_D0Dau1_pdgId_[MAXCAN];
+
+		float gen_D0Dau2_pT_[MAXCAN];
+		float gen_D0Dau2_eta_[MAXCAN];
+		float gen_D0Dau2_phi_[MAXCAN];
+		float gen_D0Dau2_mass_[MAXCAN];
+		float gen_D0Dau2_y_[MAXCAN];
+		int gen_D0Dau2_charge_[MAXCAN];
+		int gen_D0Dau2_pdgId_[MAXCAN];
+
+		float gen_D1pT_[MAXCAN];
+		float gen_D1eta_[MAXCAN];
+		float gen_D1phi_[MAXCAN];
+		float gen_D1mass_[MAXCAN];
+		float gen_D1y_[MAXCAN];
+			int gen_D1charge_[MAXCAN];
+			int gen_D1pdgId_[MAXCAN];
+			bool gen_validDstarChain_[MAXCAN];
+			bool gen_validD0chain_[MAXCAN];
+
+    //vector for gen match
+    std::vector< std::vector<double> > *pVect;
+    std::vector< std::vector<double> > *gpVect;
+    std::vector<double> *Dvector1;
+    std::vector<double> *GDvector1;
+    std::vector<double> *Dvector2;
+    std::vector<double> *GDvector2;
+    std::vector<int> *pVectIDmom;
+    
+    bool useAnyMVA_;
+    bool isSkimMVA_;
+    bool isCentrality_;
+    bool isEventPlane_;
+    bool compareEventPlane_;
+
+    edm::Handle<int> cbin_;
+
+    //tokens
+    edm::EDGetTokenT<reco::VertexCollection> tok_offlinePV_;
+    edm::EDGetTokenT<reco::TrackCollection> tok_generalTrk_;
+    edm::EDGetTokenT<CCC> PATCompositeCandidateCollection_Token_;
+    edm::EDGetTokenT<MVACollection> MVAValues_Token_;
+    edm::EDGetTokenT<reco::MuonCollection> tok_muon_;
+
+    edm::EDGetTokenT<edm::ValueMap<reco::DeDxData> > Dedx_Token1_;
+    edm::EDGetTokenT<edm::ValueMap<reco::DeDxData> > Dedx_Token2_;
+    edm::EDGetTokenT<reco::GenParticleCollection> tok_genParticle_;
+    edm::EDGetTokenT<GenEventInfoProduct> tok_genInfo_;
+
+    edm::EDGetTokenT<int> tok_centBinLabel_;
+    edm::EDGetTokenT<reco::Centrality> tok_centSrc_;
+
+    edm::EDGetTokenT<reco::EvtPlaneCollection> tok_eventplaneSrc_;
+    edm::EDGetTokenT<reco::EvtPlaneCollection> tok_eventplaneSrcRecalc_;
+};
+
+//
+// constants, enums and typedefs
+//
+
+//
+// static data member definitions
+//
+
+//
+// constructors and destructor
+//
+
+
+
+bool PATCompositeTreeProducer2Refactored::matchHadron(const reco::Candidate* _dmeson_, const reco::GenParticle& _gen_, bool isMatchD0) const {
+  bool match = false;
+  if(isMatchD0){
+    reco::Candidate const* reco_trk1 = _dmeson_->daughter(0);
+    reco::Candidate const* reco_trk2 = _dmeson_->daughter(1);
+
+    reco::Candidate const* gen_trk1 = _gen_.daughter(0);
+    reco::Candidate const* gen_trk2 = _gen_.daughter(1);
+
+    if( matchTrackdR(reco_trk1, gen_trk1, true)){
+        if( matchTrackdR(reco_trk2, gen_trk2,true)) {
+            match = true;
+            return match;
+        }
+    }    
+    if( matchTrackdR(reco_trk2, gen_trk1, true)){
+        if( matchTrackdR(reco_trk1, gen_trk2,true)) {
+            match = true;
+            return match;
+        }
+    }    
+  }
+  if(!isMatchD0){
+    if(matchTrackdR(_dmeson_, &_gen_,true)) match = true;
+  }
+  return match;
+};
+bool PATCompositeTreeProducer2Refactored::matchHadron(const reco::Candidate* _dmeson_, const reco::Candidate& _gen_, bool isMatchD0) const {
+  bool match = false;
+  if(isMatchD0){
+    reco::Candidate const* reco_trk1 = _dmeson_->daughter(0);
+    reco::Candidate const* reco_trk2 = _dmeson_->daughter(1);
+
+    reco::Candidate const* gen_trk1 = _gen_.daughter(0);
+    reco::Candidate const* gen_trk2 = _gen_.daughter(1);
+
+    if( matchTrackdR(reco_trk1, gen_trk1, true)){
+        if( matchTrackdR(reco_trk2, gen_trk2,true)) {
+            match = true;
+            return match;
+        }
+    }    
+    if( matchTrackdR(reco_trk2, gen_trk1, true)){
+        if( matchTrackdR(reco_trk1, gen_trk2,true)) {
+            match = true;
+            return match;
+        }
+    }    
+  }
+  if(!isMatchD0){
+    if(matchTrackdR(_dmeson_, &_gen_,true)) match = true;
+  }
+  return match;
+};
+
+bool PATCompositeTreeProducer2Refactored::checkSwap(const reco::Candidate* _dmeson_, const reco::GenParticle& _gen_) const {
+    return _dmeson_->pdgId() != _gen_.pdgId();
+};
+bool PATCompositeTreeProducer2Refactored::checkSwap(const reco::Candidate* _dmeson_, const reco::Candidate& _gen_) const {
+    return _dmeson_->pdgId() != _gen_.pdgId();
+};
+
+bool PATCompositeTreeProducer2Refactored::matchTrackdR(const reco::Candidate* _recoTrk_, const reco::Candidate* _genTrk_, bool chkchrg) const {
+    bool pass= false;
+    // _deltaR_
+    if(chkchrg && (_recoTrk_->charge() != _genTrk_->charge())) return false;
+    const double dR = reco::deltaR(*_recoTrk_, *_genTrk_);
+    if(dR < deltaR_) pass = true;
+    return pass;
+};
+
+
+reco::GenParticleRef PATCompositeTreeProducer2Refactored::findMother(const reco::GenParticleRef& genParRef)
+{
+  if(genParRef.isNull()) return genParRef;
+  reco::GenParticleRef genMomRef = genParRef;
+  int pdg = genParRef->pdgId(); const int pdg_OLD = pdg;
+  while(pdg==pdg_OLD && genMomRef->numberOfMothers()>0)
+  {
+    genMomRef = genMomRef->motherRef(0);
+    pdg = genMomRef->pdgId();
+  }
+  if(pdg==pdg_OLD) genMomRef = reco::GenParticleRef();
+  return genMomRef;
+};
+
+void PATCompositeTreeProducer2Refactored::genDecayLength(const reco::Candidate& gCand, float& gen_decayLength2D_, float& gen_decayLength3D_, float& gen_angle2D_, float& gen_angle3D_){
+  gen_decayLength2D_ = -99.;
+  gen_decayLength3D_ = -99.;
+  gen_angle2D_ = -99;
+  gen_angle3D_ = -99;
+
+  if(gCand.numberOfDaughters()==0 || !gCand.daughter(0)) return;
+  const auto& dauVtx = gCand.daughter(0)->vertex();
+  const auto& genVertex_ = gCand.vertex();
+  TVector3 ptosvec(dauVtx.X() - genVertex_.x(), dauVtx.Y() - genVertex_.y(), dauVtx.Z() - genVertex_.z());
+  TVector3 secvec(gCand.px(), gCand.py(), gCand.pz());
+  gen_angle3D_ = secvec.Angle(ptosvec);
+  gen_decayLength3D_ = ptosvec.Mag();
+  TVector3 ptosvec2D(dauVtx.X() - genVertex_.x(), dauVtx.Y() - genVertex_.y(), 0.0);
+  TVector3 secvec2D(gCand.px(), gCand.py(), 0.0);
+  gen_angle2D_ = secvec2D.Angle(ptosvec2D);
+  gen_decayLength2D_ = ptosvec2D.Mag();
+};
+
+//void PATCompositeTreeProducer2Refactored::getAncestorId(const reco::Candidate& gCand, int& gen_ancestorId_, int& gen_ancestorFlavor_ ){
+//  gen_ancestorId_ = 0;
+//  gen_ancestorFlavor_ = 0;
+////  reco::GenParticle gCand1(gCand.charge(),gCand.p4(),gCand.vertex(),421,2,true);
+//  //for (auto mothers = gCand.motherRefVector();
+//  //    !mothers.empty(); ) {
+//  //  auto mom = mothers.at(0);
+//  //  mothers = mom->motherRefVector();
+//  //  gen_ancestorId_ = mom->pdgId();
+//  //  cout << "gen_ancestorId_ : " << gen_ancestorId_ << endl;
+//  //  const auto idstr = std::to_string(std::abs(gen_ancestorId_));
+//  //  gen_ancestorFlavor_ = std::stoi(std::string{idstr.begin(), idstr.begin()+1});
+//  //  cout << "gen_ancestorFlavor_ : " << gen_ancestorFlavor_ << endl;
+//  //  if (idstr[0] == '5') {
+//  //    break;
+//  //  }
+//  //  if (std::abs(gen_ancestorId_) <= 40) break;
+//  //}
+//  for (auto mom = gCand.mother(); !(mom==nullptr);){
+//    gen_ancestorId_= mom->pdgId();
+//    const auto idstr = std::to_string(std::abs(gen_ancestorId_));
+//    gen_ancestorFlavor_ = std::stoi(std::string{idstr.begin(), idstr.begin()+1});
+//    if (idstr.find('5') != std::string::npos) {
+//      break;
+//    }
+//    if (std::abs(gen_ancestorId_) <= 40) break;
+//          mom = mom->mother();
+//  }
+//
+//          
+//};
+void PATCompositeTreeProducer2Refactored::getAncestorId(const reco::Candidate& gCand, int& gen_ancestorId_, int& gen_ancestorFlavor_) {
+    // 1. 항상 기본값으로 초기화
+    gen_ancestorId_ = 0;
+    gen_ancestorFlavor_ = 0;
+    const bool doVerbose = verboseDebug_;
+    if (doVerbose) {
+      edm::LogVerbatim("PATCompositeTreeProducer")
+          << "[getAncestorId] Starting ancestor search for particle with PDG ID: " << gCand.pdgId();
+    }
+
+    const reco::Candidate* mom = &gCand; // 시작 입자를 현재 입자로 설정
+    int depth = 0;
+    const int MAX_DEPTH = 50; // 2. 무한 루프 방지
+
+    while (mom != nullptr && depth < MAX_DEPTH) {
+        if (doVerbose) {
+          edm::LogVerbatim("PATCompositeTreeProducer")
+              << "[getAncestorId] Depth " << depth << ": Current particle PDG ID = " << mom->pdgId();
+        }
+        
+        if (depth > 0) { 
+             int currentId = mom->pdgId();
+             int absId = std::abs(currentId);
+             if (doVerbose) {
+               edm::LogVerbatim("PATCompositeTreeProducer")
+                   << "[getAncestorId] Processing mother: PDG ID = " << currentId << ", Abs ID = " << absId;
+             }
+
+             std::string idstr = std::to_string(absId);
+             if (doVerbose) {
+               edm::LogVerbatim("PATCompositeTreeProducer")
+                   << "[getAncestorId] ID string: " << idstr
+                   << ", First digit: " << (idstr.empty() ? '?' : idstr[0]);
+             }
+             
+                 gen_ancestorId_ = currentId;
+                 gen_ancestorFlavor_ = std::stoi(std::string{idstr.begin(), idstr.begin() + 1}); 
+
+             if (!idstr.empty() && idstr[0] == '5') {
+
+
+                 if (doVerbose) {
+                   edm::LogVerbatim("PATCompositeTreeProducer")
+                       << "[getAncestorId] Found B meson: ID = " << gen_ancestorId_
+                       << ", Flavor = " << gen_ancestorFlavor_;
+                 }
+                 break; 
+             }
+
+             if (absId <= 40) {
+                 gen_ancestorId_ = currentId;
+                 const auto final_idstr = std::to_string(absId);
+                 if(!final_idstr.empty()) {
+                    gen_ancestorFlavor_ = std::stoi(std::string{final_idstr.begin(), final_idstr.begin() + 1});
+                 }
+                 if (doVerbose) {
+                   edm::LogVerbatim("PATCompositeTreeProducer")
+                       << "[getAncestorId] Found light quark/lepton: ID = " << gen_ancestorId_
+                       << ", Flavor = " << gen_ancestorFlavor_;
+                 }
+                 break;
+             }
+             if (doVerbose) {
+               edm::LogVerbatim("PATCompositeTreeProducer")
+                   << "[getAncestorId] Not target particle, continuing search...";
+             }
+        }
+
+        mom = mom->mother();
+        depth++;
+        if (doVerbose) {
+          edm::LogVerbatim("PATCompositeTreeProducer")
+              << "[getAncestorId] Moving to next mother, depth now = " << depth;
+        }
+    }
+    
+    if (depth >= MAX_DEPTH) {
+        edm::LogWarning("PATCompositeTreeProducer") << "[getAncestorId] Maximum depth reached (" << MAX_DEPTH << "), stopping search";
+    }
+    if (mom == nullptr && doVerbose) {
+        edm::LogVerbatim("PATCompositeTreeProducer") << "[getAncestorId] No more mothers found";
+    }
+    
+    if (doVerbose) {
+      edm::LogVerbatim("PATCompositeTreeProducer")
+          << "[getAncestorId] Final result: ancestorId = " << gen_ancestorId_
+          << ", ancestorFlavor = " << gen_ancestorFlavor_;
+    }
+};

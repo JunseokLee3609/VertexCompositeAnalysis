@@ -27,10 +27,5 @@
 <use name="HLTrigger/HLTcore"/>
 <use name="CondFormats/GBRForest"/>
 <use name="PhysicsTools/ONNXRuntime"/>
-<flags SKIP_FILES="VertexCompositeTreeProducer2_temp.cc"/>
-<flags SKIP_FILES="VertexCompositeTreeProducer2_temp.h"/>
-<flags SKIP_FILES="VertexCompositeTreeProducer2.cc"/>
-<flags SKIP_FILES="VertexCompositeTreeProducer2.h"/>
-<flags SKIP_FILES="PATCompositeTreeProducer5.cc"/>
 
 <flags EDM_PLUGIN="1"/>

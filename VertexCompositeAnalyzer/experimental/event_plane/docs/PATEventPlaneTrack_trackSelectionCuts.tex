@@ -1,0 +1,468 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{amsmath}
+
+\begin{document}
+
+\section*{Track Selection Summary for \texttt{PATEventPlaneTrack}}
+
+This note summarizes the track selection implemented in
+\texttt{VertexCompositeAnalyzer/plugins/PATEventPlaneTrack.cc}.
+The relevant logic is in \texttt{collectFinalStateDaughters()} and the track loop
+inside \texttt{fillRECO()}.
+The main source anchors are:
+\begin{itemize}
+\item daughter collection: lines 326--360;
+\item candidate mass-window gate for the veto list: lines 435--439;
+\item base track cuts: lines 597--602;
+\item daughter-track veto in the Q-vector sums: lines 656--680;
+\item $\eta$ subevent partitions: lines 614--649 and 691--749.
+\end{itemize}
+
+\section*{1. Base Track Quality Selection}
+
+Every track entering the event-plane accumulation must satisfy all of the cuts in
+Table~\ref{tab:basecuts}.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+Quantity & Requirement \\
+\midrule
+Track quality & \texttt{highPurity} \\
+Relative momentum uncertainty & $|p_{T}^{\mathrm{err}}| / p_{T} < 0.10$ \\
+Longitudinal impact significance & $\left|dz/\sigma(dz)\right| \le 3$ \\
+Transverse impact significance & $\left|dxy/\sigma(dxy)\right| \le 3$ \\
+Transverse momentum & $0.3 < p_{T} < 3.0~\mathrm{GeV}$ \\
+Pseudorapidity acceptance & $|\eta| < 2.4$ \\
+\bottomrule
+\end{tabular}
+\caption{Common track quality cuts applied before any event-plane sums are filled.}
+\label{tab:basecuts}
+\end{table}
+
+The impact-parameter significances are evaluated with respect to the event vertex
+chosen in the code:
+\begin{itemize}
+\item if the first reconstructed primary vertex is not fake and has at least two tracks,
+  that primary vertex is used;
+\item otherwise a vertex built from the beam spot is used.
+\end{itemize}
+
+\section*{2. Daughter-Track Exclusion}
+
+After the base cuts above, the code fills two kinds of track sums:
+\begin{itemize}
+\item \texttt{all\_trkQ*}: uses all accepted tracks;
+\item \texttt{trkQ*}: excludes tracks matched to selected candidate daughters.
+\end{itemize}
+
+The daughter-exclusion logic is:
+\begin{itemize}
+\item only candidates with
+  $m \in (\texttt{massMinForExclusion\_}, \texttt{massMaxForExclusion\_})$
+  contribute daughter tracks to the veto list;
+\item the default exclusion window is
+  $1.7 < m < 2.1~\mathrm{GeV}$;
+\item only charged final-state leaves are stored
+  (\texttt{cand.charge() == 0} leaves are skipped);
+\item a reconstructed track is vetoed from the \texttt{trkQ*} sums when its
+  \texttt{TrackRef} product ID and key exactly match one of the stored daughter tracks.
+\end{itemize}
+
+Therefore, the daughter veto is not a geometric matching cut in the final decision;
+the exact \texttt{TrackRef} match controls the rejection. The $\Delta\eta$, $\Delta\phi$,
+and relative $\Delta p_{T}$ quantities are only filled for monitoring histograms.
+
+\section*{3. Variable Definitions and Formulas}
+
+This section collects the explicit formulas used in the code for the main variables.
+
+\subsection*{3.1 Event and Vertex Variables}
+
+The event-level bookkeeping variables are copied directly from the event record:
+\begin{align*}
+\texttt{runNb} &= \text{event run number}, \\
+\texttt{eventNb} &= \text{event number}, \\
+\texttt{lsNb} &= \text{luminosity block number}.
+\end{align*}
+
+If centrality information is enabled, the code stores
+\begin{align*}
+\texttt{Ntrkoffline} &= \texttt{cent->Ntracks()}, \\
+\texttt{centrality} &= \texttt{*cbin}.
+\end{align*}
+
+The number of high-purity input tracks is
+\[
+\texttt{NtrkHP}
+=
+\sum_{t \in \texttt{trackColl}}
+\mathbf{1}\!\left[t \text{ has } \texttt{highPurity}\right].
+\]
+
+The vertex choice is
+\[
+v =
+\begin{cases}
+v_{\mathrm{PV}}, & \text{if the first PV is not fake and has at least two tracks},\\
+v_{\mathrm{BS}}, & \text{otherwise},
+\end{cases}
+\]
+and the stored coordinates are
+\[
+\texttt{bestvx}=v_x,\qquad
+\texttt{bestvy}=v_y,\qquad
+\texttt{bestvz}=v_z,
+\]
+with uncertainties
+\[
+\texttt{bestvxError}=\sigma(v_x),\qquad
+\texttt{bestvyError}=\sigma(v_y),\qquad
+\texttt{bestvzError}=\sigma(v_z).
+\]
+
+\subsection*{3.2 Track-to-Vertex Variables}
+
+For each reconstructed track $t$, the code defines
+\begin{align*}
+\texttt{dzvtx} &= dz(t, v), \\
+\texttt{dxyvtx} &= dxy(t, v), \\
+\texttt{dzerror} &= \sqrt{\sigma_{dz}(t)^2 + \sigma(v_z)^2}, \\
+\texttt{dxyerror} &= \sigma_{dxy}(t; v, \mathrm{cov}(v)).
+\end{align*}
+
+The impact-parameter significances used in the cuts are therefore
+\[
+\left|\frac{\texttt{dzvtx}}{\texttt{dzerror}}\right|
+\quad\text{and}\quad
+\left|\frac{\texttt{dxyvtx}}{\texttt{dxyerror}}\right|.
+\]
+
+The relative momentum uncertainty cut uses
+\[
+\frac{|\texttt{track->ptError()}|}{\texttt{track->pt()}}.
+\]
+
+\subsection*{3.3 Daughter Matching Variables}
+
+For each final-state charged daughter stored in the veto list, the code keeps
+\[
+(\eta_i^{\mathrm{dau}}, \phi_i^{\mathrm{dau}}, p_{T,i}^{\mathrm{dau}})
+=
+(\texttt{dauEta[i]}, \texttt{dauPhi[i]}, \texttt{dauPt[i]}).
+\]
+
+For a selected track with $(\eta,\phi,p_T)$, the monitoring quantities are
+\begin{align*}
+\Delta\eta_i &= \left|\eta_i^{\mathrm{dau}} - \eta\right|, \\
+\Delta\phi_i &= \left|\Delta\phi(\phi_i^{\mathrm{dau}}, \phi)\right|, \\
+\Delta p_{T,i}^{\mathrm{rel}} &=
+\begin{cases}
+\left|p_{T,i}^{\mathrm{dau}} - p_T\right|/p_T, & p_T > 0,\\
+-999, & p_T \le 0.
+\end{cases}
+\end{align*}
+
+However, the actual daughter veto is controlled only by an exact reference match:
+\[
+\texttt{refMatch}_i =
+\texttt{dauHasTrackRef[i]}
+\land
+\left(\texttt{dauTrackProductId[i]} = \texttt{track.id()}\right)
+\land
+\left(\texttt{dauTrackKey[i]} = \texttt{track.key()}\right).
+\]
+If any \texttt{refMatch\_i} is true, then \texttt{DauTrk = true}, and that track is excluded
+from all \texttt{trkQ*} sums.
+
+\subsection*{3.4 Q-vector Building Blocks}
+
+Let $S$ be any accepted track set used in a given branch. The code uses the track transverse
+momentum as the weight:
+\[
+w_i = p_{T,i}.
+\]
+
+For harmonic order $n$, the unnormalized sums are
+\begin{align*}
+Q_{x,n}^{\mathrm{raw}}(S) &= \sum_{i \in S} w_i \cos(n\phi_i), \\
+Q_{y,n}^{\mathrm{raw}}(S) &= \sum_{i \in S} w_i \sin(n\phi_i), \\
+W(S) &= \sum_{i \in S} w_i = \sum_{i \in S} p_{T,i}.
+\end{align*}
+
+The code then applies the helper
+\[
+\texttt{safeNorm}(q,w) =
+\begin{cases}
+q/w, & w > 0,\\
+-999, & w \le 0.
+\end{cases}
+\]
+Therefore, every stored Q-vector component has the form
+\[
+Q_{x,n}(S) = \texttt{safeNorm}\!\left(Q_{x,n}^{\mathrm{raw}}(S), W(S)\right),\qquad
+Q_{y,n}(S) = \texttt{safeNorm}\!\left(Q_{y,n}^{\mathrm{raw}}(S), W(S)\right).
+\]
+
+\subsection*{3.5 Meaning of the Stored Branches}
+
+Define the following track sets after the base track cuts:
+\begin{align*}
+S_{\mathrm{all}} &= \{\text{all accepted tracks}\}, \\
+S_{\mathrm{veto}} &= \{\text{accepted tracks not flagged as daughter tracks}\}, \\
+S_{\mathrm{forw}} &= \{i : 0.05 < \eta_i < 2.4\}, \\
+S_{\mathrm{afterw}} &= \{i : -2.4 < \eta_i < -0.05\}, \\
+S_{1.6} &= \{i : |\eta_i| < 1.6\}, \\
+S_{0.8} &= \{i : |\eta_i| < 0.8\}.
+\end{align*}
+
+Then the main output branches are:
+\begin{align*}
+\texttt{all\_trkQx} &= Q_{x,2}(S_{\mathrm{all}}), &
+\texttt{all\_trkQy} &= Q_{y,2}(S_{\mathrm{all}}), &
+\texttt{all\_trkW} &= W(S_{\mathrm{all}}), \\
+\texttt{trkQx} &= Q_{x,2}(S_{\mathrm{veto}}), &
+\texttt{trkQy} &= Q_{y,2}(S_{\mathrm{veto}}), \\
+\texttt{trkQx\_v3} &= Q_{x,3}(S_{\mathrm{veto}}), &
+\texttt{trkQy\_v3} &= Q_{y,3}(S_{\mathrm{veto}}).
+\end{align*}
+
+For the forward and backward hemispheres:
+\begin{align*}
+\texttt{all\_trkQx\_forw} &= Q_{x,2}(S_{\mathrm{all}} \cap S_{\mathrm{forw}}), &
+\texttt{all\_trkQy\_forw} &= Q_{y,2}(S_{\mathrm{all}} \cap S_{\mathrm{forw}}), &
+\texttt{all\_trkW\_forw} &= W(S_{\mathrm{all}} \cap S_{\mathrm{forw}}), \\
+\texttt{all\_trkQx\_afterw} &= Q_{x,2}(S_{\mathrm{all}} \cap S_{\mathrm{afterw}}), &
+\texttt{all\_trkQy\_afterw} &= Q_{y,2}(S_{\mathrm{all}} \cap S_{\mathrm{afterw}}), &
+\texttt{all\_trkW\_afterw} &= W(S_{\mathrm{all}} \cap S_{\mathrm{afterw}}), \\
+\texttt{trkQx\_forw} &= Q_{x,2}(S_{\mathrm{veto}} \cap S_{\mathrm{forw}}), &
+\texttt{trkQy\_forw} &= Q_{y,2}(S_{\mathrm{veto}} \cap S_{\mathrm{forw}}), \\
+\texttt{trkQx\_afterw} &= Q_{x,2}(S_{\mathrm{veto}} \cap S_{\mathrm{afterw}}), &
+\texttt{trkQy\_afterw} &= Q_{y,2}(S_{\mathrm{veto}} \cap S_{\mathrm{afterw}}), \\
+\texttt{trkQx\_v3\_forw} &= Q_{x,3}(S_{\mathrm{veto}} \cap S_{\mathrm{forw}}), &
+\texttt{trkQy\_v3\_forw} &= Q_{y,3}(S_{\mathrm{veto}} \cap S_{\mathrm{forw}}), \\
+\texttt{trkQx\_v3\_afterw} &= Q_{x,3}(S_{\mathrm{veto}} \cap S_{\mathrm{afterw}}), &
+\texttt{trkQy\_v3\_afterw} &= Q_{y,3}(S_{\mathrm{veto}} \cap S_{\mathrm{afterw}}).
+\end{align*}
+
+For the restricted $\eta$ windows, the pattern is identical:
+\begin{align*}
+\texttt{all\_trkQx\_eta16} &= Q_{x,2}(S_{\mathrm{all}} \cap S_{1.6}), &
+\texttt{all\_trkQy\_eta16} &= Q_{y,2}(S_{\mathrm{all}} \cap S_{1.6}), &
+\texttt{all\_trkW\_eta16} &= W(S_{\mathrm{all}} \cap S_{1.6}), \\
+\texttt{trkQx\_eta16} &= Q_{x,2}(S_{\mathrm{veto}} \cap S_{1.6}), &
+\texttt{trkQy\_eta16} &= Q_{y,2}(S_{\mathrm{veto}} \cap S_{1.6}), \\
+\texttt{trkQx\_v3\_eta16} &= Q_{x,3}(S_{\mathrm{veto}} \cap S_{1.6}), &
+\texttt{trkQy\_v3\_eta16} &= Q_{y,3}(S_{\mathrm{veto}} \cap S_{1.6}),
+\end{align*}
+with completely analogous definitions for
+\texttt{\_forw\_eta16}, \texttt{\_afterw\_eta16},
+\texttt{all\_trkQx\_eta08}, \texttt{all\_trkQy\_eta08},
+\texttt{all\_trkW\_eta08},
+\texttt{all\_trkQx\_forw\_eta08}, \texttt{all\_trkQy\_forw\_eta08},
+\texttt{all\_trkW\_forw\_eta08},
+\texttt{all\_trkQx\_afterw\_eta08}, \texttt{all\_trkQy\_afterw\_eta08},
+\texttt{all\_trkW\_afterw\_eta08},
+\texttt{trkQx\_eta08}, \texttt{trkQy\_eta08},
+\texttt{trkQx\_forw\_eta08}, \texttt{trkQy\_forw\_eta08},
+\texttt{trkQx\_afterw\_eta08}, \texttt{trkQy\_afterw\_eta08},
+\texttt{trkQx\_v3\_eta08}, \texttt{trkQy\_v3\_eta08},
+\texttt{trkQx\_v3\_forw\_eta08}, \texttt{trkQy\_v3\_forw\_eta08},
+\texttt{trkQx\_v3\_afterw\_eta08}, and \texttt{trkQy\_v3\_afterw\_eta08},
+obtained by replacing $S_{1.6}$ with $S_{0.8}$.
+
+\section*{4. $\eta$ Regions Used After the Base Selection}
+
+For tracks that pass the base selection, the code forms several $\eta$ partitions:
+\begin{itemize}
+\item full tracker acceptance: $|\eta| < 2.4$;
+\item forward subevent: $0.05 < \eta < 2.4$;
+\item backward subevent: $-2.4 < \eta < -0.05$;
+\item reduced acceptance option: $|\eta| < 1.6$, with forward/backward ranges
+  $0.05 < \eta < 1.6$ and $-1.6 < \eta < -0.05$;
+\item reduced acceptance option: $|\eta| < 0.8$, with forward/backward ranges
+  $0.05 < \eta < 0.8$ and $-0.8 < \eta < -0.05$.
+\end{itemize}
+
+The event-plane Q-vectors are $p_{T}$-weighted sums of $\cos(n\phi)$ and $\sin(n\phi)$.
+The code builds $n=2$ quantities for the inclusive and daughter-vetoed track sets, and
+also builds $n=3$ quantities for the daughter-vetoed track set.
+
+\section*{5. Practical Interpretation}
+
+In compact form, the track definition used by this analyzer is:
+\[
+\texttt{highPurity}
+\;\land\;
+\frac{|p_{T}^{\mathrm{err}}|}{p_{T}} < 0.10
+\;\land\;
+\left|\frac{dz}{\sigma(dz)}\right| \le 3
+\;\land\;
+\left|\frac{dxy}{\sigma(dxy)}\right| \le 3
+\;\land\;
+0.3 < p_{T} < 3.0~\mathrm{GeV}
+\;\land\;
+|\eta| < 2.4.
+\]
+
+The only additional rejection for the \texttt{trkQ*} observables is the explicit veto of
+tracks that are exact daughters of candidates inside the configured mass window.
+
+\section*{6. Output Objects Built by \texttt{PATEventPlaneTrack.cc}}
+
+The analyzer writes one TTree named \texttt{EventPlane}. The event-plane branch naming
+scheme is easiest to read as a combination of a variable family and a suffix-defined
+$\eta$ region.
+
+\subsection*{6.1 Event and Vertex Branches}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+Branch & Meaning \\
+\midrule
+\texttt{RunNb} & run number \\
+\texttt{LSNb} & luminosity section number \\
+\texttt{EventNb} & event number \\
+\texttt{nPV} & number of reconstructed primary vertices \\
+\texttt{bestvtxX}, \texttt{bestvtxY}, \texttt{bestvtxZ} & chosen event vertex coordinates \\
+\texttt{centrality} & centrality bin, when \texttt{isCentrality\_} is enabled \\
+\texttt{Ntrkoffline} & offline track multiplicity from centrality object \\
+\texttt{NtrkHP} & number of high-purity tracks in the input collection \\
+\bottomrule
+\end{tabular}
+\caption{Non-Q-vector branches written by \texttt{PATEventPlaneTrack.cc}.}
+\label{tab:patep-event-branches}
+\end{table}
+
+\subsection*{6.2 Event-Plane Variable Families}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lllll}
+\toprule
+Branch family & Order & Track set & Stored quantity & Normalization \\
+\midrule
+\texttt{all\_trkQx<SUFFIX>} & 2 & all accepted tracks & $Q_{x,2}$ & \texttt{safeNorm} \\
+\texttt{all\_trkQy<SUFFIX>} & 2 & all accepted tracks & $Q_{y,2}$ & \texttt{safeNorm} \\
+\texttt{all\_trkW<SUFFIX>}  & 2 & all accepted tracks & $\sum p_{T}$ & raw sum \\
+\texttt{trkQx<SUFFIX>}      & 2 & daughter-vetoed tracks & $Q_{x,2}$ & \texttt{safeNorm} \\
+\texttt{trkQy<SUFFIX>}      & 2 & daughter-vetoed tracks & $Q_{y,2}$ & \texttt{safeNorm} \\
+\texttt{trkQx\_v3<SUFFIX>}  & 3 & daughter-vetoed tracks & $Q_{x,3}$ & \texttt{safeNorm} \\
+\texttt{trkQy\_v3<SUFFIX>}  & 3 & daughter-vetoed tracks & $Q_{y,3}$ & \texttt{safeNorm} \\
+\bottomrule
+\end{tabular}
+\caption{Event-plane branch families in \texttt{PATEventPlaneTrack.cc}.}
+\label{tab:patep-variable-families}
+\end{table}
+
+\noindent
+The code does not define a daughter-vetoed \texttt{trkW<SUFFIX>} branch family. Only the
+inclusive \texttt{all\_trkW<SUFFIX>} branches store the scalar weight sum.
+
+\subsection*{6.3 Suffix Definitions and $\eta$ Regions}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lll}
+\toprule
+Suffix & $\eta$ region & Note \\
+\midrule
+\texttt{""} & full accepted tracker range, $|\eta| < 2.4$ & after base track cuts \\
+\texttt{\_forw} & $0.05 < \eta < 2.4$ & forward subevent \\
+\texttt{\_afterw} & $-2.4 < \eta < -0.05$ & backward subevent \\
+\texttt{\_eta16} & $|\eta| < 1.6$ & reduced acceptance \\
+\texttt{\_forw\_eta16} & $0.05 < \eta < 1.6$ & forward, $|\eta|<1.6$ \\
+\texttt{\_afterw\_eta16} & $-1.6 < \eta < -0.05$ & backward, $|\eta|<1.6$ \\
+\texttt{\_eta08} & $|\eta| < 0.8$ & reduced acceptance \\
+\texttt{\_forw\_eta08} & $0.05 < \eta < 0.8$ & forward, $|\eta|<0.8$ \\
+\texttt{\_afterw\_eta08} & $-0.8 < \eta < -0.05$ & backward, $|\eta|<0.8$ \\
+\bottomrule
+\end{tabular}
+\caption{Exact suffix-to-region mapping used in the output branch names.}
+\label{tab:patep-suffix-definitions}
+\end{table}
+
+\subsection*{6.4 Monitoring Histograms}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+Histogram & Filled with \\
+\midrule
+\texttt{hdeltaEta} & $|\Delta\eta|$ for exact daughter-track reference matches \\
+\texttt{hdeltaPhi} & $|\Delta\phi|$ for exact daughter-track reference matches \\
+\texttt{hdeltaPt} & relative $\Delta p_{T}$ for exact daughter-track reference matches \\
+\texttt{htrkpt} & $p_{T}$ of tracks passing the base selection \\
+\texttt{htrketa} & $\eta$ of tracks passing the base selection \\
+\texttt{htrketa\_forw} & $\eta$ of daughter-vetoed tracks in the forward subevent \\
+\texttt{htrketa\_afterw} & $\eta$ of daughter-vetoed tracks in the backward subevent \\
+\bottomrule
+\end{tabular}
+\caption{Monitoring histograms booked by \texttt{PATEventPlaneTrack.cc}.}
+\label{tab:patep-monitoring-hists}
+\end{table}
+
+\subsection*{6.5 Normalization and Sentinel Convention}
+
+All stored Q-vector components are normalized with
+\[
+\texttt{safeNorm}(q,w) =
+\begin{cases}
+q / w, & w > 0,\\
+-999, & w \le 0.
+\end{cases}
+\]
+Therefore each \texttt{Qx} or \texttt{Qy} branch is a $p_{T}$-weighted average, while
+each \texttt{all\_trkW<SUFFIX>} branch stores the corresponding unnormalized scalar
+weight sum.
+
+\section*{7. CMSSW Event-Plane Type Definitions by Index}
+
+For reference, the standard CMSSW event-plane definitions used by
+\texttt{RecoHI/HiEvtPlaneAlgos/interface/HiEvtPlaneList.h} are summarized in
+Table~\ref{tab:cmssw-eptypes}. The two $\eta$ window columns correspond directly to
+the \texttt{hmin1/hmax1} and \texttt{hmin2/hmax2} ranges in that source. Entries with
+only one active region have the second window marked as ``--''.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{rllcccc}
+\toprule
+Index & Name & Detector & Order & $\eta$ window 1 & $\eta$ window 2 & $p_{T}$ range [GeV] \\
+\midrule
+0  & \texttt{HFm2}     & HF      & 2 & $-5.0 < \eta < -3.0$ & --                  & $0.01$--$30.0$ \\
+1  & \texttt{HFp2}     & HF      & 2 & $ 3.0 < \eta <  5.0$ & --                  & $0.01$--$30.0$ \\
+2  & \texttt{HF2}      & HF      & 2 & $-5.0 < \eta < -3.0$ & $3.0 < \eta < 5.0$ & $0.01$--$30.0$ \\
+3  & \texttt{trackmid2}& Tracker & 2 & $-0.5 < \eta <  0.5$ & --                  & $0.50$--$3.0$  \\
+4  & \texttt{trackm2}  & Tracker & 2 & $-2.0 < \eta < -1.0$ & --                  & $0.50$--$3.0$  \\
+5  & \texttt{trackp2}  & Tracker & 2 & $ 1.0 < \eta <  2.0$ & --                  & $0.50$--$3.0$  \\
+6  & \texttt{HFm3}     & HF      & 3 & $-5.0 < \eta < -3.0$ & --                  & $0.01$--$30.0$ \\
+7  & \texttt{HFp3}     & HF      & 3 & $ 3.0 < \eta <  5.0$ & --                  & $0.01$--$30.0$ \\
+8  & \texttt{HF3}      & HF      & 3 & $-5.0 < \eta < -3.0$ & $3.0 < \eta < 5.0$ & $0.01$--$30.0$ \\
+9  & \texttt{trackmid3}& Tracker & 3 & $-0.5 < \eta <  0.5$ & --                  & $0.50$--$3.0$  \\
+10 & \texttt{trackm3}  & Tracker & 3 & $-2.0 < \eta < -1.0$ & --                  & $0.50$--$3.0$  \\
+11 & \texttt{trackp3}  & Tracker & 3 & $ 1.0 < \eta <  2.0$ & --                  & $0.50$--$3.0$  \\
+\bottomrule
+\end{tabular}
+\caption{Index-ordered CMSSW event-plane definitions from \texttt{HiEvtPlaneList.h}.}
+\label{tab:cmssw-eptypes}
+\end{table}
+
+\noindent
+In this standard list, the one-sided HF definitions are separated from the central or
+forward/backward tracker definitions by an $\eta$ gap. For example, \texttt{HFm2} and
+\texttt{HFp2} use $|\eta|>3$, while the tracker harmonics use the intervals
+$|\eta|<0.5$, $-2<\eta<-1$, and $1<\eta<2$.
+
+\end{document}

@@ -4,13 +4,58 @@
 
 // 2. CMSSW logging system (preferred): use LogDebug
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
+#include "FWCore/ParameterSet/interface/FileInPath.h"
+#include "FWCore/Utilities/interface/Exception.h"
 
-#include "VertexCompositeAnalysis/VertexCompositeAnalyzer/plugins/PATCompositeTreeProducer5.h"
+#define PATCompositeTreeProducer5 PATCompositeTreeProducer5OnnxDebug
+#include "VertexCompositeAnalysis/VertexCompositeAnalyzer/plugins/PATCompositeTreeProducer5_onnxdebug.h"
+
+#include <fstream>
 #include <tuple>
 #include <vector>
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include "DataFormats/Math/interface/deltaR.h"
+
+namespace {
+
+struct TrackMatchResult {
+    const reco::GenParticle* particle = nullptr;
+    double deltaR = std::numeric_limits<double>::max();
+    int index = -1;
+};
+
+TrackMatchResult findBestTrackMatch(const reco::Candidate& recoCand,
+                                    const std::vector<const reco::GenParticle*>& genTracks,
+                                    const std::vector<bool>& usedFlags,
+                                    double maxDr) {
+    TrackMatchResult best;
+    for (size_t idx = 0; idx < genTracks.size(); ++idx) {
+        if (idx < usedFlags.size() && usedFlags[idx]) {
+            continue;
+        }
+        const auto* gen = genTracks[idx];
+        if (!gen) {
+            continue;
+        }
+        if (recoCand.charge() != 0 && gen->charge() != 0 && recoCand.charge() != gen->charge()) {
+            continue;
+        }
+        const double dr = reco::deltaR(recoCand.eta(), recoCand.phi(), gen->eta(), gen->phi());
+        if (dr > maxDr) {
+            continue;
+        }
+        if (!best.particle || dr < best.deltaR) {
+            best.particle = gen;
+            best.deltaR = dr;
+            best.index = static_cast<int>(idx);
+        }
+    }
+    return best;
+}
+
+}  // namespace
 
 PATCompositeTreeProducer5::D0DaughterSummary
 PATCompositeTreeProducer5::summarizeD0Daughters(const reco::Candidate* d0) const {
@@ -88,21 +133,16 @@ void PATCompositeTreeProducer5::resetRecoGenMatch(unsigned int idx) {
   isSwap[idx] = false;
   idmom_reco[idx] = -77;
   idBAnc_reco[idx] = -77;
-  gen_agl_abs[idx] = INVALID_VALUE;
-  gen_agl2D_abs[idx] = INVALID_VALUE;
-  gen_dl[idx] = INVALID_VALUE;
-  gen_dl2D[idx] = INVALID_VALUE;
 
   const float invalidFloat = INVALID_VALUE;
   const int invalidInt = -1;
-  const int invalidCharge = -99;
 
   matchGen_DStarpT_[idx] = invalidFloat;
   matchGen_DStareta_[idx] = invalidFloat;
   matchGen_DStarphi_[idx] = invalidFloat;
   matchGen_DStarmass_[idx] = invalidFloat;
   matchGen_DStary_[idx] = invalidFloat;
-  matchGen_DStarcharge_[idx] = invalidCharge;
+  matchGen_DStarcharge_[idx] = 0;
   matchGen_DStarpdgId_[idx] = 0;
 
   matchGen_D0pT_[idx] = invalidFloat;
@@ -110,7 +150,7 @@ void PATCompositeTreeProducer5::resetRecoGenMatch(unsigned int idx) {
   matchGen_D0phi_[idx] = invalidFloat;
   matchGen_D0mass_[idx] = invalidFloat;
   matchGen_D0y_[idx] = invalidFloat;
-  matchGen_D0charge_[idx] = invalidCharge;
+  matchGen_D0charge_[idx] = 0;
   matchGen_D0pdgId_[idx] = 0;
 
   matchGen_D0Dau1_pT_[idx] = invalidFloat;
@@ -118,7 +158,7 @@ void PATCompositeTreeProducer5::resetRecoGenMatch(unsigned int idx) {
   matchGen_D0Dau1_phi_[idx] = invalidFloat;
   matchGen_D0Dau1_mass_[idx] = invalidFloat;
   matchGen_D0Dau1_y_[idx] = invalidFloat;
-  matchGen_D0Dau1_charge_[idx] = invalidCharge;
+  matchGen_D0Dau1_charge_[idx] = 0;
   matchGen_D0Dau1_pdgId_[idx] = 0;
 
   matchGen_D0Dau2_pT_[idx] = invalidFloat;
@@ -126,7 +166,7 @@ void PATCompositeTreeProducer5::resetRecoGenMatch(unsigned int idx) {
   matchGen_D0Dau2_phi_[idx] = invalidFloat;
   matchGen_D0Dau2_mass_[idx] = invalidFloat;
   matchGen_D0Dau2_y_[idx] = invalidFloat;
-  matchGen_D0Dau2_charge_[idx] = invalidCharge;
+  matchGen_D0Dau2_charge_[idx] = 0;
   matchGen_D0Dau2_pdgId_[idx] = 0;
 
   matchGen_D1pT_[idx] = invalidFloat;
@@ -140,7 +180,7 @@ void PATCompositeTreeProducer5::resetRecoGenMatch(unsigned int idx) {
   matchGen_D1angle3D_[idx] = invalidFloat;
   matchGen_D1ancestorId_[idx] = invalidInt;
   matchGen_D1ancestorFlavor_[idx] = invalidInt;
-  matchGen_D1charge_[idx] = invalidCharge;
+  matchGen_D1charge_[idx] = 0;
   matchGen_D1pdgId_[idx] = 0;
   matchGen_slowPion_dR_[idx] = invalidFloat;
   matchGen_D0Dau1_motherPdgId_[idx] = invalidInt;
@@ -194,6 +234,24 @@ PATCompositeTreeProducer5::PATCompositeTreeProducer5(const edm::ParameterSet& iC
 
     useAnyMVA_ = iConfig.getParameter<bool>("useAnyMVA");
     isSkimMVA_ = iConfig.getUntrackedParameter<bool>("isSkimMVA"); 
+    doOnnxDebug_ = iConfig.getUntrackedParameter<bool>("doOnnxDebug", false);
+    onnxPrintThreshold_ = iConfig.getUntrackedParameter<double>("onnxPrintThreshold", 0.001);
+    hOnnxDebugMVA_ = nullptr;
+    hOnnxDebugMVADiff_ = nullptr;
+    hOnnxDebugMVAVsStored_ = nullptr;
+
+    if (doOnnxDebug_) {
+      if (!iConfig.exists("onnxModelFileName")) {
+        throw cms::Exception("Configuration") << "onnxModelFileName not provided in ParameterSet";
+      }
+      onnxModelFileName_ = iConfig.getParameter<std::string>("onnxModelFileName");
+      if (iConfig.exists("input_names") && iConfig.exists("output_names")) {
+        onnxInputNames_ = iConfig.getParameter<std::vector<std::string>>("input_names");
+        onnxOutputNames_ = iConfig.getParameter<std::vector<std::string>>("output_names");
+      } else {
+        throw cms::Exception("Configuration") << "input_names/output_names not provided in ParameterSet";
+      }
+    }
 
     multMax_ = iConfig.getUntrackedParameter<double>("multMax", -1);
     multMin_ = iConfig.getUntrackedParameter<double>("multMin", -1);
@@ -226,19 +284,13 @@ PATCompositeTreeProducer5::PATCompositeTreeProducer5(const edm::ParameterSet& iC
 
     isEventPlane_ = false;
     if(iConfig.exists("isEventPlane")) isEventPlane_ = iConfig.getParameter<bool>("isEventPlane");
-    compareEventPlane_ = false;
     if(isEventPlane_)
     {
       tok_eventplaneSrc_ = consumes<reco::EvtPlaneCollection>(iConfig.getParameter<edm::InputTag>("eventplaneSrc"));
-      if (iConfig.exists("eventplaneSrcRecalc")) {
-        const auto recalcTag = iConfig.getParameter<edm::InputTag>("eventplaneSrcRecalc");
-        if (!recalcTag.label().empty()) {
-          tok_eventplaneSrcRecalc_ = consumes<reco::EvtPlaneCollection>(recalcTag);
-          compareEventPlane_ = true;
-        }
-      }
     }
 
+    if(useAnyMVA_ && iConfig.exists("MVACollection"))
+      MVAValues_Token_ = consumes<MVACollection>(iConfig.getParameter<edm::InputTag>("MVACollection"));
 }
 PATCompositeTreeProducer5::~PATCompositeTreeProducer5()
 {
@@ -326,7 +378,83 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
     // Debug: Event processing information
     LogDebug("PATCompositeTreeProducer") << "Processing event with " << candSize << " candidates";
     DEBUG_MSG("Processing event with " << candSize << " candidates");
+
+    auto logUserFloatDiff = [&](const CC& cand,
+                                const char* scope,
+                                const char* name,
+                                float computed,
+                                unsigned it) {
+      if (!doOnnxDebug_) return;
+      if (!cand.hasUserFloat(name)) return;
+      const float stored = cand.userFloat(name);
+      if (!std::isfinite(computed) || !std::isfinite(stored)) return;
+      const float diff = computed - stored;
+      if (std::abs(diff) > onnxPrintThreshold_) {
+        edm::LogPrint("TrackUserFloatDebug")
+            << "cand=" << it
+            << " scope=" << scope
+            << " var=" << name
+            << " producer=" << computed
+            << " userFloat=" << stored
+            << " diff=" << diff;
+      }
+    };
     
+    std::vector<const reco::GenParticle*> genTrackPool;
+    if (doGenMatching_) {
+        auto addStableTrack = [&](const reco::GenParticle* p) {
+            if (!p) return;
+            if (p->status() != 1) return;
+            if (p->charge() == 0) return;
+            const int absId = std::abs(p->pdgId());
+            if (absId != PION_PDG_ID && absId != KAON_PDG_ID) return;
+            genTrackPool.push_back(p);
+        };
+
+        // 1) Try to build pool directly from filtered genRefs (preferred; already D*→D0+π or D0)
+        if (!genRefs.empty()) {
+            for (const auto& genRef : genRefs) {
+                const auto* gen = genRef.get();
+                if (!gen) continue;
+
+                const reco::GenParticle* d0 = nullptr;
+                const reco::GenParticle* slowPi = nullptr;
+                for (size_t i = 0; i < gen->numberOfDaughters(); ++i) {
+                    const auto* dau = gen->daughter(i);
+                    if (!dau) continue;
+                    const int absId = std::abs(dau->pdgId());
+                    if (absId == D0_PDG_ID) {
+                        d0 = dynamic_cast<const reco::GenParticle*>(dau);
+                    } else if (absId == PION_PDG_ID && dau->charge() != 0) {
+                        slowPi = dynamic_cast<const reco::GenParticle*>(dau);
+                    } else {
+                        // Single-layer mode: directly add charged daughters (skip FSR)
+                        if (absId == 22) continue;
+                        addStableTrack(dynamic_cast<const reco::GenParticle*>(dau));
+                    }
+                }
+
+                if (d0) {
+                    for (size_t j = 0; j < d0->numberOfDaughters(); ++j) {
+                        const auto* gd = d0->daughter(j);
+                        if (!gd) continue;
+                        if (std::abs(gd->pdgId()) == 22) continue;  // skip FSR gamma
+                        addStableTrack(dynamic_cast<const reco::GenParticle*>(gd));
+                    }
+                }
+                addStableTrack(slowPi);  // slow pion in two-layer mode
+            }
+        }
+
+        // 2) Fallback: build from full gen collection (previous behavior) if pool is empty
+        if (genTrackPool.empty() && genpars.isValid()) {
+            genTrackPool.reserve(genpars->size());
+            for (const auto& gen : *genpars) {
+                addStableTrack(&gen);
+            }
+        }
+    }
+
     for(unsigned it = 0; it < v0candidates_->size(); ++it) {
         if(verboseDebug_) {
           LogDebug("PATCompositeTreeProducer") << "Processing candidate " << it << "/" << candSize;
@@ -346,6 +474,11 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
         if(trk.hasUserFloat("D0mva")) mva[it] = trk.userFloat("D0mva");
         if(trk.hasUserFloat("mva")) mva[it] = trk.userFloat("mva");
 
+        double px = trk.px();
+        double py = trk.py();
+        double pz = trk.pz();
+        mass[it] = trk.mass();
+        
         const reco::Candidate * d1 = trk.daughter(0);
         const reco::Candidate * gd1;
         const reco::Candidate * gd2;
@@ -365,439 +498,238 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
 	            LogDebug("PATCompositeTreeProducer") << "Starting gen matching for candidate " << it;
 	            DEBUG_GEN("Starting gen matching for candidate " << it);
 	          }
-	          // Reset all gen-match outputs for this candidate so unmatched entries cannot
-	          // inherit values from previous events/candidates.
-	          resetRecoGenMatch(it);
 	          if( twoLayerDecay_ ){
             if(debugGenMatching_) {
               LogDebug("PATCompositeTreeProducer") << "Two-layer decay mode for candidate " << it;
               DEBUG_GEN("Two-layer decay mode for candidate " << it);
             }
 
-		            const unsigned int nGen = genRefs.size();
-		            if (nGen == 0 && debugGenMatching_) {
-		              LogDebug("PATCompositeTreeProducer") << "No genRefs available for candidate " << it;
-		              DEBUG_GEN("No genRefs available for candidate " << it);
-		            }
+		            resetRecoGenMatch(it);
 
-	            const reco::Candidate* recoD0 = nullptr;
-	            const reco::Candidate* recoSlow = nullptr;
-	            if (d1 && std::abs(d1->pdgId()) == D0_PDG_ID) {
-	              recoD0 = d1;
-	              recoSlow = d2;
-	            } else if (d2 && std::abs(d2->pdgId()) == D0_PDG_ID) {
-	              recoD0 = d2;
-	              recoSlow = d1;
-	            } else {
-	              recoD0 = d1;
-	              recoSlow = d2;
-	            }
+	            bool hasGenTrackPool = genpars.isValid() && !genTrackPool.empty();
+	            if (hasGenTrackPool) {
+              const reco::Candidate* recoD0 = nullptr;
+              const reco::Candidate* recoSlow = nullptr;
+              if (d1 && std::abs(d1->pdgId()) == D0_PDG_ID) {
+                recoD0 = d1;
+                recoSlow = d2;
+              } else if (d2 && std::abs(d2->pdgId()) == D0_PDG_ID) {
+                recoD0 = d2;
+                recoSlow = d1;
+              } else {
+                recoD0 = d1;
+                recoSlow = d2;
+              }
 
-		            const reco::Candidate* recoDauA =
-		                (recoD0 && recoD0->numberOfDaughters() >= 2) ? recoD0->daughter(0) : nullptr;
-		            const reco::Candidate* recoDauB =
-		                (recoD0 && recoD0->numberOfDaughters() >= 2) ? recoD0->daughter(1) : nullptr;
-		            const bool validReco = (recoD0 && recoSlow && recoDauA && recoDauB);
+              bool validReco = recoD0 && recoSlow && recoD0->numberOfDaughters() >= 2;
+              const reco::Candidate* recoKaonCand = validReco ? recoD0->daughter(0) : nullptr;
+              const reco::Candidate* recoPionCand = validReco ? recoD0->daughter(1) : nullptr;
+              validReco = validReco && recoKaonCand && recoPionCand;
 
-		            if (debugGenMatching_) {
-		              LogInfo("GenMatchingFlow")
-		                  << "[PreMatch][Reco] cand=" << it
-		                  << " nGenRefs=" << nGen
-		                  << " recoD0(pdg,q,nDau)=("
-		                  << (recoD0 ? recoD0->pdgId() : -99999) << ","
-		                  << (recoD0 ? recoD0->charge() : -99) << ","
-		                  << (recoD0 ? static_cast<int>(recoD0->numberOfDaughters()) : -1) << ")"
-		                  << " recoSlow(pdg,q)=("
-		                  << (recoSlow ? recoSlow->pdgId() : -99999) << ","
-		                  << (recoSlow ? recoSlow->charge() : -99) << ")"
-		                  << " recoDauA(pdg,q,pt,eta)=("
-		                  << (recoDauA ? recoDauA->pdgId() : -99999) << ","
-		                  << (recoDauA ? recoDauA->charge() : -99) << ","
-		                  << (recoDauA ? recoDauA->pt() : INVALID_VALUE) << ","
-		                  << (recoDauA ? recoDauA->eta() : INVALID_VALUE) << ")"
-		                  << " recoDauB(pdg,q,pt,eta)=("
-		                  << (recoDauB ? recoDauB->pdgId() : -99999) << ","
-		                  << (recoDauB ? recoDauB->charge() : -99) << ","
-		                  << (recoDauB ? recoDauB->pt() : INVALID_VALUE) << ","
-		                  << (recoDauB ? recoDauB->eta() : INVALID_VALUE) << ")";
+              if (!validReco) {
+                if(debugGenMatching_) {
+                  LogDebug("PATCompositeTreeProducer") << "Incomplete reco daughters for candidate " << it;
+                  DEBUG_GEN("Incomplete reco daughters for candidate " << it);
+                }
+              } else {
+                std::vector<bool> used(genTrackPool.size(), false);
 
-		              for (unsigned int igen = 0; igen < nGen; ++igen) {
-		                const auto& genRef = genRefs.at(igen);
-		                const reco::GenParticle* genDStar = genRef.get();
-		                const reco::GenParticle* genD0 = nullptr;
-		                const reco::GenParticle* genSlowPi = nullptr;
-		                int dstarGamma = 0;
-		                int dstarNonGamma = 0;
-		                int dstarD0Count = 0;
-		                int dstarPiCount = 0;
-		                if (genDStar) {
-		                  for (size_t idau = 0; idau < genDStar->numberOfDaughters(); ++idau) {
-		                    const auto* dau = genDStar->daughter(idau);
-		                    if (!dau) continue;
-		                    const int absId = std::abs(dau->pdgId());
-		                    if (absId == 22) {
-		                      ++dstarGamma;
-		                      continue;
-		                    }
-		                    ++dstarNonGamma;
-		                    if (absId == D0_PDG_ID && !genD0) genD0 = dynamic_cast<const reco::GenParticle*>(dau);
-		                    if (absId == PION_PDG_ID && !genSlowPi) genSlowPi = dynamic_cast<const reco::GenParticle*>(dau);
-		                    if (absId == D0_PDG_ID) ++dstarD0Count;
-		                    if (absId == PION_PDG_ID) ++dstarPiCount;
-		                  }
+	                auto kaonMatch = findBestTrackMatch(*recoKaonCand, genTrackPool, used, deltaR_);
+	                if (kaonMatch.index >= 0 && static_cast<size_t>(kaonMatch.index) < used.size()) {
+	                  used[kaonMatch.index] = true;
+	                }
+
+	                auto pionMatch = findBestTrackMatch(*recoPionCand, genTrackPool, used, deltaR_);
+	                if (pionMatch.index >= 0 && static_cast<size_t>(pionMatch.index) < used.size()) {
+	                  used[pionMatch.index] = true;
+	                }
+
+	                auto slowPionMatch = findBestTrackMatch(*recoSlow, genTrackPool, used, deltaR_);
+	                if (slowPionMatch.index >= 0 && static_cast<size_t>(slowPionMatch.index) < used.size()) {
+	                  used[slowPionMatch.index] = true;
+	                }
+
+
+	                const bool allTracksMatched = kaonMatch.particle && pionMatch.particle && slowPionMatch.particle;
+
+		                if (!kaonMatch.particle && !pionMatch.particle && !slowPionMatch.particle && debugGenMatching_) {
+		                  LogDebug("PATCompositeTreeProducer") << "No gen matches found for candidate " << it;
+		                  DEBUG_GEN("No gen matches found for candidate " << it);
 		                }
 
-		                const auto d0Summary = summarizeD0Daughters(genD0);
-		                LogInfo("GenMatchingFlow")
-		                    << "[PreMatch][GenRef] cand=" << it
-		                    << " igen=" << igen
-		                    << " dstar(pdg,q,nDau)=("
-		                    << (genDStar ? genDStar->pdgId() : -99999) << ","
-		                    << (genDStar ? genDStar->charge() : -99) << ","
-		                    << (genDStar ? static_cast<int>(genDStar->numberOfDaughters()) : -1) << ")"
-		                    << " dstarCounts(nonGamma,gamma,D0,pi)=("
-		                    << dstarNonGamma << "," << dstarGamma << ","
-		                    << dstarD0Count << "," << dstarPiCount << ")"
-		                    << " d0(pdg,q,nDau)=("
-		                    << (genD0 ? genD0->pdgId() : -99999) << ","
-		                    << (genD0 ? genD0->charge() : -99) << ","
-		                    << (genD0 ? static_cast<int>(genD0->numberOfDaughters()) : -1) << ")"
-		                    << " d0Summary(nonGamma,gamma,hasK,hasPi)=("
-		                    << d0Summary.nonGammaCount << "," << d0Summary.gammaCount << ","
-		                    << d0Summary.hasKaon << "," << d0Summary.hasPion << ")"
-		                    << " slowPi(pdg,q)=("
-		                    << (genSlowPi ? genSlowPi->pdgId() : -99999) << ","
-		                    << (genSlowPi ? genSlowPi->charge() : -99) << ")";
-		              }
-		            }
+	                if (!kaonMatch.particle || !pionMatch.particle) {
+	                  if(debugGenMatching_) {
+	                    LogDebug("PATCompositeTreeProducer") << "Failed to match D0 daughters for candidate " << it;
+	                    DEBUG_GEN("Failed to match D0 daughters for candidate " << it);
+	                  }
+	                }
 
-		            if (!validReco) {
-		              if(debugGenMatching_) {
-		                LogDebug("PATCompositeTreeProducer") << "Incomplete reco daughters for candidate " << it;
-		                DEBUG_GEN("Incomplete reco daughters for candidate " << it);
+	                if (!slowPionMatch.particle && debugGenMatching_) {
+	                  LogDebug("PATCompositeTreeProducer") << "Failed to match slow pion for candidate " << it;
+	                  DEBUG_GEN("Failed to match slow pion for candidate " << it);
+	                }
+
+                if (allTracksMatched) {
+                  if(debugGenMatching_) {
+                    LogInfo("PATCompositeTreeProducer") << "Track-by-track gen matching SUCCESS for candidate " << it;
+                    DEBUG_GEN("Track-by-track gen matching SUCCESS for candidate " << it);
+                  }
+
+	                  matchGen_D0Dau1_pT_[it] = kaonMatch.particle->pt();
+	                  matchGen_D0Dau1_eta_[it] = kaonMatch.particle->eta();
+	                  matchGen_D0Dau1_phi_[it] = kaonMatch.particle->phi();
+	                  matchGen_D0Dau1_mass_[it] = kaonMatch.particle->mass();
+	                  matchGen_D0Dau1_y_[it] = kaonMatch.particle->rapidity();
+	                  matchGen_D0Dau1_charge_[it] = kaonMatch.particle->charge();
+	                  matchGen_D0Dau1_pdgId_[it] = kaonMatch.particle->pdgId();
+
+	                  matchGen_D0Dau2_pT_[it] = pionMatch.particle->pt();
+	                  matchGen_D0Dau2_eta_[it] = pionMatch.particle->eta();
+	                  matchGen_D0Dau2_phi_[it] = pionMatch.particle->phi();
+	                  matchGen_D0Dau2_mass_[it] = pionMatch.particle->mass();
+	                  matchGen_D0Dau2_y_[it] = pionMatch.particle->rapidity();
+	                  matchGen_D0Dau2_charge_[it] = pionMatch.particle->charge();
+	                  matchGen_D0Dau2_pdgId_[it] = pionMatch.particle->pdgId();
+
+	                  matchGen_D1pT_[it] = slowPionMatch.particle->pt();
+	                  matchGen_D1eta_[it] = slowPionMatch.particle->eta();
+	                  matchGen_D1phi_[it] = slowPionMatch.particle->phi();
+	                  matchGen_D1mass_[it] = slowPionMatch.particle->mass();
+	                  matchGen_D1y_[it] = slowPionMatch.particle->rapidity();
+	                  matchGen_D1charge_[it] = slowPionMatch.particle->charge();
+	                  matchGen_D1pdgId_[it] = slowPionMatch.particle->pdgId();
+	                  matchGen_slowPion_dR_[it] = slowPionMatch.deltaR;
+
+	                  // Record mothers and their number of daughters for provenance
+	                  const int invalidInt = -1;
+		                  const reco::GenParticle* m1 = kaonMatch.particle ? dynamic_cast<const reco::GenParticle*>(kaonMatch.particle->mother()) : nullptr;
+		                  const reco::GenParticle* m2 = pionMatch.particle ? dynamic_cast<const reco::GenParticle*>(pionMatch.particle->mother()) : nullptr;
+		                  const reco::GenParticle* m3 = slowPionMatch.particle ? dynamic_cast<const reco::GenParticle*>(slowPionMatch.particle->mother()) : nullptr;
+                  matchGen_D0Dau1_motherPdgId_[it] = m1 ? m1->pdgId() : invalidInt;
+                  matchGen_D0Dau1_motherNDau_[it] = m1 ? static_cast<int>(m1->numberOfDaughters()) : invalidInt;
+                  matchGen_D0Dau2_motherPdgId_[it] = m2 ? m2->pdgId() : invalidInt;
+                  matchGen_D0Dau2_motherNDau_[it] = m2 ? static_cast<int>(m2->numberOfDaughters()) : invalidInt;
+                  matchGen_D1_motherPdgId_[it] = m3 ? m3->pdgId() : invalidInt;
+                  matchGen_D1_motherNDau_[it] = m3 ? static_cast<int>(m3->numberOfDaughters()) : invalidInt;
+
+                  const reco::GenParticle* genD0 = nullptr;
+	                  const reco::GenParticle* genFromFirst = findAncestor(kaonMatch.particle, D0_PDG_ID);
+	                  const reco::GenParticle* genFromSecond = findAncestor(pionMatch.particle, D0_PDG_ID);
+                  if (genFromFirst && genFromSecond && genFromFirst == genFromSecond) {
+                    genD0 = genFromFirst;
+                  }
+
+                  const reco::GenParticle* genDStar = nullptr;
+                  if (genD0) {
+                    matchGen_D0pT_[it] = genD0->pt();
+                    matchGen_D0eta_[it] = genD0->eta();
+                    matchGen_D0phi_[it] = genD0->phi();
+                    matchGen_D0mass_[it] = genD0->mass();
+                    matchGen_D0y_[it] = genD0->rapidity();
+                    matchGen_D0charge_[it] = genD0->charge();
+                    matchGen_D0pdgId_[it] = genD0->pdgId();
+                    isSwap[it] = checkSwap(recoD0, *genD0);
+                    genDStar = findAncestor(genD0, std::abs(PID_));
+                  }
+	                  if (!genDStar && slowPionMatch.particle) {
+	                    genDStar = findAncestor(slowPionMatch.particle, std::abs(PID_));
+	                  }
+
+                  if (genDStar) {
+                    matchGen_DStarpT_[it] = genDStar->pt();
+                    matchGen_DStareta_[it] = genDStar->eta();
+                    matchGen_DStarphi_[it] = genDStar->phi();
+                    matchGen_DStarmass_[it] = genDStar->mass();
+                    matchGen_DStary_[it] = genDStar->rapidity();
+                    matchGen_DStarcharge_[it] = genDStar->charge();
+                    matchGen_DStarpdgId_[it] = genDStar->pdgId();
+                    genDecayLength(*genDStar, matchGen_D1decayLength2D_[it], matchGen_D1decayLength3D_[it], matchGen_D1angle2D_[it], matchGen_D1angle3D_[it]);
+                    getAncestorId(*genDStar, matchGen_D1ancestorId_[it], matchGen_D1ancestorFlavor_[it]);
+                  }
+
+                  int momPdg = -77;
+                  int bAncestor = -77;
+                  const reco::GenParticle* lineageStart = genDStar ? genDStar : genD0;
+                  const reco::GenParticle* mother = lineageStart ? dynamic_cast<const reco::GenParticle*>(lineageStart->mother()) : nullptr;
+                  if (mother) {
+                    momPdg = mother->pdgId();
+                  }
+                  const reco::GenParticle* ancestor = mother;
+                  int depth = 0;
+                  while (ancestor && depth < 50) {
+                    ancestor = ancestor ? dynamic_cast<const reco::GenParticle*>(ancestor->mother()) : nullptr;
+                    ++depth;
+                    if (ancestor && ((std::abs(ancestor->pdgId()) % 1000) / 100 == 5)) {
+                      bAncestor = ancestor->pdgId();
+                      break;
+                    }
+                  }
+                  idmom_reco[it] = momPdg;
+                  idBAnc_reco[it] = bAncestor;
+
+	                  // Consistency flags for D0 and D*
+	                  const reco::GenParticle* genDStarFromD0 = genD0 ? findAncestor(genD0, std::abs(PID_)) : nullptr;
+	                  bool validChain = false;
+	                  bool radiativeChain = false;  // D* -> D0 pi, D0 -> K pi gamma (gamma required)
+	                  if (genDStarFromD0 && genD0) {
+	                    const bool dstarHas2 = genDStarFromD0->numberOfDaughters() == 2;
+	                    const auto d0Summary = summarizeD0Daughters(genD0);
+	                    const bool d0Strict2 = (d0Summary.gammaCount == 0 && d0Summary.nonGammaCount == 2 && d0Summary.hasKaon && d0Summary.hasPion);
+	                    const bool d0Radiative = (d0Summary.gammaCount >= 1 && d0Summary.nonGammaCount == 2 && d0Summary.hasKaon && d0Summary.hasPion);
+	                    bool dstarPDGs = false;
+	                    bool d0PDGsStrict = false;
+	                    bool d0PDGsAny = false;
+	                    bool directSlowPi = false;
+	                    if (dstarHas2) {
+	                      const auto* ds_d0 = genDStarFromD0->daughter(0);
+	                      const auto* ds_pi = genDStarFromD0->daughter(1);
+	                      const int a0 = std::abs(ds_d0->pdgId());
+	                      const int a1 = std::abs(ds_pi->pdgId());
+	                      dstarPDGs = ( (a0==D0_PDG_ID && a1==PION_PDG_ID) || (a1==D0_PDG_ID && a0==PION_PDG_ID) );
+	                      // ensure the D0 pointer is one of D* daughters
+	                      dstarPDGs = dstarPDGs && (ds_d0==genD0 || ds_pi==genD0);
+	                      // additionally require the matched slow pion to be the other direct D* daughter
+	                      if (slowPionMatch.particle) {
+	                        directSlowPi = ((ds_d0==genD0 && ds_pi==slowPionMatch.particle) || (ds_pi==genD0 && ds_d0==slowPionMatch.particle));
+	                      }
+	                    }
+	                    d0PDGsAny = matchD0WithFSR(recoKaonCand, recoPionCand, genD0, deltaR_);
+	                    if (d0Strict2) {
+	                      d0PDGsStrict = d0PDGsAny;
+	                    }
+	                    validChain = (dstarPDGs && d0PDGsStrict && directSlowPi);
+	                    radiativeChain = (dstarPDGs && d0PDGsAny && directSlowPi && d0Radiative);
+	                  }
+	                  // validChain: D*→D0+π with D0→Kπ (no FSR gamma)
+	                  // radiativeChain: D*→D0+π with D0→Kπγ (FSR gamma present)
+	                  matchGen_validDstarChain_[it] = validChain;
+	                  // matchGEN should include both normal and radiative chains once tracks are matched
+	                  matchGEN[it] = (allTracksMatched && (validChain || radiativeChain));
+	                  LogDebug("GenMatching") << "Candidate " << it
+	                                          << " matchGen_validDstarChain=" << validChain
+	                                          << " matchGEN=" << matchGEN[it];
+
+	                  // For single-layer decay: strict D0 with no extra daughters or FSR
+	                  if (!twoLayerDecay_) {
+	                    const auto d0SummaryNoFSR = summarizeD0Daughters(genD0);
+		                    const bool validD0chain =
+		                        (d0SummaryNoFSR.gammaCount == 0 && d0SummaryNoFSR.nonGammaCount == 2 &&
+		                         d0SummaryNoFSR.hasKaon && d0SummaryNoFSR.hasPion);
+		                    matchGen_validD0chain_[it] = validD0chain;
+	                  }
+
+	                }
+	                if (!allTracksMatched) {
+	                  matchGEN[it] = false;
+	                  matchGen_validDstarChain_[it] = false;
+	                }
 	              }
-		            } else {
-		              auto findGenD0KPi =
-		                  [&](const reco::GenParticle* genD0) -> std::pair<const reco::GenParticle*, const reco::GenParticle*> {
-		                std::pair<const reco::GenParticle*, const reco::GenParticle*> out(nullptr, nullptr);
-		                if (!genD0) return out;
-		                for (size_t idau = 0; idau < genD0->numberOfDaughters(); ++idau) {
-		                  const auto* dau = genD0->daughter(idau);
-		                  if (!dau || std::abs(dau->pdgId()) == 22) continue;
-		                  const auto* genDau = dynamic_cast<const reco::GenParticle*>(dau);
-		                  if (!genDau) continue;
-		                  const int absId = std::abs(genDau->pdgId());
-		                  if (absId == KAON_PDG_ID && !out.first) out.first = genDau;
-		                  if (absId == PION_PDG_ID && !out.second) out.second = genDau;
-		                }
-		                return out;
-		              };
-
-		              auto scoreRecoPair =
-		                  [&](const reco::GenParticle* genKaon,
-		                      const reco::GenParticle* genPion,
-		                      double& drKaon,
-		                      double& drPion) -> bool {
-		                drKaon = std::numeric_limits<double>::max();
-		                drPion = std::numeric_limits<double>::max();
-		                if (!genKaon || !genPion) return false;
-		                const reco::Candidate* recoDaus[2] = {recoDauA, recoDauB};
-		                int perm[2] = {0, 1};
-		                bool matched = false;
-		                do {
-		                  const reco::Candidate* recoForKaon = recoDaus[perm[0]];
-		                  const reco::Candidate* recoForPion = recoDaus[perm[1]];
-		                  if (!recoForKaon || !recoForPion) continue;
-		                  if (recoForKaon->charge() != genKaon->charge()) continue;
-		                  if (recoForPion->charge() != genPion->charge()) continue;
-
-		                  const double dRKaon = reco::deltaR(*recoForKaon, *genKaon);
-		                  const double dRPion = reco::deltaR(*recoForPion, *genPion);
-		                  if (dRKaon >= deltaR_ || dRPion >= deltaR_) continue;
-
-		                  const double curScore = dRKaon + dRPion;
-		                  if (!matched || curScore < (drKaon + drPion)) {
-		                    matched = true;
-		                    drKaon = dRKaon;
-		                    drPion = dRPion;
-		                  }
-		                } while (std::next_permutation(perm, perm + 2));
-		                return matched;
-		              };
-
-		              const reco::GenParticle* bestGenDStar = nullptr;
-		              const reco::GenParticle* bestGenD0 = nullptr;
-		              const reco::GenParticle* bestGenSlowPi = nullptr;
-		              const reco::GenParticle* bestGenKaon = nullptr;
-		              const reco::GenParticle* bestGenPion = nullptr;
-		              double bestSlowDr = std::numeric_limits<double>::max();
-		              double bestScore = std::numeric_limits<double>::max();
-		              int bestScoreIgen = -1;
-
-		              for (unsigned int igen = 0; igen < nGen; ++igen) {
-		                const auto& genRef = genRefs.at(igen);
-		                const reco::GenParticle* genDStar = genRef.get();
-		                if (!genDStar) {
-		                  if (debugGenMatching_) {
-		                    LogInfo("GenMatchingFlow")
-		                        << "[MatchStep] cand=" << it << " igen=" << igen
-		                        << " reject: null genDStar";
-		                  }
-		                  continue;
-		                }
-		                if (std::abs(genDStar->pdgId()) != std::abs(PID_)) {
-		                  if (debugGenMatching_) {
-		                    LogInfo("GenMatchingFlow")
-		                        << "[MatchStep] cand=" << it << " igen=" << igen
-		                        << " reject: wrong D* PDG="
-		                        << genDStar->pdgId() << " expectedAbs=" << std::abs(PID_);
-		                  }
-		                  continue;
-		                }
-
-		                const reco::GenParticle* genD0 = nullptr;
-		                const reco::GenParticle* genSlowPi = nullptr;
-		                for (size_t idau = 0; idau < genDStar->numberOfDaughters(); ++idau) {
-		                  const auto* dau = genDStar->daughter(idau);
-		                  if (!dau || std::abs(dau->pdgId()) == 22) continue;
-		                  const auto* genDau = dynamic_cast<const reco::GenParticle*>(dau);
-		                  if (!genDau) continue;
-		                  const int absId = std::abs(genDau->pdgId());
-		                  if (absId == D0_PDG_ID && !genD0) genD0 = genDau;
-		                  if (absId == PION_PDG_ID && !genSlowPi) genSlowPi = genDau;
-		                }
-		                if (!genD0 || !genSlowPi) {
-		                  if (debugGenMatching_) {
-		                    LogInfo("GenMatchingFlow")
-		                        << "[MatchStep] cand=" << it << " igen=" << igen
-		                        << " reject: missing D0/slowPi in D* daughters"
-		                        << " genD0=" << (genD0 ? genD0->pdgId() : -99999)
-		                        << " genSlowPi=" << (genSlowPi ? genSlowPi->pdgId() : -99999);
-		                  }
-		                  continue;
-		                }
-		                const auto d0Summary = summarizeD0Daughters(genD0);
-		                const bool d0MatchedWithFSR = matchD0WithFSR(recoDauA, recoDauB, genD0, deltaR_);
-		                if (!d0MatchedWithFSR) {
-		                  if (debugGenMatching_) {
-		                    LogInfo("GenMatchingFlow")
-		                        << "[MatchStep] cand=" << it << " igen=" << igen
-		                        << " reject: D0 daughters fail FSR-aware reco match"
-		                        << " d0Summary(nonGamma,gamma,hasK,hasPi)=("
-		                        << d0Summary.nonGammaCount << "," << d0Summary.gammaCount
-		                        << "," << d0Summary.hasKaon << "," << d0Summary.hasPion << ")";
-		                  }
-		                  continue;
-		                }
-		                const bool slowPiMatched = matchTrackdR(recoSlow, genSlowPi, true);
-		                const double slowDr = reco::deltaR(*recoSlow, *genSlowPi);
-		                if (!slowPiMatched) {
-		                  if (debugGenMatching_) {
-		                    LogInfo("GenMatchingFlow")
-		                        << "[MatchStep] cand=" << it << " igen=" << igen
-		                        << " reject: slow pion fails dR/charge match"
-		                        << " slowDr=" << slowDr;
-		                  }
-		                  continue;
-		                }
-
-		                const auto genKPi = findGenD0KPi(genD0);
-		                const reco::GenParticle* genKaon = genKPi.first;
-		                const reco::GenParticle* genPion = genKPi.second;
-		                double drKaon = std::numeric_limits<double>::max();
-		                double drPion = std::numeric_limits<double>::max();
-		                const bool daughterPairMatched = scoreRecoPair(genKaon, genPion, drKaon, drPion);
-		                if (!daughterPairMatched) {
-		                  if (debugGenMatching_) {
-		                    LogInfo("GenMatchingFlow")
-		                        << "[MatchStep] cand=" << it << " igen=" << igen
-		                        << " reject: K/pi pair assignment failed"
-		                        << " genK=" << (genKaon ? genKaon->pdgId() : -99999)
-		                        << " genPi=" << (genPion ? genPion->pdgId() : -99999);
-		                  }
-		                  continue;
-		                }
-
-		                const double score = drKaon + drPion + slowDr;
-		                if (debugGenMatching_) {
-		                  LogInfo("GenMatchingFlow")
-		                      << "[MatchStep] cand=" << it << " igen=" << igen
-		                      << " pass: drK=" << drKaon
-		                      << " drPi=" << drPion
-		                      << " drSlow=" << slowDr
-		                      << " score=" << score
-		                      << " bestScoreSoFar=" << bestScore;
-		                }
-		                if (score < bestScore) {
-		                  bestScore = score;
-		                  bestScoreIgen = static_cast<int>(igen);
-		                  bestGenDStar = genDStar;
-		                  bestGenD0 = genD0;
-		                  bestGenSlowPi = genSlowPi;
-		                  bestGenKaon = genKaon;
-		                  bestGenPion = genPion;
-		                  bestSlowDr = slowDr;
-		                  if (debugGenMatching_) {
-		                    LogInfo("GenMatchingFlow")
-		                        << "[BestUpdate] cand=" << it
-		                        << " newBestIgen=" << igen
-		                        << " bestScore=" << bestScore;
-		                  }
-		                }
-		              }
-
-		              if (debugGenMatching_) {
-		                LogDebug("GenMatchingCompare")
-		                    << "Candidate " << it
-		                    << " bestScoreIdx=" << bestScoreIgen
-		                    << " bestScore=" << bestScore;
-		              }
-
-	              const bool allTracksMatched = bestGenDStar && bestGenD0 && bestGenSlowPi && bestGenKaon && bestGenPion;
-		              if (!allTracksMatched) {
-		                if(debugGenMatching_) {
-		                  LogDebug("PATCompositeTreeProducer") << "No genRefs-based two-layer match for candidate " << it;
-		                  DEBUG_GEN("No genRefs-based two-layer match for candidate " << it);
-		                  LogInfo("GenMatchingFlow")
-		                      << "[PostMatch] cand=" << it
-		                      << " bestIgen=" << bestScoreIgen
-		                      << " allTracksMatched=0 validChain=0 radiativeChain=0 finalMatchGEN=0"
-		                      << " bestScore=" << bestScore
-		                      << " reason=noBestGenChain";
-		                }
-		                matchGEN[it] = false;
-		                matchGen_validDstarChain_[it] = false;
-		              } else {
-	                if(debugGenMatching_) {
-	                  LogInfo("PATCompositeTreeProducer") << "genRefs two-layer matching SUCCESS for candidate " << it;
-	                  DEBUG_GEN("genRefs two-layer matching SUCCESS for candidate " << it);
-	                }
-
-	                matchGen_D0Dau1_pT_[it] = bestGenKaon->pt();
-	                matchGen_D0Dau1_eta_[it] = bestGenKaon->eta();
-	                matchGen_D0Dau1_phi_[it] = bestGenKaon->phi();
-	                matchGen_D0Dau1_mass_[it] = bestGenKaon->mass();
-	                matchGen_D0Dau1_y_[it] = bestGenKaon->rapidity();
-	                matchGen_D0Dau1_charge_[it] = bestGenKaon->charge();
-	                matchGen_D0Dau1_pdgId_[it] = bestGenKaon->pdgId();
-
-	                matchGen_D0Dau2_pT_[it] = bestGenPion->pt();
-	                matchGen_D0Dau2_eta_[it] = bestGenPion->eta();
-	                matchGen_D0Dau2_phi_[it] = bestGenPion->phi();
-	                matchGen_D0Dau2_mass_[it] = bestGenPion->mass();
-	                matchGen_D0Dau2_y_[it] = bestGenPion->rapidity();
-	                matchGen_D0Dau2_charge_[it] = bestGenPion->charge();
-	                matchGen_D0Dau2_pdgId_[it] = bestGenPion->pdgId();
-
-	                matchGen_D1pT_[it] = bestGenSlowPi->pt();
-	                matchGen_D1eta_[it] = bestGenSlowPi->eta();
-	                matchGen_D1phi_[it] = bestGenSlowPi->phi();
-	                matchGen_D1mass_[it] = bestGenSlowPi->mass();
-	                matchGen_D1y_[it] = bestGenSlowPi->rapidity();
-	                matchGen_D1charge_[it] = bestGenSlowPi->charge();
-	                matchGen_D1pdgId_[it] = bestGenSlowPi->pdgId();
-	                matchGen_slowPion_dR_[it] = bestSlowDr;
-
-	                const int invalidInt = -1;
-	                const reco::GenParticle* m1 = bestGenKaon ? dynamic_cast<const reco::GenParticle*>(bestGenKaon->mother()) : nullptr;
-	                const reco::GenParticle* m2 = bestGenPion ? dynamic_cast<const reco::GenParticle*>(bestGenPion->mother()) : nullptr;
-	                const reco::GenParticle* m3 = bestGenSlowPi ? dynamic_cast<const reco::GenParticle*>(bestGenSlowPi->mother()) : nullptr;
-	                matchGen_D0Dau1_motherPdgId_[it] = m1 ? m1->pdgId() : invalidInt;
-	                matchGen_D0Dau1_motherNDau_[it] = m1 ? static_cast<int>(m1->numberOfDaughters()) : invalidInt;
-	                matchGen_D0Dau2_motherPdgId_[it] = m2 ? m2->pdgId() : invalidInt;
-	                matchGen_D0Dau2_motherNDau_[it] = m2 ? static_cast<int>(m2->numberOfDaughters()) : invalidInt;
-	                matchGen_D1_motherPdgId_[it] = m3 ? m3->pdgId() : invalidInt;
-	                matchGen_D1_motherNDau_[it] = m3 ? static_cast<int>(m3->numberOfDaughters()) : invalidInt;
-
-	                matchGen_D0pT_[it] = bestGenD0->pt();
-	                matchGen_D0eta_[it] = bestGenD0->eta();
-	                matchGen_D0phi_[it] = bestGenD0->phi();
-	                matchGen_D0mass_[it] = bestGenD0->mass();
-	                matchGen_D0y_[it] = bestGenD0->rapidity();
-	                matchGen_D0charge_[it] = bestGenD0->charge();
-	                matchGen_D0pdgId_[it] = bestGenD0->pdgId();
-	                isSwap[it] = checkSwap(recoD0, *bestGenD0);
-
-	                matchGen_DStarpT_[it] = bestGenDStar->pt();
-	                matchGen_DStareta_[it] = bestGenDStar->eta();
-	                matchGen_DStarphi_[it] = bestGenDStar->phi();
-	                matchGen_DStarmass_[it] = bestGenDStar->mass();
-	                matchGen_DStary_[it] = bestGenDStar->rapidity();
-	                matchGen_DStarcharge_[it] = bestGenDStar->charge();
-	                matchGen_DStarpdgId_[it] = bestGenDStar->pdgId();
-	                genDecayLength(*bestGenDStar, matchGen_D1decayLength2D_[it], matchGen_D1decayLength3D_[it], matchGen_D1angle2D_[it], matchGen_D1angle3D_[it]);
-	                getAncestorId(*bestGenDStar, matchGen_D1ancestorId_[it], matchGen_D1ancestorFlavor_[it]);
-
-	                int momPdg = -77;
-	                int bAncestor = -77;
-	                const reco::GenParticle* mother = dynamic_cast<const reco::GenParticle*>(bestGenDStar->mother());
-	                if (mother) {
-	                  momPdg = mother->pdgId();
-	                }
-	                const reco::GenParticle* ancestor = mother;
-	                int depth = 0;
-	                while (ancestor && depth < 50) {
-	                  ancestor = dynamic_cast<const reco::GenParticle*>(ancestor->mother());
-	                  ++depth;
-	                  if (ancestor && ((std::abs(ancestor->pdgId()) % 1000) / 100 == 5)) {
-	                    bAncestor = ancestor->pdgId();
-	                    break;
-	                  }
-	                }
-	                idmom_reco[it] = momPdg;
-	                idBAnc_reco[it] = bAncestor;
-
-	                const reco::GenParticle* genDStarFromD0 = bestGenD0 ? findAncestor(bestGenD0, std::abs(PID_)) : nullptr;
-	                bool validChain = false;
-	                bool radiativeChain = false;
-	                if (genDStarFromD0 && bestGenD0) {
-	                  const bool dstarHas2 = genDStarFromD0->numberOfDaughters() == 2;
-	                  const auto d0Summary = summarizeD0Daughters(bestGenD0);
-	                  const bool d0Strict2 = (d0Summary.gammaCount == 0 && d0Summary.nonGammaCount == 2 && d0Summary.hasKaon && d0Summary.hasPion);
-	                  const bool d0Radiative = (d0Summary.gammaCount >= 1 && d0Summary.nonGammaCount == 2 && d0Summary.hasKaon && d0Summary.hasPion);
-	                  bool dstarPDGs = false;
-	                  bool d0PDGsStrict = false;
-	                  bool d0PDGsAny = false;
-	                  bool directSlowPi = false;
-	                  if (dstarHas2) {
-	                    const auto* ds_d0 = genDStarFromD0->daughter(0);
-	                    const auto* ds_pi = genDStarFromD0->daughter(1);
-	                    const int a0 = std::abs(ds_d0->pdgId());
-	                    const int a1 = std::abs(ds_pi->pdgId());
-	                    dstarPDGs = ((a0 == D0_PDG_ID && a1 == PION_PDG_ID) || (a1 == D0_PDG_ID && a0 == PION_PDG_ID));
-	                    dstarPDGs = dstarPDGs && (ds_d0 == bestGenD0 || ds_pi == bestGenD0);
-	                    directSlowPi = ((ds_d0 == bestGenD0 && ds_pi == bestGenSlowPi) || (ds_pi == bestGenD0 && ds_d0 == bestGenSlowPi));
-	                  }
-	                  d0PDGsAny = matchD0WithFSR(recoDauA, recoDauB, bestGenD0, deltaR_);
-	                  if (d0Strict2) {
-	                    d0PDGsStrict = d0PDGsAny;
-	                  }
-	                  validChain = (dstarPDGs && d0PDGsStrict && directSlowPi);
-	                  radiativeChain = (dstarPDGs && d0PDGsAny && directSlowPi && d0Radiative);
-	                }
-
-		                matchGen_validDstarChain_[it] = validChain;
-		                matchGEN[it] = (allTracksMatched && (validChain || radiativeChain));
-		                LogDebug("GenMatching") << "Candidate " << it
-		                                        << " matchGen_validDstarChain=" << validChain
-		                                        << " matchGEN=" << matchGEN[it];
-		                if (debugGenMatching_) {
-		                  LogInfo("GenMatchingFlow")
-		                      << "[PostMatch] cand=" << it
-		                      << " bestIgen=" << bestScoreIgen
-		                      << " allTracksMatched=" << allTracksMatched
-		                      << " validChain=" << validChain
-		                      << " radiativeChain=" << radiativeChain
-		                      << " finalMatchGEN=" << matchGEN[it]
-		                      << " bestDStarPdg=" << (bestGenDStar ? bestGenDStar->pdgId() : -99999)
-		                      << " bestD0Pdg=" << (bestGenD0 ? bestGenD0->pdgId() : -99999)
-		                      << " bestSlowPiPdg=" << (bestGenSlowPi ? bestGenSlowPi->pdgId() : -99999)
-		                      << " bestKaonPdg=" << (bestGenKaon ? bestGenKaon->pdgId() : -99999)
-		                      << " bestPionPdg=" << (bestGenPion ? bestGenPion->pdgId() : -99999)
-		                      << " bestScore=" << bestScore;
-		                }
-		              }
-		            }
+	            } else {
+	              if(debugGenMatching_) {
+	                LogDebug("PATCompositeTreeProducer") << "No gen track pool available for candidate " << it;
+	                DEBUG_GEN("No gen track pool available for candidate " << it);
+              }
+            }
 
           }
           else {
@@ -823,8 +755,20 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
                 bool hadronMatch = matchHadron(&trk, *theGenP,true);
                 bool manualMatch = matchD0WithFSR(d1, d2, theGenP.get(), deltaR_);
 
-
-		                matchGEN[it] = matchGEN[it] || hadronMatch || manualMatch;
+                double deltaR_hadron = -999.0;
+                if(hadronMatch) {
+                  deltaR_hadron = sqrt(pow(trk.eta() - theGenP->eta(), 2) + pow(trk.phi() - theGenP->phi(), 2));
+                  if(debugGenMatching_) {
+                    LogDebug("PATCompositeTreeProducer") << "D0 matching - Candidate " << it << " Gen " << igen 
+                                << " | Match: " << hadronMatch << " (dR=" << deltaR_hadron << ")"
+                                << " | RecoPt=" << trk.pt() << " GenPt=" << theGenP->pt();
+                    DEBUG_GEN("D0 matching - Candidate " << it << " Gen " << igen 
+                            << " | Match: " << hadronMatch << " (dR=" << deltaR_hadron << ")"
+                            << " | RecoPt=" << trk.pt() << " GenPt=" << theGenP->pt());
+                  }
+                }
+                
+	                matchGEN[it] = matchGEN[it] || hadronMatch || manualMatch;
 	                if(matchGEN[it]){
 	                  const auto d0Summary = summarizeD0Daughters(theGenP.get());
 	                  matchGen_validD0chain_[it] = (d0Summary.gammaCount == 0 && d0Summary.nonGammaCount == 2 &&
@@ -856,28 +800,8 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
                   genDecayLength(*theGenP, matchGen_D1decayLength2D_[it], matchGen_D1decayLength3D_[it], matchGen_D1angle2D_[it], matchGen_D1angle3D_[it] );
                   getAncestorId(*theGenP, matchGen_D1ancestorId_[it], matchGen_D1ancestorFlavor_[it] );
 
-                  const reco::Candidate* genDau0 = nullptr;
-                  const reco::Candidate* genDau1 = nullptr;
-                  const auto matchedIdxs = findDaughterPermutation(*theGenP, false);
-                  if (matchedIdxs.size() == 2) {
-                    genDau0 = theGenP->daughter(matchedIdxs[0]);  // PID_dau1_ (usually K)
-                    genDau1 = theGenP->daughter(matchedIdxs[1]);  // PID_dau2_ (usually pi)
-                  } else {
-                    // Fallback: pick first two non-gamma daughters to avoid FSR gamma assignment.
-                    for (size_t idau = 0; idau < theGenP->numberOfDaughters(); ++idau) {
-                      const auto* dau = theGenP->daughter(idau);
-                      if (!dau || std::abs(dau->pdgId()) == 22) continue;
-                      if (!genDau0) genDau0 = dau;
-                      else if (!genDau1) {
-                        genDau1 = dau;
-                        break;
-                      }
-                    }
-                  }
-                  if (!genDau0 || !genDau1) {
-                    edm::LogWarning("GenMatching") << "Single-layer matched candidate has insufficient non-gamma daughters";
-                    break;
-                  }
+                  const auto* genDau0 = theGenP->daughter(0);
+                  const auto* genDau1 = theGenP->daughter(1);
 
                   matchGen_D0Dau1_pT_[it] = genDau0->pt();
                   matchGen_D0Dau1_eta_[it] = genDau0->eta();
@@ -1005,6 +929,11 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
           ndf[it] = trk.userFloat("VtxNdof");
           VtxProb[it] = TMath::Prob(vtxChi2[it],ndf[it]);
           
+          TVector3 ptosvec(secvx-bestvx,secvy-bestvy,secvz-bestvz);
+          TVector3 secvec(px,py,pz);
+          
+          TVector3 ptosvec2D(secvx-bestvx,secvy-bestvy,0);
+          TVector3 secvec2D(px,py,0);
           agl[it] = cos(trk.userFloat("alpha3D"));
           agl_abs[it] = trk.userFloat("alpha3D");
           agl2D[it] = cos(trk.userFloat("alpha2D"));
@@ -1023,7 +952,6 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
           dca2D[it] = dl2D[it] * std::sin(agl2D_abs[it]);
 
           auto dau1 = d1->get<reco::TrackRef>();
-          ptErr1[it] = INVALID_VALUE;
           if(!twoLayerDecay_)
           {
               trkquality1[it] = dau1->quality(reco::TrackBase::highPurity);
@@ -1061,6 +989,15 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
               dxyos1[it] = dxybest1/dxyerror1;
               dzval1[it] = dzbest1;
               dxyval1[it] = dxybest1;
+
+              logUserFloatDiff(trk, "D0_dau1", "trkquality1", trkquality1[it] ? 1.0f : 0.0f, it);
+              logUserFloatDiff(trk, "D0_dau1", "trkChi1", trkChi1[it], it);
+              logUserFloatDiff(trk, "D0_dau1", "ptErr1", ptErr1[it], it);
+              logUserFloatDiff(trk, "D0_dau1", "nhit1", nhit1[it], it);
+              logUserFloatDiff(trk, "D0_dau1", "dzos1", dzos1[it], it);
+              logUserFloatDiff(trk, "D0_dau1", "dxyos1", dxyos1[it], it);
+              logUserFloatDiff(trk, "D0_dau1", "dzval1", dzval1[it], it);
+              logUserFloatDiff(trk, "D0_dau1", "dxyval1", dxyval1[it], it);
           }
           
           auto dau2 = d2->get<reco::TrackRef>();
@@ -1100,6 +1037,17 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
           dxyos2[it] = dxybest2/dxyerror2;
           dzval2[it] = dzbest2;
           dxyval2[it] = dxybest2;
+
+          if (!twoLayerDecay_) {
+            logUserFloatDiff(trk, "D0_dau2", "trkquality2", trkquality2[it] ? 1.0f : 0.0f, it);
+            logUserFloatDiff(trk, "D0_dau2", "trkChi2", trkChi2[it], it);
+            logUserFloatDiff(trk, "D0_dau2", "ptErr2", ptErr2[it], it);
+            logUserFloatDiff(trk, "D0_dau2", "nhit2", nhit2[it], it);
+            logUserFloatDiff(trk, "D0_dau2", "dzos2", dzos2[it], it);
+            logUserFloatDiff(trk, "D0_dau2", "dxyos2", dxyos2[it], it);
+            logUserFloatDiff(trk, "D0_dau2", "dzval2", dzval2[it], it);
+            logUserFloatDiff(trk, "D0_dau2", "dxyval2", dxyval2[it], it);
+          }
           
           if(doMuon_)
           {
@@ -1112,22 +1060,6 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
             nmatchedch2[it] = -1;
             nmatchedst2[it] = -1;
             matchedenergy2[it] = -1;
-            dx1_seg_[it] = INVALID_VALUE;
-            dy1_seg_[it] = INVALID_VALUE;
-            dxSig1_seg_[it] = INVALID_VALUE;
-            dySig1_seg_[it] = INVALID_VALUE;
-            ddxdz1_seg_[it] = INVALID_VALUE;
-            ddydz1_seg_[it] = INVALID_VALUE;
-            ddxdzSig1_seg_[it] = INVALID_VALUE;
-            ddydzSig1_seg_[it] = INVALID_VALUE;
-            dx2_seg_[it] = INVALID_VALUE;
-            dy2_seg_[it] = INVALID_VALUE;
-            dxSig2_seg_[it] = INVALID_VALUE;
-            dySig2_seg_[it] = INVALID_VALUE;
-            ddxdz2_seg_[it] = INVALID_VALUE;
-            ddydz2_seg_[it] = INVALID_VALUE;
-            ddxdzSig2_seg_[it] = INVALID_VALUE;
-            ddydzSig2_seg_[it] = INVALID_VALUE;
               
             double x_exp = -999.;
             double y_exp = -999.;
@@ -1386,6 +1318,7 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
               
               grand_pt1[it] = gd1->pt();
               grand_pt2[it] = gd2->pt();
+              grand_y1[it] = d1->rapidity();
               grand_mass1[it] = gd1->mass();
               grand_mass2[it] = gd2->mass();
               
@@ -1437,6 +1370,47 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
               
               grand_dzos2[it] = gdzbest2/gdzerror2;
               grand_dxyos2[it] = gdxybest2/gdxyerror2;
+
+              if (d2) {
+                auto slowTrk = d2->get<reco::TrackRef>();
+                if (slowTrk.isNonnull()) {
+                  math::XYZPoint bestvtx(bestvx,bestvy,bestvz);
+                  const double slowDz = slowTrk->dz(bestvtx);
+                  const double slowDxy = slowTrk->dxy(bestvtx);
+                  const double slowDzErr = sqrt(slowTrk->dzError()*slowTrk->dzError()+bestvzError*bestvzError);
+                  const double slowDxyErr = sqrt(slowTrk->d0Error()*slowTrk->d0Error()+bestvxError*bestvxError+bestvyError*bestvyError);
+                  const float slowTrkChi = slowTrk->normalizedChi2();
+                  const float slowPtErr = slowTrk->ptError();
+                  const float slowNhit = slowTrk->numberOfValidHits();
+                  const float slowDzos = slowDzErr > 0.0 ? slowDz/slowDzErr : 0.0f;
+                  const float slowDxyos = slowDxyErr > 0.0 ? slowDxy/slowDxyErr : 0.0f;
+                  logUserFloatDiff(trk, "Dstar_slowPi", "slow_trkquality",
+                                   slowTrk->quality(reco::TrackBase::highPurity) ? 1.0f : 0.0f, it);
+                  logUserFloatDiff(trk, "Dstar_slowPi", "slow_trkChi", slowTrkChi, it);
+                  logUserFloatDiff(trk, "Dstar_slowPi", "slow_ptErr", slowPtErr, it);
+                  logUserFloatDiff(trk, "Dstar_slowPi", "slow_nhit", slowNhit, it);
+                  logUserFloatDiff(trk, "Dstar_slowPi", "slow_dzos", slowDzos, it);
+                  logUserFloatDiff(trk, "Dstar_slowPi", "slow_dxyos", slowDxyos, it);
+                  logUserFloatDiff(trk, "Dstar_slowPi", "slow_dxyerr", slowDxyErr, it);
+                  logUserFloatDiff(trk, "Dstar_slowPi", "slow_dzval", slowDz, it);
+                  logUserFloatDiff(trk, "Dstar_slowPi", "slow_dxyval", slowDxy, it);
+                }
+              }
+
+              if (d1CC) {
+                logUserFloatDiff(*d1CC, "D0_from_Dstar_dau1", "trkquality1", grand_trkquality1[it] ? 1.0f : 0.0f, it);
+                logUserFloatDiff(*d1CC, "D0_from_Dstar_dau1", "trkChi1", grand_trkChi1[it], it);
+                logUserFloatDiff(*d1CC, "D0_from_Dstar_dau1", "ptErr1", grand_ptErr1[it], it);
+                logUserFloatDiff(*d1CC, "D0_from_Dstar_dau1", "nhit1", grand_nhit1[it], it);
+                logUserFloatDiff(*d1CC, "D0_from_Dstar_dau1", "dzos1", grand_dzos1[it], it);
+                logUserFloatDiff(*d1CC, "D0_from_Dstar_dau1", "dxyos1", grand_dxyos1[it], it);
+                logUserFloatDiff(*d1CC, "D0_from_Dstar_dau2", "trkquality2", grand_trkquality2[it] ? 1.0f : 0.0f, it);
+                logUserFloatDiff(*d1CC, "D0_from_Dstar_dau2", "trkChi2", grand_trkChi2[it], it);
+                logUserFloatDiff(*d1CC, "D0_from_Dstar_dau2", "ptErr2", grand_ptErr2[it], it);
+                logUserFloatDiff(*d1CC, "D0_from_Dstar_dau2", "nhit2", grand_nhit2[it], it);
+                logUserFloatDiff(*d1CC, "D0_from_Dstar_dau2", "dzos2", grand_dzos2[it], it);
+                logUserFloatDiff(*d1CC, "D0_from_Dstar_dau2", "dxyos2", grand_dxyos2[it], it);
+              }
               
               grand_vtxChi2[it] = ((CC*) d1)->userFloat("VtxChi2");
               grand_ndf[it] = ((CC*) d1)->userFloat("VtxNdof");
@@ -1463,13 +1437,51 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
                 grand_agl2D[it] = cos(secvec2D.Angle(ptosvec2D));
                 grand_agl2D_abs[it] = secvec2D.Angle(ptosvec2D);
               }
+
+              if (d1CC->hasUserFloat("alpha3D")) {
+                const float alpha3d = d1CC->userFloat("alpha3D");
+                if (std::isfinite(alpha3d)) {
+                  d0fit_alpha3D[it] = alpha3d;
+                  d0fit_cos3D[it] = cos(d0fit_alpha3D[it]);
+                } else {
+                  d0fit_alpha3D[it] = grand_agl_abs[it];
+                  d0fit_cos3D[it] = grand_agl[it];
+                }
+              } else {
+                d0fit_alpha3D[it] = grand_agl_abs[it];
+                d0fit_cos3D[it] = grand_agl[it];
+              }
+
+              if (d1CC->hasUserFloat("alpha2D")) {
+                const float alpha2d = d1CC->userFloat("alpha2D");
+                if (std::isfinite(alpha2d)) {
+                  d0fit_alpha2D[it] = alpha2d;
+                  d0fit_cos2D[it] = cos(d0fit_alpha2D[it]);
+                } else {
+                  d0fit_alpha2D[it] = grand_agl2D_abs[it];
+                  d0fit_cos2D[it] = grand_agl2D[it];
+                }
+              } else {
+                d0fit_alpha2D[it] = grand_agl2D_abs[it];
+                d0fit_cos2D[it] = grand_agl2D[it];
+              }
               
+              typedef ROOT::Math::SMatrix<double, 3, 3, ROOT::Math::MatRepSym<double, 3> > SMatrixSym3D;
+              typedef ROOT::Math::SVector<double, 3> SVector3;
+              typedef ROOT::Math::SVector<double, 6> SVector6;
+              
+              // d1CC already set above
+
               grand_dl[it] = d1CC->userFloat("decaylength3D");
               grand_dlos[it] = d1CC->userFloat("decaylengthsignif3D");
               grand_dlerror[it] = grand_dl[it]/grand_dlos[it];
               grand_dlos2D[it] = d1CC->userFloat("decaylengthsignif2D");
               grand_dl2D[it] = d1CC->userFloat("decaylength2D");
 
+          }
+
+          if(doOnnxDebug_) {
+              fillOnnxDebug(it);
           }
 
           if(saveHistogram_)
@@ -1593,185 +1605,39 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
   }
 
   void
-	  PATCompositeTreeProducer5::fillGEN(const edm::Event& iEvent, const edm::EventSetup& iSetup)
-	  {
-	      edm::Handle<GenEventInfoProduct> geninfo;
-	      iEvent.getByToken(tok_genInfo_, geninfo);
-	      gen_weight = (geninfo.isValid() ? geninfo->weight() : -1.0);
-	      
-	      edm::Handle<reco::GenParticleCollection> genpars;
-	      iEvent.getByToken(tok_genParticle_,genpars);
-	      std::vector<reco::GenParticleRef> genRefs;
-	      std::vector<unsigned int> genRefIdxFillGEN;
-	      const bool logAllGen = (debugGenMatching_ && verboseDebug_);
-	      int nPidTarget = 0;
-	      int nAccepted = 0;
-	      int nRejectedNonGamma = 0;
-	      int nRejectedTwoLayerNau = 0;
-	      int nRejectedFirstTwo = 0;
-	      int nRejectedPermutation = 0;
-	      for(unsigned it=0; it<genpars->size(); ++it){
+  PATCompositeTreeProducer5::fillGEN(const edm::Event& iEvent, const edm::EventSetup& iSetup)
+  {
+      edm::Handle<GenEventInfoProduct> geninfo;
+      iEvent.getByToken(tok_genInfo_, geninfo);
+      gen_weight = (geninfo.isValid() ? geninfo->weight() : -1.0);
+      
+      edm::Handle<reco::GenParticleCollection> genpars;
+      iEvent.getByToken(tok_genParticle_,genpars);
+      std::vector<reco::GenParticleRef> genRefs;
+      for(unsigned it=0; it<genpars->size(); ++it){
 
-	          const reco::GenParticle & trk = (*genpars)[it];
+          const reco::GenParticle & trk = (*genpars)[it];
 
-	          int id = trk.pdgId();
-	          if(fabs(id)!=PID_) {
-	            if (logAllGen) {
-	              LogInfo("GenRefFilter")
-	                  << "[GEN][Decision] idx=" << it
-	                  << " pdg=" << id
-	                  << " nDau=" << trk.numberOfDaughters()
-	                  << " decision=REJECT reason=pidMismatch";
-	            }
-	            continue; //check is target
-	          }
-	          ++nPidTarget;
-	          
-	          // Count non-gamma daughters to allow FSR
-	          int nNonGammaDaughters = 0;
-	          for(size_t i = 0; i < trk.numberOfDaughters(); ++i) {
-	              if(std::abs(trk.daughter(i)->pdgId()) != 22) nNonGammaDaughters++;
-	          }
-	          
-	          if(decayInGen_ && nNonGammaDaughters != 2) {
-	            ++nRejectedNonGamma;
-	            if (debugGenMatching_) {
-	              LogInfo("GenRefFilter")
-	                  << "[GEN][Decision] idx=" << it
-	                  << " pdg=" << id
-	                  << " nDau=" << trk.numberOfDaughters()
-	                  << " nNonGamma=" << nNonGammaDaughters
-	                  << " decision=REJECT reason=nonGammaCountNot2";
-	            }
-	            continue;
-	          }
-	          if(twoLayerDecay_ && decayInGen_ && trk.numberOfDaughters() != 2) {
-	            ++nRejectedTwoLayerNau;
-	            if (debugGenMatching_) {
-	              LogInfo("GenRefFilter")
-	                  << "[GEN][Decision] idx=" << it
-	                  << " pdg=" << id
-	                  << " nDau=" << trk.numberOfDaughters()
-	                  << " decision=REJECT reason=twoLayerDecay_requires_exactly2_daughters";
-	            }
-	            continue;
-	          }
-	          if(twoLayerDecay_) {
-	              if(trk.numberOfDaughters() < 2) {
-	                ++nRejectedFirstTwo;
-	                if (debugGenMatching_) {
-	                  LogInfo("GenRefFilter")
-	                      << "[GEN][Decision] idx=" << it
-	                      << " pdg=" << id
-	                      << " nDau=" << trk.numberOfDaughters()
-	                      << " decision=REJECT reason=twoLayerDecay_daughtersLessThan2";
-	                }
-	                continue;
-	              }
-	              const reco::Candidate* d0 = trk.daughter(0);
-	              const reco::Candidate* d1 = trk.daughter(1);
-	              if(!d0 || !d1) {
-	                ++nRejectedFirstTwo;
-	                if (debugGenMatching_) {
-	                  LogInfo("GenRefFilter")
-	                      << "[GEN][Decision] idx=" << it
-	                      << " pdg=" << id
-	                      << " decision=REJECT reason=twoLayerDecay_nullDaughterInFirstTwo";
-	                }
-	                continue;
-	              }
-	              const bool d0InFirstTwo = (std::abs(d0->pdgId()) == D0_PDG_ID || std::abs(d1->pdgId()) == D0_PDG_ID);
-	              if(!d0InFirstTwo) {
-	                ++nRejectedFirstTwo;
-	                if (debugGenMatching_) {
-	                  LogInfo("GenRefFilter")
-	                      << "[GEN][Decision] idx=" << it
-	                      << " pdg=" << id
-	                      << " d0FirstTwo=(" << d0->pdgId() << "," << d1->pdgId() << ")"
-	                      << " decision=REJECT reason=twoLayerDecay_d0NotInFirstTwo";
-	                }
-	                continue;
-	              }
-	          }
-	          
-	          std::vector<unsigned int> idxs = findDaughterPermutation(trk, twoLayerDecay_);
-	          if (decayInGen_ && idxs.empty()) {
-	            ++nRejectedPermutation;
-	            if (debugGenMatching_) {
-	              LogInfo("GenRefFilter")
-	                  << "[GEN][Decision] idx=" << it
-	                  << " pdg=" << id
-	                  << " nDau=" << trk.numberOfDaughters()
-	                  << " decision=REJECT reason=daughterPermutationFailed";
-	            }
-	            continue;
-	          }
-	          genRefs.push_back(reco::GenParticleRef(genpars, it));
-	          genRefIdxFillGEN.push_back(it);
-	          ++nAccepted;
-	          if (debugGenMatching_) {
-	            LogInfo("GenRefFilter")
-	                << "[GEN][Decision] idx=" << it
-	                << " pdg=" << id
-	                << " nDau=" << trk.numberOfDaughters()
-	                << " nNonGamma=" << nNonGammaDaughters
-	                << " idxsSize=" << idxs.size()
-	                << " decision=ACCEPT";
-	          }
-	      }
+          int id = trk.pdgId();
 
-	      if (debugGenMatching_) {
-	        const auto recoStyleGenRefs = processGenMatching(genpars);
-	        std::vector<unsigned int> genRefIdxRECOStyle;
-	        genRefIdxRECOStyle.reserve(recoStyleGenRefs.size());
-	        for (const auto& ref : recoStyleGenRefs) {
-	          if (ref.isNonnull()) genRefIdxRECOStyle.push_back(ref.key());
-	        }
-
-	        std::sort(genRefIdxFillGEN.begin(), genRefIdxFillGEN.end());
-	        std::sort(genRefIdxRECOStyle.begin(), genRefIdxRECOStyle.end());
-	        const bool sameSet = (genRefIdxFillGEN == genRefIdxRECOStyle);
-	        LogInfo("GenRefConsistency")
-	            << "[EventCheck] run:lumi:event="
-	            << iEvent.id().run() << ":" << iEvent.id().luminosityBlock() << ":" << iEvent.id().event()
-	            << " fillGEN_nGenRefs=" << genRefIdxFillGEN.size()
-	            << " recoStyle_nGenRefs=" << genRefIdxRECOStyle.size()
-	            << " sameSet=" << sameSet;
-
-	        if (!sameSet) {
-	          std::string genList = "[";
-	          for (size_t i = 0; i < genRefIdxFillGEN.size(); ++i) {
-	            if (i) genList += ",";
-	            genList += std::to_string(genRefIdxFillGEN[i]);
-	          }
-	          genList += "]";
-	          std::string recoList = "[";
-	          for (size_t i = 0; i < genRefIdxRECOStyle.size(); ++i) {
-	            if (i) recoList += ",";
-	            recoList += std::to_string(genRefIdxRECOStyle[i]);
-	          }
-	          recoList += "]";
-	          LogWarning("GenRefConsistency")
-	              << "[Mismatch] run:lumi:event="
-	              << iEvent.id().run() << ":" << iEvent.id().luminosityBlock() << ":" << iEvent.id().event()
-	              << " fillGEN=" << genList
-	              << " recoStyle=" << recoList;
-	        }
-
-	        LogInfo("GenRefFilter")
-	            << "[GEN][Summary] run:lumi:event="
-	            << iEvent.id().run() << ":" << iEvent.id().luminosityBlock() << ":" << iEvent.id().event()
-	            << " totalGen=" << genpars->size()
-	            << " pidTarget=" << nPidTarget
-	            << " accepted=" << nAccepted
-	            << " rejNonGammaCount=" << nRejectedNonGamma
-	            << " rejTwoLayerNau=" << nRejectedTwoLayerNau
-	            << " rejFirstTwoDaughters=" << nRejectedFirstTwo
-	            << " rejPermutation=" << nRejectedPermutation;
-	      }
-	      
-	      unsigned int nGen = genRefs.size();
-	      candSize_gen = nGen;
+          if(fabs(id)!=PID_) continue; //check is target
+          
+          // Count non-gamma daughters to allow FSR
+          int nNonGammaDaughters = 0;
+          for(size_t i = 0; i < trk.numberOfDaughters(); ++i) {
+              if(std::abs(trk.daughter(i)->pdgId()) != 22) nNonGammaDaughters++;
+          }
+          
+          if(decayInGen_ && nNonGammaDaughters != 2) continue;
+          if(twoLayerDecay_ && decayInGen_ && trk.numberOfDaughters() != 2) continue;
+          
+          std::vector<unsigned int> idxs = findDaughterPermutation(trk, twoLayerDecay_);
+          if (decayInGen_ && idxs.empty()) continue;
+              genRefs.push_back(reco::GenParticleRef(genpars, it));
+      }
+      
+      unsigned int nGen = genRefs.size();
+      candSize_gen = nGen;
       if(twoLayerDecay_){
         for( unsigned int igen=0; igen<nGen; igen++){
           auto const theGenDStar = genRefs.at(igen);
@@ -1800,15 +1666,6 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
 		          }
 	          auto const* theGenD0 = genRefs.at(igen)->daughter(idxD0);
 	          auto const* theGenPion = genRefs.at(igen)->daughter(1- idxD0);
-          // Intentionally-unfilled branches: write deterministic sentinels.
-          iddau1[igen] = -1;
-          iddau2[igen] = -1;
-          gen_D0charge_[igen] = -99;
-          gen_D1charge_[igen] = -99;
-          gen_D0Dau1_mass_[igen] = INVALID_VALUE;
-          gen_D0Dau2_mass_[igen] = INVALID_VALUE;
-          gen_D0Dau1_charge_[igen] = -99;
-          gen_D0Dau2_charge_[igen] = -99;
           gen_validDstarChain_[igen] = false;
           gen_validD0chain_[igen] = false;
           mass_gen[igen] = theGenDStar->mass();
@@ -1887,8 +1744,6 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
     else{
         for( unsigned int igen=0; igen<nGen; igen++){
             auto const theGenP = genRefs.at(igen);
-             iddau1[igen] = -1;
-             iddau2[igen] = -1;
              gen_validDstarChain_[igen] = false;
              gen_validD0chain_[igen] = false;
              pt_gen[igen] = theGenP->pt();
@@ -1945,6 +1800,90 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
                 }
               } // END for nGen
             }
+
+  void
+  PATCompositeTreeProducer5::fillOnnxDebug(unsigned int it)
+  {
+      if(!doOnnxDebug_ || !onnxRuntime_ || !twoLayerDecay_) return;
+
+      cms::Ort::FloatArrays data_;
+      data_.emplace_back(19, 0.0f);
+      std::vector<float> &onnxVals = data_[0];
+
+      onnxVals[0] = pt1[it];
+      onnxVals[1] = grand_y1[it];
+      onnxVals[2] = grand_VtxProb[it];
+      onnxVals[3] = centrality;
+      onnxVals[4] = grand_agl[it];
+      onnxVals[5] = grand_agl_abs[it];
+      onnxVals[6] = grand_agl2D[it];
+      onnxVals[7] = grand_agl2D_abs[it];
+      onnxVals[8] = grand_dl[it];
+      onnxVals[9] = grand_dlos[it];
+      onnxVals[10] = grand_dl2D[it];
+      onnxVals[11] = grand_dlos2D[it];
+      onnxVals[12] = grand_pt1[it];
+      onnxVals[13] = grand_eta1[it];
+      onnxVals[14] = grand_pt2[it];
+      onnxVals[15] = grand_eta2[it];
+      onnxVals[16] = grand_ptErr1[it];
+      onnxVals[17] = grand_ptErr2[it];
+      onnxVals[18] = trk3Ddca[it];
+
+      std::vector<float> d0fitVals(19, 0.0f);
+      d0fitVals[0] = pt1[it];
+      d0fitVals[1] = grand_y1[it];
+      d0fitVals[2] = grand_VtxProb[it];
+      d0fitVals[3] = centrality;
+      d0fitVals[4] = d0fit_cos3D[it];
+      d0fitVals[5] = d0fit_alpha3D[it];
+      d0fitVals[6] = d0fit_cos2D[it];
+      d0fitVals[7] = d0fit_alpha2D[it];
+      d0fitVals[8] = grand_dl[it];
+      d0fitVals[9] = grand_dlos[it];
+      d0fitVals[10] = grand_dl2D[it];
+      d0fitVals[11] = grand_dlos2D[it];
+      d0fitVals[12] = grand_pt1[it];
+      d0fitVals[13] = grand_eta1[it];
+      d0fitVals[14] = grand_pt2[it];
+      d0fitVals[15] = grand_eta2[it];
+      d0fitVals[16] = grand_ptErr1[it];
+      d0fitVals[17] = grand_ptErr2[it];
+      d0fitVals[18] = trk3Ddca[it];
+
+      const auto outputs = onnxRuntime_->run(onnxInputNames_, data_, onnxInputShapes_, onnxOutputNames_);
+      if(outputs.empty() || outputs[0].size() < 2) return;
+
+      const float mvaDebug = outputs[0][1];
+      const float mvaStored = mva[it];
+
+      if (std::abs(mvaDebug - mvaStored) > onnxPrintThreshold_) {
+        static const char* kNames[19] = {
+            "pt", "y", "vtxProb", "cent",
+            "cos3D", "alpha3D", "cos2D", "alpha2D",
+            "lVtxMag", "lVtxSig", "rVtxMag", "rVtxSig",
+            "ptPos", "etaPos", "ptNeg", "etaNeg",
+            "ptErrPos", "ptErrNeg", "dca"
+        };
+        edm::LogPrint("OnnxDebug")
+            << "cand=" << it
+            << " mvaStored=" << mvaStored
+            << " mvaDebug=" << mvaDebug
+            << " diff=" << (mvaDebug - mvaStored);
+        for (int i = 0; i < 19; ++i) {
+          edm::LogPrint("OnnxDebug")
+              << "cand=" << it
+              << " var=" << kNames[i]
+              << " producer=" << onnxVals[i]
+              << " d0fit=" << d0fitVals[i]
+              << " diff=" << (onnxVals[i] - d0fitVals[i]);
+        }
+      }
+
+      if(hOnnxDebugMVA_) hOnnxDebugMVA_->Fill(mvaDebug);
+      if(hOnnxDebugMVADiff_) hOnnxDebugMVADiff_->Fill(mvaDebug - mvaStored);
+      if(hOnnxDebugMVAVsStored_) hOnnxDebugMVAVsStored_->Fill(mvaStored, mvaDebug);
+  }
   void
   PATCompositeTreeProducer5::beginJob()
   {
@@ -1962,6 +1901,7 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
       
       if(saveHistogram_) initHistogram();
       if(saveTree_) initTree();
+      if(doOnnxDebug_) initOnnxDebug();
   }
 
   void
@@ -2007,6 +1947,27 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
     }
     }
   }
+  }
+
+  void
+  PATCompositeTreeProducer5::initOnnxDebug()
+  {
+      if(!doOnnxDebug_) return;
+
+      if(!onnxRuntime_) {
+          edm::FileInPath fip(Form("VertexCompositeAnalysis/VertexCompositeProducer/data/%s", onnxModelFileName_.c_str()));
+          std::string fullPath = fip.fullPath();
+          std::ifstream testFile(fullPath);
+          if(!testFile.good()) {
+              throw cms::Exception("Configuration") << "cannot find ONNX Model in : " << fullPath;
+          }
+          testFile.close();
+          onnxRuntime_ = std::make_unique<cms::Ort::ONNXRuntime>(fullPath);
+      }
+
+      hOnnxDebugMVA_ = fs->make<TH1F>("hOnnxDebugMVA",";mva_debug;count",200,-1.,1.);
+      hOnnxDebugMVADiff_ = fs->make<TH1F>("hOnnxDebugMVADiff",";mva_debug - mva_stored;count",200,-1.,1.);
+      hOnnxDebugMVAVsStored_ = fs->make<TH2F>("hOnnxDebugMVAVsStored",";mva_stored;mva_debug",200,-1.,1.,200,-1.,1.);
   }
 
   void 
@@ -2056,12 +2017,7 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
         PATCompositeNtuple->Branch("eptrackmidAngle", &eptrackmidAngle, "eptrackmidAngle[2]/F");
         PATCompositeNtuple->Branch("eptrackmidQ", &eptrackmidQ, "eptrackmidQ[2]/F");
         PATCompositeNtuple->Branch("eptrackmidSumW", &eptrackmidSumW, "eptrackmidSumW/F");
-        PATCompositeNtuple->Branch("eptrackpAngle", &eptrackpAngle, "eptrackpAngle[2]/F");
-        PATCompositeNtuple->Branch("eptrackpQ", &eptrackpQ, "eptrackpQ[2]/F");
-        PATCompositeNtuple->Branch("eptrackpSumW", &eptrackpSumW, "eptrackpSumW[2]/F");
-        PATCompositeNtuple->Branch("eptrackmAngle", &eptrackmAngle, "eptrackmAngle[2]/F");
-        PATCompositeNtuple->Branch("eptrackmQ", &eptrackmQ, "eptrackmQ[2]/F");
-        PATCompositeNtuple->Branch("eptrackmSumW", &eptrackmSumW, "eptrackmSumW[2]/F");
+
         // Full HF (v2,v3): flat(level2), offset(level1), raw(level0)
         PATCompositeNtuple->Branch("ephfAngle", &ephfAngle, "ephfAngle[2]/F");
         PATCompositeNtuple->Branch("ephfAngleoff", &ephfAngleoff, "ephfAngleoff[2]/F");
@@ -2410,11 +2366,6 @@ void PATCompositeTreeProducer5::processCandidates(const CCC* v0candidates_,
 
 void PATCompositeTreeProducer5::processCentralityInfo(const edm::Event& iEvent) {
     centrality = -1;
-    Npixel = -1;
-    HFsumETPlus = INVALID_VALUE;
-    HFsumETMinus = INVALID_VALUE;
-    ZDCPlus = INVALID_VALUE;
-    ZDCMinus = INVALID_VALUE;
     if(isCentrality_) {
         edm::Handle<reco::Centrality> cent;
         iEvent.getByToken(tok_centSrc_, cent);
@@ -2425,11 +2376,6 @@ void PATCompositeTreeProducer5::processCentralityInfo(const edm::Event& iEvent) 
         Npixel = cent->multiplicityPixel();
         ZDCPlus = cent->zdcSumPlus();
         ZDCMinus = cent->zdcSumMinus();
-        edm::LogPrint("CentralityDebug") << "PATCompositeTreeProducer5 centrality run="
-                                    << iEvent.id().run() << " lumi="
-                                    << iEvent.luminosityBlock() << " event="
-                                    << iEvent.id().event() << " cbin="
-                                    << centrality;
     }
 }
 
@@ -2437,18 +2383,8 @@ void PATCompositeTreeProducer5::processEventPlaneInfo(const edm::Event& iEvent) 
     if(!isEventPlane_) return;
 
     constexpr float kInvalid = -99.f;
-    auto deltaPhiPeriodic = [](double a, double b, int order) {
-      const double period = (order > 0 ? 2.0 * M_PI / static_cast<double>(order) : 2.0 * M_PI);
-      double d = a - b;
-      while (d > period / 2.0)
-        d -= period;
-      while (d <= -period / 2.0)
-        d += period;
-      return d;
-    };
     auto set3 = [&](float (&arr)[3]) { for (auto& v : arr) v = kInvalid; };
     auto set2 = [&](float (&arr)[2]) { for (auto& v : arr) v = kInvalid; };
-    auto setN = [&](float* arr, int n) { for (int i = 0; i < n; ++i) arr[i] = kInvalid; };
 
     set3(ephfpAngle);
     set3(ephfmAngle);
@@ -2472,23 +2408,6 @@ void PATCompositeTreeProducer5::processEventPlaneInfo(const edm::Event& iEvent) 
     set2(eptrackmidAngle);
     set2(eptrackmidQ);
     eptrackmidSumW = kInvalid;
-    set2(eptrackpAngle);
-    set2(eptrackpQ);
-    set2(eptrackpSumW);
-    set2(eptrackmAngle);
-    set2(eptrackmQ);
-    set2(eptrackmSumW);
-    setN(epStoredAngle2, kCompareEPSize);
-    setN(epStoredQ2, kCompareEPSize);
-    setN(epStoredSumW, kCompareEPSize);
-    setN(epRecalcAngle2, kCompareEPSize);
-    setN(epRecalcQ2, kCompareEPSize);
-    setN(epRecalcSumW, kCompareEPSize);
-    setN(epDeltaAngle2, kCompareEPSize);
-    setN(epDeltaQ2, kCompareEPSize);
-    setN(epDeltaSumW, kCompareEPSize);
-    epStoredSize = -1;
-    epRecalcSize = -1;
 
     set2(ephfAngle);
     set2(ephfAngleoff);
@@ -2515,15 +2434,11 @@ void PATCompositeTreeProducer5::processEventPlaneInfo(const edm::Event& iEvent) 
     const auto* hfPlusV2 = getEp(1);
     const auto* hfV2 = getEp(2);
     const auto* trkMidV2 = getEp(3);
-    const auto* trkPlusV2 = getEp(4);
-    const auto* trkMinusV2 = getEp(5);
 
     const auto* hfMinusV3 = getEp(6);
     const auto* hfPlusV3 = getEp(7);
     const auto* hfV3 = getEp(8);
     const auto* trkMidV3 = getEp(9);
-    const auto* trkPlusV3 = getEp(10);
-    const auto* trkMinusV3 = getEp(11);
 
     // Legacy branches: keep the same indices/sign-convention as PATCompositeTreeProducer2.cc.
     // (HF-: 0,6 ; HF+: 1,7 ; "HF" combined: 2,8)
@@ -2572,26 +2487,6 @@ void PATCompositeTreeProducer5::processEventPlaneInfo(const edm::Event& iEvent) 
       eptrackmidAngle[1] = trkMidV3->angle(2);
       eptrackmidQ[1] = trkMidV3->q(2);
     }
-    if (trkPlusV2) {
-      eptrackpAngle[0] = trkPlusV2->angle(2);
-      eptrackpQ[0] = trkPlusV2->q(2);
-      eptrackpSumW[0] = trkPlusV2->sumw();
-    }
-    if (trkPlusV3) {
-      eptrackpAngle[1] = trkPlusV3->angle(2);
-      eptrackpQ[1] = trkPlusV3->q(2);
-      eptrackpSumW[1] = trkPlusV3->sumw();
-    }
-    if (trkMinusV2) {
-      eptrackmAngle[0] = trkMinusV2->angle(2);
-      eptrackmQ[0] = trkMinusV2->q(2);
-      eptrackmSumW[0] = trkMinusV2->sumw();
-    }
-    if (trkMinusV3) {
-      eptrackmAngle[1] = trkMinusV3->angle(2);
-      eptrackmQ[1] = trkMinusV3->q(2);
-      eptrackmSumW[1] = trkMinusV3->sumw();
-    }
 
     if (hfV2) {
       ephfAngle[0] = hfV2->angle(2);
@@ -2616,44 +2511,6 @@ void PATCompositeTreeProducer5::processEventPlaneInfo(const edm::Event& iEvent) 
       ephfsumSinRaw[1] = hfV3->sumSin(0);
       ephfsumPtOrEt[1] = hfV3->sumPtOrEt();
     }
-
-    if (compareEventPlane_) {
-      edm::Handle<reco::EvtPlaneCollection> storedEps;
-      edm::Handle<reco::EvtPlaneCollection> recalcEps;
-      iEvent.getByToken(tok_eventplaneSrc_, storedEps);
-      iEvent.getByToken(tok_eventplaneSrcRecalc_, recalcEps);
-
-      if (storedEps.isValid())
-        epStoredSize = static_cast<int>(storedEps->size());
-      if (recalcEps.isValid())
-        epRecalcSize = static_cast<int>(recalcEps->size());
-
-      for (int i = 0; i < kCompareEPSize; ++i) {
-        const reco::EvtPlane* s = (storedEps.isValid() && static_cast<int>(storedEps->size()) > i) ? &(*storedEps)[i] : nullptr;
-        const reco::EvtPlane* r = (recalcEps.isValid() && static_cast<int>(recalcEps->size()) > i) ? &(*recalcEps)[i] : nullptr;
-        if (s) {
-          epStoredAngle2[i] = s->angle(2);
-          epStoredQ2[i] = s->q(2);
-          epStoredSumW[i] = s->sumw();
-        }
-        if (r) {
-          epRecalcAngle2[i] = r->angle(2);
-          epRecalcQ2[i] = r->q(2);
-          epRecalcSumW[i] = r->sumw();
-        }
-        if (s && r) {
-          const bool sSentinel = (epStoredAngle2[i] <= -9.0f);
-          const bool rSentinel = (epRecalcAngle2[i] <= -9.0f);
-          if (sSentinel && rSentinel) {
-            epDeltaAngle2[i] = 0.0f;
-          } else if (!sSentinel && !rSentinel) {
-            epDeltaAngle2[i] = static_cast<float>(deltaPhiPeriodic(epStoredAngle2[i], epRecalcAngle2[i], 2));
-          }
-          epDeltaQ2[i] = epStoredQ2[i] - epRecalcQ2[i];
-          epDeltaSumW[i] = epStoredSumW[i] - epRecalcSumW[i];
-        }
-      }
-    }
 }
 
 void PATCompositeTreeProducer5::processVertexAndTrackInfo(const edm::Handle<reco::VertexCollection>& vertices,
@@ -2673,7 +2530,7 @@ void PATCompositeTreeProducer5::processVertexAndTrackInfo(const edm::Handle<reco
             double dzvtx = trk.dz(bestvtx);
             double dxyvtx = trk.dxy(bestvtx);
             double dzerror = sqrt(trk.dzError()*trk.dzError() + bestvzError*bestvzError);
-            double dxyerror = sqrt(trk.d0Error()*trk.d0Error() + bestvxError*bestvxError+bestvyError*bestvyError);
+            double dxyerror = sqrt(trk.d0Error()*trk.d0Error()+bestvxError*bestvxError+bestvyError*bestvyError);
             
             if(!trk.quality(reco::TrackBase::highPurity)) continue;
             if(fabs(trk.ptError())/trk.pt() > 0.10) continue;
@@ -2698,122 +2555,84 @@ std::vector<reco::GenParticleRef> PATCompositeTreeProducer5::processGenMatching(
         return genRefs;
     }
     
-    const bool logAllGen = (debugGenMatching_ && verboseDebug_);
+    edm::LogInfo("GenMatching") << "=== Gen Matching Process Started ===";
+    edm::LogInfo("GenMatching") << "Total gen particles in collection: " << genpars->size();
+    
     int pidMatches = 0;
-    int nonTargetRejected = 0;
-    int rejectedMissingTargetDau = 0;
-    int rejectedDStarGamma = 0;
-    int rejectedPermutation = 0;
     int daughterMatches = 0;
     int permutationMatches = 0;
     int finalAccepted = 0;
     
     for(unsigned int it = 0; it < genpars->size(); ++it) {
+        edm::LogInfo("GenSize") << "Gen Particle collection size : " << genpars->size() ;
         const reco::GenParticle & trk = (*genpars)[it];
         int id = trk.pdgId();
         
-        if(fabs(id) != PID_) {
-            ++nonTargetRejected;
-            if (logAllGen) {
-                LogInfo("GenRefFilter")
-                    << "[RECO][Decision] idx=" << it
-                    << " pdg=" << id
-                    << " nDau=" << trk.numberOfDaughters()
-                    << " decision=REJECT reason=pidMismatch";
-            }
-            continue;
-        }
+        if(fabs(id) != PID_) continue;
         pidMatches++;
         
         // Check daughter PDG IDs based on decay mode (allow FSR gamma); count D* gamma
         bool hasDau1 = false;
         bool hasDau2 = false;
         int dstarGammaCount = 0;
-        int nNonGammaDaughters = 0;
+        std::vector<unsigned int> nonGammaDauIndices;
         for (size_t i = 0; i < trk.numberOfDaughters(); ++i) {
             const int dauId = std::abs(trk.daughter(i)->pdgId());
             if (dauId == 22) { ++dstarGammaCount; continue; }  // D* level gamma
-            ++nNonGammaDaughters;
             if (dauId == std::abs(PID_dau1_)) hasDau1 = true;  // D0(421) for D*, K(321) for D0
             if (dauId == std::abs(PID_dau2_)) hasDau2 = true;  // π(211) for both
         }
 
         // Require exactly 2 non-gamma daughters (allow FSR)
-        if(decayInGen_ && (!hasDau1 || !hasDau2)) {
-            ++rejectedMissingTargetDau;
-            if (debugGenMatching_) {
-                LogInfo("GenRefFilter")
-                    << "[RECO][Decision] idx=" << it
-                    << " pdg=" << id
-                    << " nDau=" << trk.numberOfDaughters()
-                    << " nNonGamma=" << nNonGammaDaughters
-                    << " hasDau1=" << hasDau1
-                    << " hasDau2=" << hasDau2
-                    << " decision=REJECT reason=missingTargetDaughters";
-            }
-            continue;
-        }
+        if(decayInGen_ && (!hasDau1 || !hasDau2)) continue;
+        
+        LogDebug("GenMatching") << "Processing candidate " << it << ": PDG=" << id 
+                                << " nDau=" << trk.numberOfDaughters()
+                                << " dstarGamma=" << dstarGammaCount;
         
         // Reject D* with explicit extra gamma; allow only D0 FSR
         if(twoLayerDecay_ && decayInGen_ && dstarGammaCount > 0) {
-            ++rejectedDStarGamma;
-            if (debugGenMatching_) {
-                LogInfo("GenRefFilter")
-                    << "[RECO][Decision] idx=" << it
-                    << " pdg=" << id
-                    << " nDau=" << trk.numberOfDaughters()
-                    << " dstarGamma=" << dstarGammaCount
-                    << " decision=REJECT reason=dstarHasGamma";
-            }
+            LogDebug("GenMatching") << "Candidate " << it << " rejected: D* has gamma daughters";
             continue;
         }
-
         std::vector<unsigned int> idxs = findDaughterPermutation(trk, twoLayerDecay_);
         if (decayInGen_ && idxs.empty()) {
-            ++rejectedPermutation;
-            if (debugGenMatching_) {
-                LogInfo("GenRefFilter")
-                    << "[RECO][Decision] idx=" << it
-                    << " pdg=" << id
-                    << " nDau=" << trk.numberOfDaughters()
-                    << " nNonGamma=" << nNonGammaDaughters
-                    << " decision=REJECT reason=daughterPermutationFailed";
-            }
+            LogDebug("GenMatching") << "Candidate " << it << " failed permutation matching";
             continue;
         }
         if (!idxs.empty()) {
             permutationMatches++;
+            LogDebug("GenMatching") << "Candidate " << it << " permutation matched (idxs size=" << idxs.size() << ")";
         }
         daughterMatches++;
         genRefs.push_back(reco::GenParticleRef(genpars, it));
         finalAccepted++;
-        if (debugGenMatching_) {
-            LogInfo("GenRefFilter")
-                << "[RECO][Decision] idx=" << it
-                << " pdg=" << id
-                << " nDau=" << trk.numberOfDaughters()
-                << " nNonGamma=" << nNonGammaDaughters
-                << " dstarGamma=" << dstarGammaCount
-                << " idxsSize=" << idxs.size()
-                << " decision=ACCEPT";
-        }
+        LogDebug("GenMatching") << "Candidate " << it << " ACCEPTED";
     }
     
-    if (debugGenMatching_) {
-        LogInfo("GenRefFilter")
-            << "[RECO][Summary]"
-            << " totalGen=" << genpars->size()
-            << " pidTarget=" << pidMatches
-            << " pidMismatch=" << nonTargetRejected
-            << " accepted=" << finalAccepted
-            << " rejMissingTargetDau=" << rejectedMissingTargetDau
-            << " rejDStarGamma=" << rejectedDStarGamma
-            << " rejPermutation=" << rejectedPermutation
-            << " daughterMatches=" << daughterMatches
-            << " permutationMatches=" << permutationMatches;
-    }
+    edm::LogInfo("GenMatching") << "=== Gen Matching Results ===";
+    edm::LogInfo("GenMatching") << "PID matches: " << pidMatches << "/" << genpars->size();
+    edm::LogInfo("GenMatching") << "Daughter count matches: " << daughterMatches << "/" << pidMatches;
+    edm::LogInfo("GenMatching") << "Permutation matches: " << permutationMatches << "/" << daughterMatches;
+    edm::LogInfo("GenMatching") << "Final accepted: " << finalAccepted << "/" << permutationMatches;
+    
+        if(twoLayerDecay_) {
+            edm::LogInfo("GenMatching") << "Applied strict D* → D0+π → K+π+π filtering";
+        }
         
         return genRefs;
+}
+
+bool PATCompositeTreeProducer5::isValidCandidateIndex(unsigned int index) const {
+    return index < MAXCAN;
+}
+
+void PATCompositeTreeProducer5::validateArrayAccess(unsigned int index, const std::string& arrayName) const {
+    if (!isValidCandidateIndex(index)) {
+        throw std::runtime_error("Array index " + std::to_string(index) + 
+                                " out of bounds for " + arrayName + 
+                                " (max: " + std::to_string(MAXCAN) + ")");
+    }
 }
 
 int PATCompositeTreeProducer5::muAssocToTrack( const reco::TrackRef& trackref,
@@ -2831,4 +2650,4 @@ PATCompositeTreeProducer5::endJob() {
     
 }
 
-DEFINE_FWK_MODULE(PATCompositeTreeProducer5);
+DEFINE_FWK_MODULE(PATCompositeTreeProducer5OnnxDebug);
