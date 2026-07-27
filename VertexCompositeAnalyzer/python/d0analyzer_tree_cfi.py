@@ -33,6 +33,7 @@ d0ana = cms.EDAnalyzer('PATCompositeTreeProducer6',
   yBins = cms.untracked.vdouble(-2.4,-1.0,0.0,1.0,2.4),
 
   useAnyMVA = cms.bool(False),
+  doRunInfo = cms.bool(True),
   isSkimMVA = cms.untracked.bool(False),
   MVACollection = cms.InputTag("generalD0CandidatesNew:MVAValues"),
 
@@ -74,6 +75,7 @@ d0ana_mc = cms.EDAnalyzer('PATCompositeTreeProducer6',
   yBins = cms.untracked.vdouble(-2.4,-1.0,0.0,1.0,2.4),
 
   useAnyMVA = cms.bool(False),
+  doRunInfo = cms.bool(True),
   isSkimMVA = cms.untracked.bool(False),
   MVACollection = cms.InputTag("generalD0CandidatesNew:MVAValues")
                               )

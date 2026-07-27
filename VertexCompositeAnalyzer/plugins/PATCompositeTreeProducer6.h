@@ -307,7 +307,7 @@ private:
   TTree* PATCompositeNtuple_;
   static constexpr int kDstarMassHistCategoryBins = 31;
   static constexpr int kDstarMassHistDcaBins = 10;
-  static constexpr int kDstarMassHistMvaBins = 11;
+  static constexpr int kDstarMassHistMvaBins = 25;
   TH1F* hDstarDeltaMass[kDstarMassHistCategoryBins][kDstarMassHistDcaBins][kDstarMassHistMvaBins];
   float mva[kMaxGenCand];
   float pt[kMaxGenCand];

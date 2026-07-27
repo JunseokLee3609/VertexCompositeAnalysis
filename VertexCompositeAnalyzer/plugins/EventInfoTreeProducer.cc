@@ -290,11 +290,11 @@ EventInfoTreeProducer::fillRECO(const edm::Event& iEvent, const edm::EventSetup&
     edm::Handle<int> cbin;
     iEvent.getByToken(tok_centBinLabel_, cbin);
     centrality = (cbin.isValid() ? *cbin : -1);
-    edm::LogPrint("CentralityDebug") << "EventInfoTreeProducer centrality run="
-                                << iEvent.id().run() << " lumi="
-                                << iEvent.luminosityBlock() << " event="
-                                << iEvent.id().event() << " cbin="
-                                << centrality;
+    // edm::LogPrint("CentralityDebug") << "EventInfoTreeProducer centrality run="
+    //                             << iEvent.id().run() << " lumi="
+    //                             << iEvent.luminosityBlock() << " event="
+    //                             << iEvent.id().event() << " cbin="
+    //                             << centrality;
   }
   
   NtrkHP = -1;

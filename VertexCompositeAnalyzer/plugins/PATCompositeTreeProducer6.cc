@@ -65,7 +65,10 @@ PATCompositeTreeProducer6::PATCompositeTreeProducer6(const edm::ParameterSet& iC
           "dstarMassHistDcaBins",
           std::vector<double>{0., 0.0008, 0.0016, 0.0024, 0.0040, 0.0060, 0.0085, 0.0120, 0.0200, 0.0800})),
       dstarMassHistMvaCuts_(iConfig.getUntrackedParameter<std::vector<double>>(
-          "dstarMassHistMvaCuts", std::vector<double>{0., 0.1, 0.3, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.995, 0.999})),
+          "dstarMassHistMvaCuts",
+          std::vector<double>{0., 0.1, 0.3, 0.5, 0.7, 0.8, 0.9,
+                              0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99,
+                              0.991, 0.992, 0.993, 0.994, 0.995, 0.996, 0.997, 0.998, 0.999})),
       Ntrkoffline(0),
       Npixel(-99),
       centrality(-99),
@@ -1707,6 +1710,9 @@ void PATCompositeTreeProducer6::fillDstarMassHistograms(unsigned int idx) {
   if (!saveHistogram_ || !twoLayerDecay_ || idx >= static_cast<unsigned int>(kMaxGenCand)) return;
   if (mass[idx] == kInvalidValue || grand_mass[idx] == kInvalidValue || mva[idx] == kInvalidValue) return;
   const double deltaMass = mass[idx] - grand_mass[idx];
+  if (grand_mass[idx] < 1.81120 || grand_mass[idx] >= 1.91738) return;
+  if (deltaMass < 0.139 || deltaMass >= 0.155) return;
+  if (dca3D[idx] < 0.0 || dca3D[idx] >= 0.08) return;
 
   int dcaBin = -1;
   const double absDca = std::abs(dca3D[idx]);

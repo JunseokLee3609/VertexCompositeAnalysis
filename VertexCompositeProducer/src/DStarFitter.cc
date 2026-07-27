@@ -23,6 +23,7 @@
 #include "TrackingTools/PatternTools/interface/ClosestApproachInRPhi.h"
 #include "Geometry/CommonDetUnit/interface/GlobalTrackingGeometry.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
+#include "FWCore/ServiceRegistry/interface/Service.h"
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateTransform.h"
 #include "TrackingTools/PatternTools/interface/TwoTrackMinimumDistance.h"
 #include "TrackingTools/PatternTools/interface/TSCBLBuilderNoMaterial.h"
@@ -50,9 +51,13 @@
 #include <Math/SMatrix.h>
 #include <TMath.h>
 #include <TVector3.h>
+#include <TH1D.h>
+#include <TH2D.h>
 #include "TrackingTools/IPTools/interface/IPTools.h"
 #include "CommonTools/Statistics/interface/ChiSquaredProbability.h"
 #include "CondFormats/DataRecord/interface/GBRWrapperRcd.h"
+
+#include <limits>
 
 static const float piMassDStar = 0.13957018;
 static const float piMassDStarSquared = piMassDStar*piMassDStar;
@@ -102,6 +107,19 @@ DStarFitter::DStarFitter(const edm::ParameterSet& theParameters,  edm::ConsumesC
   alphaCut = theParameters.getParameter<double>(string("alphaCut"));
   alpha2DCut = theParameters.getParameter<double>(string("alpha2DCut"));
   isWrongSign = theParameters.getParameter<bool>(string("isWrongSign"));
+  useRawDStarKinematics_ = theParameters.exists("useRawDStarKinematics") &&
+                           theParameters.getParameter<bool>("useRawDStarKinematics");
+  debugCategoryCutflow_ = theParameters.exists("debugCategoryCutflow") &&
+                          theParameters.getParameter<bool>("debugCategoryCutflow");
+  debugSlowPionPtScan_ = theParameters.exists("debugSlowPionPtScan") &&
+                         theParameters.getParameter<bool>("debugSlowPionPtScan");
+  rejectDuplicateSlowPion_ = theParameters.exists("rejectDuplicateSlowPion") &&
+                             theParameters.getParameter<bool>("rejectDuplicateSlowPion");
+  debugLabel_ = theParameters.exists("debugLabel") ? theParameters.getParameter<std::string>("debugLabel") : "DStarFitterDebug";
+  if (debugCategoryCutflow_) {
+    debugMinDeltaM_.fill(std::numeric_limits<double>::infinity());
+    debugMaxDeltaM_.fill(-std::numeric_limits<double>::infinity());
+  }
 
 
   useAnyMVA_ = false;
@@ -139,9 +157,139 @@ DStarFitter::DStarFitter(const edm::ParameterSet& theParameters,  edm::ConsumesC
 }
 
 DStarFitter::~DStarFitter() {
+  if (debugCategoryCutflow_) printDebugCutflow();
+  if (debugSlowPionPtScan_) printSlowPionPtScan();
   if (forest_ != nullptr) {
     delete forest_;
     forest_ = nullptr;
+  }
+}
+
+int DStarFitter::debugCategoryIndex(int qK, int qPiD0, int qPiS) const {
+  const int qKPi = qK * qPiD0;
+  const int qKPiS = qK * qPiS;
+  if (qKPi == -1 && qKPiS == -1) return kDebugA;
+  if (qKPi == -1 && qKPiS == 1) return kDebugB;
+  if (qKPi == 1 && qKPiS == -1) return kDebugC;
+  if (qKPi == 1 && qKPiS == 1) return kDebugD;
+  return -1;
+}
+
+void DStarFitter::debugFill(int category, DebugStep step) {
+  if (debugCategoryCutflow_ && category >= 0 && category < kDebugNCategory) debugCutflow_[category][step]++;
+}
+
+void DStarFitter::slowPiPtScanFill(double slowPiPt, SlowPionPtScanStage stage) {
+  if (!debugSlowPionPtScan_) return;
+  static const std::array<double, kSlowPiPtNThreshold> thresholds{{0.3, 0.4, 0.5}};
+  for (int ithr = 0; ithr < kSlowPiPtNThreshold; ++ithr) {
+    if (slowPiPt > thresholds[ithr]) ++slowPiPtScanCounts_[ithr][stage];
+  }
+}
+
+void DStarFitter::bookDebugHistograms() {
+  if (!debugCategoryCutflow_ || debugHistogramsBooked_) return;
+  edm::Service<TFileService> fs;
+  if (!fs) return;
+  auto dir = fs->mkdir(debugLabel_);
+  static const std::array<const char*, kDebugNCategory> catNames{{"A", "B", "C", "D"}};
+  for (int cat = 0; cat < kDebugNCategory; ++cat) {
+    auto catDir = dir.mkdir(("cat" + std::string(catNames[cat])).c_str());
+    hDebugRawDStarPt_[cat] = catDir.make<TH1D>("rawDStarPt_before_dPtCut", ";raw p_{T}(K#pi#pi_{s}) (GeV);candidates", 200, 0.0, 100.0);
+    hDebugFitterDStarPt_[cat] = catDir.make<TH1D>("fitterDStarPt_before_dPtCut", ";DStarFitter p_{T}(D*) (GeV);candidates", 200, 0.0, 100.0);
+    hDebugRawD0Pt_[cat] = catDir.make<TH1D>("rawD0Pt_before_dPtCut", ";raw p_{T}(D0) (GeV);candidates", 200, 0.0, 100.0);
+    hDebugFittedD0Pt_[cat] = catDir.make<TH1D>("fittedD0Pt_before_dPtCut", ";fitted p_{T}(D0) (GeV);candidates", 200, 0.0, 100.0);
+    hDebugSlowPiPt_[cat] = catDir.make<TH1D>("slowPiPt_before_dPtCut", ";p_{T}(#pi_{s}) (GeV);candidates", 150, 0.0, 15.0);
+    hDebugOpeningAngle_[cat] = catDir.make<TH1D>("openingAngle_before_dPtCut", ";opening angle(D0,#pi_{s});candidates", 160, 0.0, 3.2);
+    hDebugQValue_[cat] = catDir.make<TH1D>("Q_before_dPtCut", ";Q = #DeltaM - m_{#pi} (GeV);candidates", 200, 0.0, 0.100);
+    hDebugRawVsFitterDStarPt_[cat] = catDir.make<TH2D>("rawDStarPt_vs_fitterDStarPt_before_dPtCut", ";raw p_{T}(D*) (GeV);DStarFitter p_{T}(D*) (GeV)", 200, 0.0, 100.0, 200, 0.0, 100.0);
+    hDebugD0PtVsDStarPt_[cat] = catDir.make<TH2D>("D0Pt_vs_fitterDStarPt_before_dPtCut", ";raw p_{T}(D0) (GeV);DStarFitter p_{T}(D*) (GeV)", 200, 0.0, 100.0, 200, 0.0, 100.0);
+    hDebugSlowPiPtVsDStarPt_[cat] = catDir.make<TH2D>("slowPiPt_vs_fitterDStarPt_before_dPtCut", ";p_{T}(#pi_{s}) (GeV);DStarFitter p_{T}(D*) (GeV)", 150, 0.0, 15.0, 200, 0.0, 100.0);
+    hDebugQVsDStarPt_[cat] = catDir.make<TH2D>("Q_vs_fitterDStarPt_before_dPtCut", ";Q (GeV);DStarFitter p_{T}(D*) (GeV)", 200, 0.0, 0.100, 200, 0.0, 100.0);
+  }
+  debugHistogramsBooked_ = true;
+}
+
+void DStarFitter::fillDebugPrePtHistograms(int category, double rawDStarPt, double fitterDStarPt, double rawD0Pt,
+                                           double fittedD0Pt, double slowPiPt, double openingAngle, double qValue) {
+  if (!debugCategoryCutflow_ || category < 0 || category >= kDebugNCategory) return;
+  bookDebugHistograms();
+  if (!debugHistogramsBooked_) return;
+  hDebugRawDStarPt_[category]->Fill(rawDStarPt);
+  hDebugFitterDStarPt_[category]->Fill(fitterDStarPt);
+  hDebugRawD0Pt_[category]->Fill(rawD0Pt);
+  hDebugFittedD0Pt_[category]->Fill(fittedD0Pt);
+  hDebugSlowPiPt_[category]->Fill(slowPiPt);
+  hDebugOpeningAngle_[category]->Fill(openingAngle);
+  hDebugQValue_[category]->Fill(qValue);
+  hDebugRawVsFitterDStarPt_[category]->Fill(rawDStarPt, fitterDStarPt);
+  hDebugD0PtVsDStarPt_[category]->Fill(rawD0Pt, fitterDStarPt);
+  hDebugSlowPiPtVsDStarPt_[category]->Fill(slowPiPt, fitterDStarPt);
+  hDebugQVsDStarPt_[category]->Fill(qValue, fitterDStarPt);
+}
+
+void DStarFitter::printDebugCutflow() const {
+  static const std::array<const char*, kDebugNCategory> catNames{{"A qK*qPiD0=-1 qK*qPiS=-1",
+                                                                  "B qK*qPiD0=-1 qK*qPiS=+1",
+                                                                  "C qK*qPiD0=+1 qK*qPiS=-1",
+                                                                  "D qK*qPiD0=+1 qK*qPiS=+1"}};
+  static const std::array<const char*, kDebugNStep> stepNames{{"slow pion attach",
+                                                               "dM calculated",
+                                                               "dM < 0.500",
+                                                               "dM < 0.300",
+                                                               "dM < 0.250",
+                                                               "dM < 0.200",
+                                                               "dM < 0.180",
+                                                               "dM < 0.165",
+                                                               "dM < 0.160",
+                                                               "charge category cut",
+                                                               "D0 kinematic tree valid",
+                                                               "D* vertex fit valid",
+                                                               "D* state valid",
+                                                               "D* decay vertex valid",
+                                                               "D* vertex probability",
+                                                               "D*/slow-pi child states",
+                                                               "D* pT cut",
+                                                               "D* y cut",
+                                                               "D* TSOS valid",
+                                                               "D* topology cuts",
+                                                               "final D* mass window"}};
+  edm::LogPrint("DStarFitterDebug") << "DStarFitter internal category cutflow";
+  for (int cat = 0; cat < kDebugNCategory; ++cat) {
+    edm::LogPrint("DStarFitterDebug") << "Category " << catNames[cat];
+    unsigned long long previous = 0;
+    for (int step = 0; step < kDebugNStep; ++step) {
+      const unsigned long long value = debugCutflow_[cat][step];
+      const double survival = step == 0 ? 1.0 : (previous > 0 ? static_cast<double>(value) / previous : 0.0);
+      edm::LogPrint("DStarFitterDebug") << stepNames[step] << ": N = " << value << ", survival = " << survival;
+      previous = value;
+    }
+    edm::LogPrint("DStarFitterDebug") << "minDeltaM = " << debugMinDeltaM_[cat]
+                                      << ", maxDeltaM = " << debugMaxDeltaM_[cat]
+                                      << ", nDeltaM_lt_mPi = " << debugDeltaMLtPionMass_[cat]
+                                      << ", nInvalidMass = " << debugInvalidMass_[cat]
+                                      << ", nDuplicateTrack = " << debugDuplicateTrack_[cat];
+  }
+}
+
+void DStarFitter::printSlowPionPtScan() const {
+  static const std::array<double, kSlowPiPtNThreshold> thresholds{{0.3, 0.4, 0.5}};
+  static const std::array<const char*, kSlowPiPtNStage> stageNames{{"slow pion attach",
+                                                                    "dM < 0.160",
+                                                                    "charge category cut",
+                                                                    "D* vertex fit valid",
+                                                                    "D* pT cut",
+                                                                    "final D* mass window"}};
+  edm::LogPrint("DStarFitterDebug") << "DStarFitter slow pion pT threshold scan";
+  for (int ithr = 0; ithr < kSlowPiPtNThreshold; ++ithr) {
+    edm::LogPrint("DStarFitterDebug") << "slow pion pT > " << thresholds[ithr] << " GeV";
+    unsigned long long previous = 0;
+    for (int stage = 0; stage < kSlowPiPtNStage; ++stage) {
+      const unsigned long long value = slowPiPtScanCounts_[ithr][stage];
+      const double survival = stage == 0 ? 1.0 : (previous > 0 ? static_cast<double>(value) / previous : 0.0);
+      edm::LogPrint("DStarFitterDebug") << stageNames[stage] << ": N = " << value << ", survival = " << survival;
+      previous = value;
+    }
   }
 }
 
@@ -303,13 +451,64 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
       //  continue;
       // }
 
-      // if( !pionTransTkPtr->impactPointStateAvailable()) continue;
-      const auto& D0Vec = theD0.p4();
-      const reco::Track& thePiTrack = pionTransTkPtr->track();
-      math::PtEtaPhiMLorentzVector pPi(thePiTrack.pt(), thePiTrack.eta(), thePiTrack.phi(), piMassDStar);
-      double theDStarcandMass = (D0Vec + pPi).M();
-      // std::cout << "D* - D0 mass : " << theDStarcandMass << ", " << D0Vec.M() << std::endl;
-      if(theDStarcandMass - D0Vec.M() >0.16) continue;
+	      // if( !pionTransTkPtr->impactPointStateAvailable()) continue;
+		      int slowPionCharge = pionTrackRef->charge();
+		      const double slowPionPtForScan = pionTrackRef->pt();
+	      const reco::Candidate* kaonCand = nullptr;
+	      const reco::Candidate* pionCand = nullptr;
+	      if (dau0->mass() > dau1->mass()) {
+	        kaonCand = dau0;
+	        pionCand = dau1;
+	      } else {
+	        kaonCand = dau1;
+	        pionCand = dau0;
+	      }
+		      const int debugCat = debugCategoryCutflow_ ? debugCategoryIndex(kaonCand->charge(), pionCand->charge(), slowPionCharge) : -1;
+		      debugFill(debugCat, kDebugSlowPionAttach);
+		      slowPiPtScanFill(slowPionPtForScan, kSlowPiPtAttach);
+	      bool duplicateSlowPion = false;
+	      if (debugCategoryCutflow_ && debugCat >= 0) {
+	        reco::TrackRef d0Track0;
+	        reco::TrackRef d0Track1;
+	        if (const auto* rc0 = dynamic_cast<const reco::RecoChargedCandidate*>(dau0)) d0Track0 = rc0->track();
+	        if (const auto* rc1 = dynamic_cast<const reco::RecoChargedCandidate*>(dau1)) d0Track1 = rc1->track();
+	        if ((d0Track0.isNonnull() && d0Track0 == pionTrackRef) ||
+	            (d0Track1.isNonnull() && d0Track1 == pionTrackRef)) {
+	          duplicateSlowPion = true;
+	          debugDuplicateTrack_[debugCat]++;
+	        }
+	      }
+	      if (rejectDuplicateSlowPion_ && duplicateSlowPion) continue;
+	      const auto& D0Vec = theD0.p4();
+	      const reco::Track& thePiTrack = pionTransTkPtr->track();
+	      math::PtEtaPhiMLorentzVector pPi(thePiTrack.pt(), thePiTrack.eta(), thePiTrack.phi(), piMassDStar);
+	      double theDStarcandMass = (D0Vec + pPi).M();
+	      const double rawDStarPt = (D0Vec + pPi).Pt();
+	      const Particle::LorentzVector rawDStarP4(D0Vec.px() + pPi.px(),
+	                                               D0Vec.py() + pPi.py(),
+	                                               D0Vec.pz() + pPi.pz(),
+	                                               D0Vec.E() + pPi.E());
+	      const double debugDeltaM = theDStarcandMass - D0Vec.M();
+	      if (!std::isfinite(theDStarcandMass) || !std::isfinite(debugDeltaM)) {
+	        if (debugCategoryCutflow_ && debugCat >= 0) debugInvalidMass_[debugCat]++;
+	        continue;
+	      }
+	      debugFill(debugCat, kDebugDeltaMCalculated);
+	      if (debugCategoryCutflow_ && debugCat >= 0) {
+	        debugMinDeltaM_[debugCat] = std::min(debugMinDeltaM_[debugCat], debugDeltaM);
+	        debugMaxDeltaM_[debugCat] = std::max(debugMaxDeltaM_[debugCat], debugDeltaM);
+	        if (debugDeltaM < piMassDStar) debugDeltaMLtPionMass_[debugCat]++;
+	      }
+	      if (debugDeltaM < 0.500) debugFill(debugCat, kDebugDeltaMLt0500);
+	      if (debugDeltaM < 0.300) debugFill(debugCat, kDebugDeltaMLt0300);
+	      if (debugDeltaM < 0.250) debugFill(debugCat, kDebugDeltaMLt0250);
+	      if (debugDeltaM < 0.200) debugFill(debugCat, kDebugDeltaMLt0200);
+	      if (debugDeltaM < 0.180) debugFill(debugCat, kDebugDeltaMLt0180);
+	      if (debugDeltaM < 0.165) debugFill(debugCat, kDebugDeltaMLt0165);
+	      if (debugDeltaM < 0.160) debugFill(debugCat, kDebugDeltaMLt0160);
+	      // std::cout << "D* - D0 mass : " << theDStarcandMass << ", " << D0Vec.M() << std::endl;
+		      if(theDStarcandMass - D0Vec.M() >0.16) continue;
+		      slowPiPtScanFill(slowPionPtForScan, kSlowPiPtDeltaM);
 
 
       // Calculate DCA of two daughters
@@ -380,46 +579,32 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
       KinematicParticleFactoryFromTransientTrack pFactory;
       vector<RefCountedKinematicParticle> d0Daus;
 
-       int slowPionCharge = pionTrackRef->charge();
-       
-      const reco::Candidate* kaonCand = nullptr;
-      const reco::Candidate* pionCand = nullptr;
-       
-       
-       if (dau0->mass() > dau1->mass()) {
-         kaonCand = dau0;
-         pionCand = dau1;
-       } else {
-         kaonCand = dau1;
-         pionCand = dau0;
-       }
-
-
-
-
-       // For D*+: K- pi+ followed by slow pi+
-       // For D*-: K+ pi- followed by slow pi-
-       if(!isWrongSign){
-       if (slowPionCharge > 0) { // D*+ case
-               if (kaonCand->charge() > 0) continue;
+	       // For D*+: K- pi+ followed by slow pi+
+	       // For D*-: K+ pi- followed by slow pi-
+	       if(!isWrongSign){
+	       if (slowPionCharge > 0) { // D*+ case
+	               if (kaonCand->charge() > 0) continue;
        } else {
                if (kaonCand->charge() < 0) continue;
        }
        }
-       else{
-        if(!(abs(pionCand->charge()+kaonCand->charge()+slowPionCharge)==1)) continue;
-       }
-       int a =0; 
-       reco::TransientTrack ttk0(*dau0->bestTrack(), magField);
-       reco::TransientTrack ttk1(*dau1->bestTrack(), magField);
+	       else{
+	        if(kaonCand->charge() * slowPionCharge != 1) continue;
+	       }
+		      debugFill(debugCat, kDebugCharge);
+		      slowPiPtScanFill(slowPionPtForScan, kSlowPiPtCharge);
+	       int a =0;
+	       reco::TransientTrack ttk0(*dau0->bestTrack(), magField);
+	       reco::TransientTrack ttk1(*dau1->bestTrack(), magField);
        float dau0mass =  dau0->mass();
        float dau1mass =  dau1->mass();
        d0Daus.push_back(pFactory.particle(ttk0,dau0mass,chi,ndf,D0MassD0_sigma));
        d0Daus.push_back(pFactory.particle(ttk1,dau1mass,chi,ndf,D0MassD0_sigma));
 
-       KinematicParticleVertexFitter kpvFitter;
-       RefCountedKinematicTree d0Tree =  kpvFitter.fit(d0Daus);
-      if( !d0Tree->isValid() ) continue;
+	       KinematicParticleVertexFitter kpvFitter;
+	       RefCountedKinematicTree d0Tree =  kpvFitter.fit(d0Daus);
+	      if( !d0Tree->isValid() ) continue;
+	      debugFill(debugCat, kDebugD0Tree);
        #ifdef DEBUG
       cout << a++ << endl;
         #endif
@@ -433,28 +618,33 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
 
        KinematicParticleVertexFitter dStarFitter;
        RefCountedKinematicTree dStarVertex;
-       dStarVertex = dStarFitter.fit(dStarParticles);
+	       dStarVertex = dStarFitter.fit(dStarParticles);
 
-       if( !dStarVertex->isValid() ) continue;
+		       if( !dStarVertex->isValid() ) continue;
+		      debugFill(debugCat, kDebugDStarVertex);
+		      slowPiPtScanFill(slowPionPtForScan, kSlowPiPtDStarVertex);
        #ifdef DEBUG
       cout << a++ << endl;
         #endif
 
        dStarVertex->movePointerToTheTop();
-       RefCountedKinematicParticle dStarCand = dStarVertex->currentParticle();
-       if (!dStarCand->currentState().isValid()) continue;
+	       RefCountedKinematicParticle dStarCand = dStarVertex->currentParticle();
+	       if (!dStarCand->currentState().isValid()) continue;
+	      debugFill(debugCat, kDebugDStarState);
        #ifdef DEBUG
       cout << a++ << endl;
         #endif
 
-       RefCountedKinematicVertex dStarDecayVertex = dStarVertex->currentDecayVertex();
-       if (!dStarDecayVertex->vertexIsValid()) continue;
+	       RefCountedKinematicVertex dStarDecayVertex = dStarVertex->currentDecayVertex();
+	       if (!dStarDecayVertex->vertexIsValid()) continue;
+	      debugFill(debugCat, kDebugDecayVertex);
        #ifdef DEBUG
       cout << a++ << endl;
         #endif
 
-	     float dStarC2Prob = TMath::Prob(dStarDecayVertex->chiSquared(),dStarDecayVertex->degreesOfFreedom());
-	     if (dStarC2Prob < VtxChiProbCut) continue;
+		     float dStarC2Prob = TMath::Prob(dStarDecayVertex->chiSquared(),dStarDecayVertex->degreesOfFreedom());
+		     if (dStarC2Prob < VtxChiProbCut) continue;
+	      debugFill(debugCat, kDebugVtxProb);
        #ifdef DEBUG
       cout << a++ << endl;
         #endif
@@ -464,7 +654,8 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
        dStarVertex->movePointerToTheNextChild();
        RefCountedKinematicParticle negCand = dStarVertex->currentParticle();
 
-       if(!posCand->currentState().isValid() || !negCand->currentState().isValid()) continue;
+	       if(!posCand->currentState().isValid() || !negCand->currentState().isValid()) continue;
+	      debugFill(debugCat, kDebugChildState);
        #ifdef DEBUG
       cout << a++ << endl;
         #endif
@@ -501,12 +692,23 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
        float negCandTotalE = sqrt( negCandTotalP.mag2() + piMassDStar*piMassDStar );
        float dStarTotalE = posCandTotalE + negCandTotalE;
 
-       const Particle::LorentzVector dStarP4(dStarTotalP.x(), dStarTotalP.y(), dStarTotalP.z(), dStarTotalE);
-       double dStarPt = dStarTotalP.perp();
-       if(dStarPt < dPtCut) continue;
-       double dStarY = 0.5 * log((dStarTotalE + dStarPt * TMath::SinH(dStarTotalP.eta())) /
-                                 (dStarTotalE - dStarPt * TMath::SinH(dStarTotalP.eta())));
-       if(fabs(dStarY) > dStarAbsYCut) continue;
+       const Particle::LorentzVector refitDStarP4(dStarTotalP.x(), dStarTotalP.y(), dStarTotalP.z(), dStarTotalE);
+	      const Particle::LorentzVector& dStarP4 = useRawDStarKinematics_ ? rawDStarP4 : refitDStarP4;
+	      double dStarPt = dStarP4.pt();
+	      const double rawD0Pt = theD0.pt();
+	      const double fittedD0Pt = posCandTotalP.perp();
+	      const double slowPiPt = pionTrackRef->pt();
+	      const double qValue = debugDeltaM - piMassDStar;
+	      const double dot = D0Vec.px() * pionTrackRef->px() + D0Vec.py() * pionTrackRef->py() + D0Vec.pz() * pionTrackRef->pz();
+	      const double mag = D0Vec.P() * pionTrackRef->p();
+	      const double openingAngle = mag > 0.0 ? std::acos(std::max(-1.0, std::min(1.0, dot / mag))) : -1.0;
+		      fillDebugPrePtHistograms(debugCat, rawDStarPt, dStarPt, rawD0Pt, fittedD0Pt, slowPiPt, openingAngle, qValue);
+		      if(dStarPt < dPtCut) continue;
+		      debugFill(debugCat, kDebugPt);
+		      slowPiPtScanFill(slowPionPtForScan, kSlowPiPtDStarPt);
+	      double dStarY = dStarP4.Rapidity();
+	      if(fabs(dStarY) > dStarAbsYCut) continue;
+	      debugFill(debugCat, kDebugY);
 
        Particle::Point dStarVtx((*dStarDecayVertex).position().x(), (*dStarDecayVertex).position().y(), (*dStarDecayVertex).position().z());
        std::vector<double> dStarVtxEVec;
@@ -552,8 +754,9 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
 
 	       // DCA error
 	       GlobalPoint refVtxPos(xVtx, yVtx, zVtx);
-	       tsos = extrapolator.extrapolate(dStarCand->currentState().freeTrajectoryState(), refVtxPos);
-	       if( !tsos.isValid() ) continue;
+		       tsos = extrapolator.extrapolate(dStarCand->currentState().freeTrajectoryState(), refVtxPos);
+		       if( !tsos.isValid() ) continue;
+	      debugFill(debugCat, kDebugTsos);
 	       Measurement1D cur3DIP;
 	       VertexDistance3D a3d;
 	       GlobalPoint refPoint          = tsos.globalPosition();
@@ -569,8 +772,9 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
            rVtxMag / sigmaRvtxMag < rVtxSigCut ||
            lVtxMag < lVtxCut ||
            lVtxMag / sigmaLvtxMag < lVtxSigCut ||
-           cos(dStarAngle3D) < collinCut3D || cos(dStarAngle2D) < collinCut2D || dStarAngle3D > alphaCut || dStarAngle2D > alpha2DCut
-       ) continue;
+	           cos(dStarAngle3D) < collinCut3D || cos(dStarAngle2D) < collinCut2D || dStarAngle3D > alphaCut || dStarAngle2D > alpha2DCut
+	       ) continue;
+	      debugFill(debugCat, kDebugTopology);
 
        #ifdef DEBUG
       cout << a++ << endl;
@@ -623,10 +827,12 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
 //        theDStar->addUserFloat("D03DDCA", dca);
 //        theDStar->addUserFloat("D03DDCAErr", dcaError);
       //  addp4.set( *theDStar );
-       if( theDStar->mass() < dStarMassDStar + dStarMassCut &&
-           theDStar->mass() > dStarMassDStar - dStarMassCut )
-       {
-         theDStars.push_back( *theDStar );
+	      if( theDStar->mass() < dStarMassDStar + dStarMassCut &&
+	          theDStar->mass() > dStarMassDStar - dStarMassCut )
+		      {
+		        debugFill(debugCat, kDebugFinalMass);
+		        slowPiPtScanFill(slowPionPtForScan, kSlowPiPtFinalMass);
+		        theDStars.push_back( *theDStar );
          dcaVals_.push_back(cur3DIP.value());
          dcaErrs_.push_back(cur3DIP.error());
 //if(theDStar->pt()<4){cout <<"Dstar pt : " <<theDStar->pt()<<endl;}

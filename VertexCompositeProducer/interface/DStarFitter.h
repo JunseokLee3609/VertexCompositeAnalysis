@@ -78,6 +78,10 @@
 #include <utility>
 #include <algorithm>
 #include <map>
+#include <array>
+
+class TH1D;
+class TH2D;
 
 class DStarFitter {
   public:
@@ -144,6 +148,74 @@ class DStarFitter {
   double alphaCut;
   double alpha2DCut;
   bool   isWrongSign;
+  bool   useRawDStarKinematics_;
+  bool   debugCategoryCutflow_;
+  bool   debugSlowPionPtScan_;
+  bool   rejectDuplicateSlowPion_;
+  bool   debugHistogramsBooked_ = false;
+  std::string debugLabel_;
+  enum SlowPionPtScanStage {
+    kSlowPiPtAttach = 0,
+    kSlowPiPtDeltaM,
+    kSlowPiPtCharge,
+    kSlowPiPtDStarVertex,
+    kSlowPiPtDStarPt,
+    kSlowPiPtFinalMass,
+    kSlowPiPtNStage
+  };
+  static constexpr int kSlowPiPtNThreshold = 3;
+  std::array<std::array<unsigned long long, kSlowPiPtNStage>, kSlowPiPtNThreshold> slowPiPtScanCounts_{};
+  void slowPiPtScanFill(double slowPiPt, SlowPionPtScanStage stage);
+  void printSlowPionPtScan() const;
+
+  enum DebugCategory { kDebugA = 0, kDebugB = 1, kDebugC = 2, kDebugD = 3, kDebugNCategory = 4 };
+  enum DebugStep {
+    kDebugSlowPionAttach = 0,
+    kDebugDeltaMCalculated,
+    kDebugDeltaMLt0500,
+    kDebugDeltaMLt0300,
+    kDebugDeltaMLt0250,
+    kDebugDeltaMLt0200,
+    kDebugDeltaMLt0180,
+    kDebugDeltaMLt0165,
+    kDebugDeltaMLt0160,
+    kDebugCharge,
+    kDebugD0Tree,
+    kDebugDStarVertex,
+    kDebugDStarState,
+    kDebugDecayVertex,
+    kDebugVtxProb,
+    kDebugChildState,
+    kDebugPt,
+    kDebugY,
+    kDebugTsos,
+    kDebugTopology,
+    kDebugFinalMass,
+    kDebugNStep
+  };
+  std::array<std::array<unsigned long long, kDebugNStep>, kDebugNCategory> debugCutflow_{};
+  std::array<double, kDebugNCategory> debugMinDeltaM_{};
+  std::array<double, kDebugNCategory> debugMaxDeltaM_{};
+  std::array<unsigned long long, kDebugNCategory> debugInvalidMass_{};
+  std::array<unsigned long long, kDebugNCategory> debugDeltaMLtPionMass_{};
+  std::array<unsigned long long, kDebugNCategory> debugDuplicateTrack_{};
+  std::array<TH1D*, kDebugNCategory> hDebugRawDStarPt_{};
+  std::array<TH1D*, kDebugNCategory> hDebugFitterDStarPt_{};
+  std::array<TH1D*, kDebugNCategory> hDebugRawD0Pt_{};
+  std::array<TH1D*, kDebugNCategory> hDebugFittedD0Pt_{};
+  std::array<TH1D*, kDebugNCategory> hDebugSlowPiPt_{};
+  std::array<TH1D*, kDebugNCategory> hDebugOpeningAngle_{};
+  std::array<TH1D*, kDebugNCategory> hDebugQValue_{};
+  std::array<TH2D*, kDebugNCategory> hDebugRawVsFitterDStarPt_{};
+  std::array<TH2D*, kDebugNCategory> hDebugD0PtVsDStarPt_{};
+  std::array<TH2D*, kDebugNCategory> hDebugSlowPiPtVsDStarPt_{};
+  std::array<TH2D*, kDebugNCategory> hDebugQVsDStarPt_{};
+  int debugCategoryIndex(int qK, int qPiD0, int qPiS) const;
+  void debugFill(int category, DebugStep step);
+  void bookDebugHistograms();
+  void fillDebugPrePtHistograms(int category, double rawDStarPt, double fitterDStarPt, double rawD0Pt,
+                                double fittedD0Pt, double slowPiPt, double openingAngle, double qValue);
+  void printDebugCutflow() const;
 
   std::vector<reco::TrackBase::TrackQuality> qualities;
 
