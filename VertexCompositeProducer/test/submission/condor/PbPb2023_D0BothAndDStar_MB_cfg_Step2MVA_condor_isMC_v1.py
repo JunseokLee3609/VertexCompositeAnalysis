@@ -219,6 +219,7 @@ process.generalD0CandidatesNew.mPiKCutMax = cms.double(2.00)
 
 process.load("VertexCompositeAnalysis.VertexCompositeProducer.generalDStarCandidates_cff")
 process.generalDStarCandidatesNew = process.generalDStarCandidates.clone()
+process.generalDStarCandidatesNew.useRawDStarKinematics = cms.bool(True)
 process.generalDStarCandidatesNew.trkPtSumCut = cms.double(0.0)
 process.generalDStarCandidatesNew.trkEtaDiffCut = cms.double(99.0)
 process.generalDStarCandidatesNew.tkNhitsCut = cms.int32(0)

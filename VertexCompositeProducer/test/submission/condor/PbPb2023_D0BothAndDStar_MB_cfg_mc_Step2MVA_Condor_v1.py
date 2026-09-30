@@ -124,9 +124,16 @@ process.hltFilter.HLTPaths = [
 
 # Add PbPb collision event selection
 process.load('VertexCompositeAnalysis.VertexCompositeProducer.collisionEventSelection_cff')
-process.load('VertexCompositeAnalysis.VertexCompositeProducer.hfCoincFilter_cff')
 process.load('VertexCompositeAnalysis.VertexCompositeProducer.hffilter_cfi')
-process.colEvtSel = cms.Sequence()
+# 2023 PbPb MiniAOD selection: CMS SWGuideHeavyIonCentrality / CmsHI 13_2_X.
+# Slimmed vertices do not retain track refs; use the official MiniAOD PV cut.
+process.primaryVertexFilter.src = cms.InputTag("offlineSlimmedPrimaryVertices")
+process.primaryVertexFilter.cut = cms.string("!isFake && abs(z) <= 25 && position.Rho <= 2")
+process.colEvtSel = cms.Sequence(
+    process.primaryVertexFilter
+    * process.clusterCompatibilityFilter
+    * process.phfCoincFilter2Th4
+)
 
 # Define the event selection sequence
 process.eventFilter_HM = cms.Sequence(
@@ -219,6 +226,7 @@ process.generalD0CandidatesNew.mPiKCutMax = cms.double(2.00)
 
 process.load("VertexCompositeAnalysis.VertexCompositeProducer.generalDStarCandidates_cff")
 process.generalDStarCandidatesNew = process.generalDStarCandidates.clone()
+process.generalDStarCandidatesNew.useRawDStarKinematics = cms.bool(True)
 # Original MC parameters (commented out)
 # process.generalDStarCandidatesNew.tkChi2Cut = cms.double(999)
 # process.generalDStarCandidatesNew.tkNhitsCut = cms.int32(0)
@@ -385,6 +393,7 @@ process.d0candCountFilter = cms.EDFilter("CandViewCountFilter",
 #process.dStarAna_step = cms.Path( process.eventFilter_HM * process.generalD0CandidatesNew* process.generalDStarCandidatesNew * process.d0ana_newreduced *process.dStarana_mc*process.eventplane)
 process.dStarAna_step = cms.Path(
     process.eventFilter_HM
+    * process.colEvtSel
     * process.generalD0CandidatesNew
     * process.generalDStarCandidatesNew
     * process.d0candCountFilter
@@ -401,14 +410,15 @@ process.dStarAna_step = cms.Path(
 # eventinfoana must be in EndPath, and process.eventinfoana.selectEvents must be the name of eventFilter_HM Path
 process.eventinfoana.selectEvents = cms.untracked.string('dStarAna_step')
 process.eventinfoana.triggerPathNames = cms.untracked.vstring(
-    "HLT_HIMinimumBiasHF1AND_v*", #24
+    "HLT_HIMinimumBiasHF1AND_v", #24
     "HLT_HIMinimumBiasHF1ANDZDC2nOR_v", #25
     "HLT_HIMinimumBiasHF1ANDZDC1nOR_v", #26
     )
 process.eventinfoana.eventFilterNames = cms.untracked.vstring(
     'Flag_colEvtSel',
     'Flag_hfCoincFilter',
-    'Flag_primaryVertexFilter', 
+    'Flag_primaryVertexFilter',
+    'Flag_clusterCompatibilityFilter',
     )
 process.centralityPath = cms.Path(process.cent_seq)
 process.eventinfoana.triggerFilterNames = cms.untracked.vstring()
@@ -427,13 +437,18 @@ process.schedule = cms.Schedule(
    process.pevt,
 )
 
-# Add the event selection filters
+# Individual flags use the HLT/unpacker prefix, not the combined offline selection.
+# evtSel order: combined, HF, PV, cluster compatibility.
 process.Flag_colEvtSel = cms.Path(process.eventFilter_HM * process.colEvtSel)
-#process.Flag_hfCoincFilter = cms.Path(process.eventFilter_HM * process.hfCoincFilter2Th4)
-process.Flag_primaryVertexFilter = cms.Path(process.eventFilter_HM * process.primaryVertexFilter * process.clusterCompatibilityFilter)
-# follow the exactly same config of process.eventinfoana.eventFilterNames
-#eventFilterPaths = [ process.Flag_colEvtSel , process.Flag_hfCoincFilter , process.Flag_primaryVertexFilter ]
-eventFilterPaths = [ process.Flag_colEvtSel  , process.Flag_primaryVertexFilter ]
+process.Flag_hfCoincFilter = cms.Path(process.eventFilter_HM * process.phfCoincFilter2Th4)
+process.Flag_primaryVertexFilter = cms.Path(process.eventFilter_HM * process.primaryVertexFilter)
+process.Flag_clusterCompatibilityFilter = cms.Path(process.eventFilter_HM * process.clusterCompatibilityFilter)
+eventFilterPaths = [
+    process.Flag_colEvtSel,
+    process.Flag_hfCoincFilter,
+    process.Flag_primaryVertexFilter,
+    process.Flag_clusterCompatibilityFilter,
+]
 for P in eventFilterPaths:
     process.schedule.insert(0, P)
 

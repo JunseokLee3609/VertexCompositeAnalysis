@@ -592,7 +592,7 @@ PATEventPlaneTrack::fillRECO(const edm::Event& iEvent, const edm::EventSetup& iS
 	float dzvtx = track->dz(bestvtx);
         float dxyvtx = track->dxy(bestvtx);
         float dzerror = sqrt(track->dzError()*track->dzError()+bestvzError*bestvzError);
-        float dxyerror = track->dxyError(bestvtx, vtx.covariance());
+        float dxyerror = sqrt(track->dxyError()*track->dxyError()+bestvxError*bestvyError);
         
         if(!track->quality(reco::TrackBase::highPurity)) continue;
         if(fabs(track->ptError())/track->pt()>0.10) continue;

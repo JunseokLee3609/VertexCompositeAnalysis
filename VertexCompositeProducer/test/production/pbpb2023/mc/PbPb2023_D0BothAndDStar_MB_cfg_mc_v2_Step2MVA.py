@@ -88,9 +88,16 @@ process.hltFilter.HLTPaths = [
 
 # Add PbPb collision event selection
 process.load('VertexCompositeAnalysis.VertexCompositeProducer.collisionEventSelection_cff')
-process.load('VertexCompositeAnalysis.VertexCompositeProducer.hfCoincFilter_cff')
 process.load('VertexCompositeAnalysis.VertexCompositeProducer.hffilter_cfi')
-process.colEvtSel = cms.Sequence()
+# 2023 PbPb MiniAOD selection: CMS SWGuideHeavyIonCentrality / CmsHI 13_2_X.
+# Slimmed vertices do not retain track refs; use the official MiniAOD PV cut.
+process.primaryVertexFilter.src = cms.InputTag("offlineSlimmedPrimaryVertices")
+process.primaryVertexFilter.cut = cms.string("!isFake && abs(z) <= 25 && position.Rho <= 2")
+process.colEvtSel = cms.Sequence(
+    process.primaryVertexFilter
+    * process.clusterCompatibilityFilter
+    * process.phfCoincFilter2Th4
+)
 
 # Define the event selection sequence
 process.eventFilter_HM = cms.Sequence(
@@ -217,8 +224,7 @@ process.generalDStarCandidatesNew.dauLongImpactSigCut = cms.double(0.0)
 process.generalDStarCandidatesNew.dauTransImpactSigCut = cms.double(0.0)
 process.generalDStarCandidatesNew.dPtCut = cms.double(4.5)
 process.generalDStarCandidatesNew.isWrongSign = cms.bool(False)
-process.generalDStarCandidatesNew.useRawDStarKinematics = cms.bool(False)
-process.generalDStarCandidatesNew.rejectDuplicateSlowPion = cms.bool(False)
+process.generalDStarCandidatesNew.useRawDStarKinematics = cms.bool(True)
 process.generalDStarCandidatesNew.debugCategoryCutflow = cms.bool(False)
 process.generalDStarCandidatesNew.debugSlowPionPtScan = cms.bool(False)
 #process.generalDStarCandidatesNew.trkPtSumCut = cms.double(0.0)
@@ -299,6 +305,7 @@ process.d0ana_newreduced.CompositeCollection = cms.untracked.InputTag("generalD0
 # process.d0ana_newreduced.VertexCompositeCollection = cms.untracked.InputTag("generalD0CandidatesNew:D0")
 
 process.dStarana_mc.GenParticleCollection =  cms.untracked.InputTag("prunedGenParticles")
+process.dStarana_mc.signalOnlyGenMatching = cms.untracked.bool(True)
 process.dStarana_mc.useAnyMVA = cms.bool(False)
 process.dStarana_mc.doRecoNtuple = cms.untracked.bool(True)
 process.dStarana_mc.CompositeCollection = cms.untracked.InputTag("generalDStarCandidatesNew:DStar")
@@ -357,6 +364,7 @@ process.d0candCountFilter = cms.EDFilter("CandViewCountFilter",
 
 process.dStarAna_step = cms.Path(
     process.eventFilter_HM
+    * process.colEvtSel
     * process.generalD0CandidatesNew
     * process.generalDStarCandidatesNew
     * process.d0candCountFilter
@@ -373,7 +381,7 @@ process.dStarAna_step = cms.Path(
 # eventinfoana must be in EndPath, and process.eventinfoana.selectEvents must be the name of a Path
 process.eventinfoana.selectEvents = cms.untracked.string('dStarAna_step')
 process.eventinfoana.triggerPathNames = cms.untracked.vstring(
-    "HLT_HIMinimumBiasHF1AND_v*", #24
+    "HLT_HIMinimumBiasHF1AND_v", #24
     "HLT_HIMinimumBiasHF1ANDZDC2nOR_v", #25
     "HLT_HIMinimumBiasHF1ANDZDC1nOR_v", #26
     )
@@ -381,6 +389,7 @@ process.eventinfoana.eventFilterNames = cms.untracked.vstring(
     'Flag_colEvtSel',
     'Flag_hfCoincFilter',
     'Flag_primaryVertexFilter',
+    'Flag_clusterCompatibilityFilter',
     )
 process.c = cms.Path(process.cent_seq)
 process.eventinfoana.triggerFilterNames = cms.untracked.vstring()
@@ -399,13 +408,18 @@ process.schedule = cms.Schedule(
    process.pevt,
 )
 
-# Add the event selection filters
+# Individual flags use the HLT/unpacker prefix, not the combined offline selection.
+# evtSel order: combined, HF, PV, cluster compatibility.
 process.Flag_colEvtSel = cms.Path(process.eventFilter_HM * process.colEvtSel)
-#process.Flag_hfCoincFilter = cms.Path(process.eventFilter_HM * process.hfCoincFilter2Th4)
-process.Flag_primaryVertexFilter = cms.Path(process.eventFilter_HM * process.primaryVertexFilter * process.clusterCompatibilityFilter)
-# follow the exactly same config of process.eventinfoana.eventFilterNames
-#eventFilterPaths = [ process.Flag_colEvtSel , process.Flag_hfCoincFilter , process.Flag_primaryVertexFilter ]
-eventFilterPaths = [ process.Flag_colEvtSel  , process.Flag_primaryVertexFilter ]
+process.Flag_hfCoincFilter = cms.Path(process.eventFilter_HM * process.phfCoincFilter2Th4)
+process.Flag_primaryVertexFilter = cms.Path(process.eventFilter_HM * process.primaryVertexFilter)
+process.Flag_clusterCompatibilityFilter = cms.Path(process.eventFilter_HM * process.clusterCompatibilityFilter)
+eventFilterPaths = [
+    process.Flag_colEvtSel,
+    process.Flag_hfCoincFilter,
+    process.Flag_primaryVertexFilter,
+    process.Flag_clusterCompatibilityFilter,
+]
 for P in eventFilterPaths:
     process.schedule.insert(0, P)
 

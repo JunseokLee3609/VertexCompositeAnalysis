@@ -15,6 +15,8 @@
 //
 
 #include "VertexCompositeAnalysis/VertexCompositeProducer/interface/D0Fitter.h"
+#include "VertexCompositeAnalysis/VertexCompositeProducer/interface/D0TrainingFeatures.h"
+#include "VertexCompositeAnalysis/VertexCompositeProducer/interface/FitDiagnostics.h"
 #include "CommonTools/CandUtils/interface/AddFourMomenta.h"
 
 #include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
@@ -239,7 +241,6 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
     zVtxError = 0.0;
   }
   math::XYZPoint bestvtx(xVtx,yVtx,zVtx);
-  const auto bestvtxCov = (isVtxPV ? vtxPrimary->covariance() : theBeamSpotHandle->rotatedCovariance3D());
 
   // Fill vectors of TransientTracks and TrackRefs after applying preselection cuts.
   for(unsigned int indx = 0; indx < theTrackHandle->size(); indx++) {
@@ -266,7 +267,7 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
       double dzvtx = tmpRef->dz(bestvtx);
       double dxyvtx = tmpRef->dxy(bestvtx);      
       double dzerror = sqrt(tmpRef->dzError()*tmpRef->dzError()+zVtxError*zVtxError);
-      double dxyerror = tmpRef->dxyError(bestvtx, bestvtxCov);
+      double dxyerror = sqrt(tmpRef->dxyError()*tmpRef->dxyError()+xVtxError*yVtxError);
 
       double dauLongImpactSig = dzvtx/dzerror;
       double dauTransImpactSig = dxyvtx/dxyerror;
@@ -343,14 +344,14 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
       double dzvtx_pos = positiveTrackRef->dz(bestvtx);
       double dxyvtx_pos = positiveTrackRef->dxy(bestvtx);
       double dzerror_pos = sqrt(positiveTrackRef->dzError()*positiveTrackRef->dzError()+zVtxError*zVtxError);
-      double dxyerror_pos = positiveTrackRef->dxyError(bestvtx, bestvtxCov);
+      double dxyerror_pos = sqrt(positiveTrackRef->dxyError()*positiveTrackRef->dxyError()+xVtxError*yVtxError);
       double dauLongImpactSig_pos = dzvtx_pos/dzerror_pos;
       double dauTransImpactSig_pos = dxyvtx_pos/dxyerror_pos;
 
       double dzvtx_neg = negativeTrackRef->dz(bestvtx);
       double dxyvtx_neg = negativeTrackRef->dxy(bestvtx);
       double dzerror_neg = sqrt(negativeTrackRef->dzError()*negativeTrackRef->dzError()+zVtxError*zVtxError);
-      double dxyerror_neg = negativeTrackRef->dxyError(bestvtx, bestvtxCov);
+      double dxyerror_neg = sqrt(negativeTrackRef->dxyError()*negativeTrackRef->dxyError()+xVtxError*yVtxError);
       double dauLongImpactSig_neg = dzvtx_neg/dzerror_neg;
       double dauTransImpactSig_neg = dxyvtx_neg/dxyerror_neg;
 
@@ -474,7 +475,7 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
         //   ChiSquaredProbability((double)(d0DecayVertex->chiSquared()),(double)(d0DecayVertex->degreesOfFreedom()));
         //if (d0C2Prob < 0.0001) continue;
 
-	      float d0C2Prob = TMath::Prob(d0DecayVertex->chiSquared(),d0DecayVertex->degreesOfFreedom());
+	      const float d0C2Prob = d0training::vertexProbability(d0DecayVertex->chiSquared(),d0DecayVertex->degreesOfFreedom());
 	      if (d0C2Prob < VtxChiProbCut) continue;
 
         //if ( d0Cand->currentState().mass() > 2.5 || d0Cand->currentState().mass() < 1.0) continue;
@@ -543,6 +544,8 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
         rVtxMag = d0LineOfFlight.perp();
         sigmaLvtxMag = sqrt(ROOT::Math::Similarity(d0TotalCov, distanceVector3D)) / lVtxMag;
         sigmaRvtxMag = sqrt(ROOT::Math::Similarity(d0TotalCov, distanceVector2D)) / rVtxMag;
+        const float lVtxSig = d0training::decayLengthSignificance(lVtxMag, sigmaLvtxMag);
+        const float rVtxSig = d0training::decayLengthSignificance(rVtxMag, sigmaRvtxMag);
 
         if( d0NormalizedChi2 > chi2Cut ||
             rVtxMag < rVtxCut ||
@@ -589,6 +592,7 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
         std::unique_ptr<CC> theD0 = std::make_unique<CC>();
 
         theD0->setP4(d0P4);
+        theD0->addUserData("diagD0CovP4", vca::fitdiag::covariance(d0Cand->currentState(), d0P4));
         // theD0 = new VertexCompositeCandidate(0, d0P4, d0Vtx, d0VtxCov, d0VtxChi2, d0VtxNdof);
 
         RecoChargedCandidate
@@ -617,6 +621,7 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
         theD0->addUserData("Vtx", d0VtxObj);
         theD0->addUserFloat("VtxChi2", d0VtxChi2 );
         theD0->addUserFloat("VtxNdof", d0VtxNdof );
+        theD0->addUserFloat("VtxProb", d0C2Prob);
         theD0->addUserFloat("alpha2D", d0Angle2D );
         theD0->addUserFloat("alpha3D", d0Angle3D );
         theD0->addUserFloat("d0FitVx", d0Vtx.x());
@@ -624,8 +629,8 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
         theD0->addUserFloat("d0FitVz", d0Vtx.z());
         theD0->addUserFloat("decaylength2D", rVtxMag);
         theD0->addUserFloat("decaylength3D", lVtxMag );
-        theD0->addUserFloat("decaylengthsignif2D", rVtxMag/sigmaRvtxMag);
-        theD0->addUserFloat("decaylengthsignif3D", lVtxMag/sigmaLvtxMag );
+        theD0->addUserFloat("decaylengthsignif2D", rVtxSig);
+        theD0->addUserFloat("decaylengthsignif3D", lVtxSig);
         theD0->addUserFloat("dca3D", cur3DIP.value());
         theD0->addUserFloat("dca3DErr", cur3DIP.error());
         theD0->addUserFloat("track3DDCA", dca);
@@ -672,8 +677,6 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
           // Prepare input data
           cms::Ort::FloatArrays data_;
 
-          const float lVtxSig = (sigmaLvtxMag > 0.f ? lVtxMag / sigmaLvtxMag : 0.f);
-          const float rVtxSig = (sigmaRvtxMag > 0.f ? rVtxMag / sigmaRvtxMag : 0.f);
           const float dEta_dau = posCandTotalP.eta() - negCandTotalP.eta();
 
           data_.emplace_back(onnxFeatureNames_.size(), 0.0f);
@@ -682,15 +685,15 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
           auto featureValue = [&](const std::string &name) -> float {
             if (name == "pT") return theD0->pt();
             if (name == "y") return theD0->y();
-            if (name == "VtxProb") return d0C2Prob;
+            if (name == "VtxProb") return theD0->userFloat("VtxProb");
             if (name == "3DCosPointingAngle") return std::cos(d0Angle3D);
             if (name == "3DPointingAngle") return d0Angle3D;
             if (name == "2DCosPointingAngle") return std::cos(d0Angle2D);
             if (name == "2DPointingAngle") return d0Angle2D;
             if (name == "3DDecayLength") return lVtxMag;
-            if (name == "3DDecayLengthSignificance") return lVtxSig;
+            if (name == "3DDecayLengthSignificance") return theD0->userFloat("decaylengthsignif3D");
             if (name == "2DDecayLength") return rVtxMag;
-            if (name == "2DDecayLengthSignificance") return rVtxSig;
+            if (name == "2DDecayLengthSignificance") return theD0->userFloat("decaylengthsignif2D");
             if (name == "pTD1") return posCandTotalP.perp();
             if (name == "EtaD1") return posCandTotalP.eta();
             if (name == "pTD2") return negCandTotalP.perp();

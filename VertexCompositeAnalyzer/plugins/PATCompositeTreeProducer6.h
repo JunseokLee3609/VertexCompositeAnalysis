@@ -194,6 +194,7 @@ private:
   bool doGenMatching_;
   bool doGenNtuple_;
   bool doGenMatchingTOF_;
+  bool signalOnlyGenMatching_;
   bool hasSwap_;
   bool decayInGen_;
   bool twoLayerDecay_;
@@ -223,6 +224,21 @@ private:
   std::vector<double> dstarMassHistHiBins_;
   std::vector<double> dstarMassHistDcaBins_;
   std::vector<double> dstarMassHistMvaCuts_;
+
+  struct FitDiagnosticState {
+    double pt[kMaxGenCand];
+    double eta[kMaxGenCand];
+    double phi[kMaxGenCand];
+    double y[kMaxGenCand];
+    double mass[kMaxGenCand];
+    double ptErr[kMaxGenCand];
+    double covP4[kMaxGenCand][10];
+  };
+  std::array<FitDiagnosticState, 6> diagStates_;
+  double diagDeltaMBefore_[kMaxGenCand];
+  double diagDeltaMAfter_[kMaxGenCand];
+  double diagCovMassDstarD0Before_[kMaxGenCand];
+  double diagCovMassDstarD0After_[kMaxGenCand];
 
   int Ntrkoffline;
   int Npixel;

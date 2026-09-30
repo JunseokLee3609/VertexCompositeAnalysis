@@ -16,6 +16,7 @@
 
 //#define DEBUG
 #include "VertexCompositeAnalysis/VertexCompositeProducer/interface/DStarFitter.h"
+#include "VertexCompositeAnalysis/VertexCompositeProducer/interface/FitDiagnostics.h"
 #include "CommonTools/CandUtils/interface/AddFourMomenta.h"
 
 #include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
@@ -61,9 +62,10 @@
 
 static const float piMassDStar = 0.13957018;
 static const float piMassDStarSquared = piMassDStar*piMassDStar;
+static const float kaonMassDStar = 0.493677;
 static const float dStarMassDStar = 2.010000;
 static float piMassDStar_sigma = 3.5E-7f;
-static float D0MassD0_sigma = 1.6E-4f;
+static float kaonMassDStar_sigma = 1.6E-5f;
 static float dStarMassDStar_sigma = dStarMassDStar*1.e-6;
 
 
@@ -113,8 +115,6 @@ DStarFitter::DStarFitter(const edm::ParameterSet& theParameters,  edm::ConsumesC
                           theParameters.getParameter<bool>("debugCategoryCutflow");
   debugSlowPionPtScan_ = theParameters.exists("debugSlowPionPtScan") &&
                          theParameters.getParameter<bool>("debugSlowPionPtScan");
-  rejectDuplicateSlowPion_ = theParameters.exists("rejectDuplicateSlowPion") &&
-                             theParameters.getParameter<bool>("rejectDuplicateSlowPion");
   debugLabel_ = theParameters.exists("debugLabel") ? theParameters.getParameter<std::string>("debugLabel") : "DStarFitterDebug";
   if (debugCategoryCutflow_) {
     debugMinDeltaM_.fill(std::numeric_limits<double>::infinity());
@@ -267,8 +267,7 @@ void DStarFitter::printDebugCutflow() const {
     edm::LogPrint("DStarFitterDebug") << "minDeltaM = " << debugMinDeltaM_[cat]
                                       << ", maxDeltaM = " << debugMaxDeltaM_[cat]
                                       << ", nDeltaM_lt_mPi = " << debugDeltaMLtPionMass_[cat]
-                                      << ", nInvalidMass = " << debugInvalidMass_[cat]
-                                      << ", nDuplicateTrack = " << debugDuplicateTrack_[cat];
+                                      << ", nInvalidMass = " << debugInvalidMass_[cat];
   }
 }
 
@@ -371,7 +370,6 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
     zVtxError = 0.0;
   }
   math::XYZPoint bestvtx(xVtx,yVtx,zVtx);
-  const auto bestvtxCov = (isVtxPV ? vtxPrimary->covariance() : theBeamSpotHandle->rotatedCovariance3D());
 
   // Fill vectors of TransientTracks and TrackRefs after applying preselection cuts.
   for(unsigned int indx = 0; indx < theTrackHandle->size(); indx++) {
@@ -397,7 +395,7 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
       double dzvtx = tmpRef->dz(bestvtx);
       double dxyvtx = tmpRef->dxy(bestvtx);
       double dzerror = sqrt(tmpRef->dzError()*tmpRef->dzError()+zVtxError*zVtxError);
-      double dxyerror = tmpRef->dxyError(bestvtx, bestvtxCov);
+      double dxyerror = sqrt(tmpRef->dxyError()*tmpRef->dxyError()+xVtxError*yVtxError);
 
       double dauLongImpactSig = dzvtx/dzerror;
       double dauTransImpactSig = dxyvtx/dxyerror;
@@ -440,16 +438,13 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
       const reco::Candidate* dau0 = theD0.daughter(0);
       const reco::Candidate* dau1 = theD0.daughter(1);
 
-      // // Skip slow pion if it reuses a track already used in the D0
-      // reco::TrackRef d0Track0;
-      // reco::TrackRef d0Track1;
-      // if (const auto* rc0 = dynamic_cast<const reco::RecoChargedCandidate*>(dau0)) d0Track0 = rc0->track();
-      // if (const auto* rc1 = dynamic_cast<const reco::RecoChargedCandidate*>(dau1)) d0Track1 = rc1->track();
-      // if ((d0Track0.isNonnull() && d0Track0 == pionTrackRef) ||
-      //    (d0Track1.isNonnull() && d0Track1 == pionTrackRef)) {
-
-      //  continue;
-      // }
+      reco::TrackRef d0Track0;
+      reco::TrackRef d0Track1;
+      if (const auto* rc0 = dynamic_cast<const reco::RecoChargedCandidate*>(dau0)) d0Track0 = rc0->track();
+      if (const auto* rc1 = dynamic_cast<const reco::RecoChargedCandidate*>(dau1)) d0Track1 = rc1->track();
+      if ((d0Track0.isNonnull() && d0Track0 == pionTrackRef) ||
+          (d0Track1.isNonnull() && d0Track1 == pionTrackRef))
+        continue;
 
 	      // if( !pionTransTkPtr->impactPointStateAvailable()) continue;
 		      int slowPionCharge = pionTrackRef->charge();
@@ -466,19 +461,6 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
 		      const int debugCat = debugCategoryCutflow_ ? debugCategoryIndex(kaonCand->charge(), pionCand->charge(), slowPionCharge) : -1;
 		      debugFill(debugCat, kDebugSlowPionAttach);
 		      slowPiPtScanFill(slowPionPtForScan, kSlowPiPtAttach);
-	      bool duplicateSlowPion = false;
-	      if (debugCategoryCutflow_ && debugCat >= 0) {
-	        reco::TrackRef d0Track0;
-	        reco::TrackRef d0Track1;
-	        if (const auto* rc0 = dynamic_cast<const reco::RecoChargedCandidate*>(dau0)) d0Track0 = rc0->track();
-	        if (const auto* rc1 = dynamic_cast<const reco::RecoChargedCandidate*>(dau1)) d0Track1 = rc1->track();
-	        if ((d0Track0.isNonnull() && d0Track0 == pionTrackRef) ||
-	            (d0Track1.isNonnull() && d0Track1 == pionTrackRef)) {
-	          duplicateSlowPion = true;
-	          debugDuplicateTrack_[debugCat]++;
-	        }
-	      }
-	      if (rejectDuplicateSlowPion_ && duplicateSlowPion) continue;
 	      const auto& D0Vec = theD0.p4();
 	      const reco::Track& thePiTrack = pionTransTkPtr->track();
 	      math::PtEtaPhiMLorentzVector pPi(thePiTrack.pt(), thePiTrack.eta(), thePiTrack.phi(), piMassDStar);
@@ -596,10 +578,12 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	       int a =0;
 	       reco::TransientTrack ttk0(*dau0->bestTrack(), magField);
 	       reco::TransientTrack ttk1(*dau1->bestTrack(), magField);
-       float dau0mass =  dau0->mass();
-       float dau1mass =  dau1->mass();
-       d0Daus.push_back(pFactory.particle(ttk0,dau0mass,chi,ndf,D0MassD0_sigma));
-       d0Daus.push_back(pFactory.particle(ttk1,dau1mass,chi,ndf,D0MassD0_sigma));
+       float dau0mass = dau0 == kaonCand ? kaonMassDStar : piMassDStar;
+       float dau1mass = dau1 == kaonCand ? kaonMassDStar : piMassDStar;
+       float dau0sigma = dau0 == kaonCand ? kaonMassDStar_sigma : piMassDStar_sigma;
+       float dau1sigma = dau1 == kaonCand ? kaonMassDStar_sigma : piMassDStar_sigma;
+       d0Daus.push_back(pFactory.particle(ttk0,dau0mass,chi,ndf,dau0sigma));
+       d0Daus.push_back(pFactory.particle(ttk1,dau1mass,chi,ndf,dau1sigma));
 
 	       KinematicParticleVertexFitter kpvFitter;
 	       RefCountedKinematicTree d0Tree =  kpvFitter.fit(d0Daus);
@@ -793,7 +777,7 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
        const double slowPiDz = pionTrackRef->dz(bestvtx);
        const double slowPiDxy = pionTrackRef->dxy(bestvtx);
        const double slowPiDzErr = sqrt(pionTrackRef->dzError() * pionTrackRef->dzError() + zVtxError * zVtxError);
-       const double slowPiDxyErr = pionTrackRef->dxyError(bestvtx, bestvtxCov);
+       const double slowPiDxyErr = sqrt(pionTrackRef->dxyError() * pionTrackRef->dxyError() + xVtxError * yVtxError);
        const double slowPiDzSig = slowPiDz / slowPiDzErr;
        const double slowPiDxySig = slowPiDxy / slowPiDxyErr;
 
@@ -832,6 +816,28 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
 		      {
 		        debugFill(debugCat, kDebugFinalMass);
 		        slowPiPtScanFill(slowPionPtForScan, kSlowPiPtFinalMass);
+        // DIAG-01: successful candidates only; nominal p4/daughters and cuts are unchanged.
+        using namespace vca::fitdiag;
+        const P4 d0Before = theD0.p4();
+        const P4 slowBefore(pPi.px(), pPi.py(), pPi.pz(), pPi.energy());
+        const P4 starBefore = d0Before + slowBefore;
+        const CovP4 d0BeforeCov = *theD0.userData<CovP4>("diagD0CovP4");
+        const CovP4 slowBeforeCov = covariance(pionTransTkPtr->initialFreeState(), slowBefore, piMassDStar_sigma);
+        const P4 starAfter = p4(dStarCand->currentState());
+        const P4 d0After = p4(posCand->currentState());
+        const P4 slowAfter = p4(negCand->currentState());
+        const CovP4 d0AfterCov = covariance(posCand->currentState(), d0After);
+        storeState(*theDStar, "DstarBefore", starBefore, d0BeforeCov + slowBeforeCov);
+        storeState(*theDStar, "DstarAfter", starAfter, covariance(dStarCand->currentState(), starAfter));
+        storeState(*theDStar, "D0Before", d0Before, d0BeforeCov);
+        storeState(*theDStar, "D0After", d0After, d0AfterCov);
+        storeState(*theDStar, "SlowPiBefore", slowBefore, slowBeforeCov);
+        storeState(*theDStar, "SlowPiAfter", slowAfter, covariance(negCand->currentState(), slowAfter));
+        MassCross massCross;
+        massCross[0] = massCrossCovariance(starBefore, d0Before, d0BeforeCov, CrossP4());
+        massCross[1] = massCrossCovariance(starAfter, d0After, d0AfterCov,
+                                         fittedCrossCovariance(posCand->currentState(), negCand->currentState()));
+        theDStar->addUserData("diagCovMassDstarD0", massCross);
 		        theDStars.push_back( *theDStar );
          dcaVals_.push_back(cur3DIP.value());
          dcaErrs_.push_back(cur3DIP.error());

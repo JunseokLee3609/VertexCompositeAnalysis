@@ -151,7 +151,6 @@ class DStarFitter {
   bool   useRawDStarKinematics_;
   bool   debugCategoryCutflow_;
   bool   debugSlowPionPtScan_;
-  bool   rejectDuplicateSlowPion_;
   bool   debugHistogramsBooked_ = false;
   std::string debugLabel_;
   enum SlowPionPtScanStage {
@@ -198,7 +197,6 @@ class DStarFitter {
   std::array<double, kDebugNCategory> debugMaxDeltaM_{};
   std::array<unsigned long long, kDebugNCategory> debugInvalidMass_{};
   std::array<unsigned long long, kDebugNCategory> debugDeltaMLtPionMass_{};
-  std::array<unsigned long long, kDebugNCategory> debugDuplicateTrack_{};
   std::array<TH1D*, kDebugNCategory> hDebugRawDStarPt_{};
   std::array<TH1D*, kDebugNCategory> hDebugFitterDStarPt_{};
   std::array<TH1D*, kDebugNCategory> hDebugRawD0Pt_{};

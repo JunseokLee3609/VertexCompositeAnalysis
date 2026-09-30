@@ -245,6 +245,7 @@ void V0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
     zVtxError = 0.0;
   }
 
+
   // Fill vectors of TransientTracks and TrackRefs after applying preselection cuts.
   for(unsigned int indx = 0; indx < theTrackHandle->size(); indx++) {
     TrackRef tmpRef( theTrackHandle, indx );
