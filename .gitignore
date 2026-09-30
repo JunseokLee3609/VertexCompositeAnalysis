@@ -37,3 +37,9 @@ VertexCompositeAnalyzer/test/pat7_gendca_validation/
 
 # User-generated input lists without a conventional extension
 VertexCompositeProducer/test/files_*
+
+# Reproducible DATA MVA0.8 production input snapshots
+!VertexCompositeProducer/test/submission/crab/input_lists/data_mva08_20260930/files2023MB0_7.txt
+!VertexCompositeProducer/test/submission/crab/input_lists/data_mva08_20260930/files2023MB8_15.txt
+!VertexCompositeProducer/test/submission/crab/input_lists/data_mva08_20260930/files2023MB16_23.txt
+!VertexCompositeProducer/test/submission/crab/input_lists/data_mva08_20260930/files2023MB24_31.txt

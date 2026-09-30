@@ -1,0 +1,93 @@
+{
+  "base_source_commit": "99d856887f3f67cd39b3a13e7349a5bda47d8fed",
+  "CMSSW_VERSION": "CMSSW_13_2_11",
+  "SCRAM_ARCH": "el8_amd64_gcc11",
+  "mva_cut": 0.8,
+  "units_per_job": 10,
+  "input_DAS_snapshot": "/eos/user/j/junseok/DStarRefitDiagnostics_20260918/production_readonly_audit_20260929/data_mva08_size_estimate_20260930T120910Z/pd_summaries.json",
+  "model_sha256": "cd431de656a401610062481e5b6a88f20b534231836f631e9cf49d2461bbc024",
+  "groups": [
+    {
+      "group": "0_7",
+      "first_pd": 0,
+      "last_pd": 7,
+      "nfiles": 45477,
+      "nevents": 3982056299,
+      "nominal_jobs": 4548,
+      "input_list": "VertexCompositeProducer/test/submission/crab/input_lists/data_mva08_20260930/files2023MB0_7.txt",
+      "sha256": "7de2d6f09847035aeaa04c2a04c420df5e79aa52ba15c3c3d30a30ef3fce2656",
+      "pd_counts": {
+        "0": 5645,
+        "1": 5652,
+        "2": 5685,
+        "3": 5676,
+        "4": 5686,
+        "5": 5743,
+        "6": 5691,
+        "7": 5699
+      }
+    },
+    {
+      "group": "8_15",
+      "first_pd": 8,
+      "last_pd": 15,
+      "nfiles": 45240,
+      "nevents": 3982324105,
+      "nominal_jobs": 4524,
+      "input_list": "VertexCompositeProducer/test/submission/crab/input_lists/data_mva08_20260930/files2023MB8_15.txt",
+      "sha256": "5921088511c38e998ea386286cedc16bc6d866926fbfaf33a9527b84c76d6d40",
+      "pd_counts": {
+        "8": 5715,
+        "9": 5721,
+        "10": 5613,
+        "11": 5646,
+        "12": 5629,
+        "13": 5623,
+        "14": 5656,
+        "15": 5637
+      }
+    },
+    {
+      "group": "16_23",
+      "first_pd": 16,
+      "last_pd": 23,
+      "nfiles": 45421,
+      "nevents": 3982307969,
+      "nominal_jobs": 4543,
+      "input_list": "VertexCompositeProducer/test/submission/crab/input_lists/data_mva08_20260930/files2023MB16_23.txt",
+      "sha256": "f7605dd83d71f21e6bc5e6b99f9521284711ae2539d07ceccb99e86900996b25",
+      "pd_counts": {
+        "16": 5639,
+        "17": 5692,
+        "18": 5656,
+        "19": 5685,
+        "20": 5683,
+        "21": 5678,
+        "22": 5686,
+        "23": 5702
+      }
+    },
+    {
+      "group": "24_31",
+      "first_pd": 24,
+      "last_pd": 31,
+      "nfiles": 45492,
+      "nevents": 3982070893,
+      "nominal_jobs": 4550,
+      "input_list": "VertexCompositeProducer/test/submission/crab/input_lists/data_mva08_20260930/files2023MB24_31.txt",
+      "sha256": "4b5be2f6b8e51b69a8988db7a4d2ebb14f3b4f4935223da946fcdea06268ed49",
+      "pd_counts": {
+        "24": 5646,
+        "25": 5681,
+        "26": 5707,
+        "27": 5668,
+        "28": 5689,
+        "29": 5706,
+        "30": 5704,
+        "31": 5691
+      }
+    }
+  ],
+  "total_input_files": 181630,
+  "total_input_events": 15928759266
+}
