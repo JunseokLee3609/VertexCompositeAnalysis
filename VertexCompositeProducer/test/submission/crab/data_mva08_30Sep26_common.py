@@ -8,13 +8,13 @@ def make_config(first_pd, last_pd):
     test_dir = config_dir.parents[1]
     output_user = os.environ["DSTAR_OUTPUT_USER"]
     group = f"{first_pd}_{last_pd}"
-    request_name = f"DStarAna_Data_RawPrime{group}_MVA0p8_DIAG_CMSSW13211_30Sep26_v1"
+    request_name = f"DStarAna_Data_RawPrime{group}_MVA0p8_DIAG_NoD0Tuple_CMSSW13211_01Oct26_v1"
     input_list = config_dir / "input_lists" / "data_mva08_20260930" / f"files2023MB{group}.txt"
 
     config = Configuration()
     config.section_("General")
     config.General.requestName = request_name
-    config.General.workArea = str(config_dir / "crab_projects" / "data_mva08_30Sep26")
+    config.General.workArea = str(config_dir / "crab_projects" / "data_mva08_nod0tuple_01Oct26")
     config.General.transferOutputs = True
     config.General.transferLogs = True
 

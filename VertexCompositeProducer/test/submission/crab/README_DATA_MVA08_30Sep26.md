@@ -16,6 +16,8 @@ All inputs are HIRun2023A-PromptReco-v2/MINIAOD. The four committed file lists a
 - CMSSW_13_2_11, el8_amd64_gcc11, current production modules.
 - DATA cfg: PbPb2023_D0BothAndDStar_MB_cfg_v2_Step2MVA_MVA0p8_30Sep26.py.
 - The DATA wrapper loads the canonical cfg and sets only D0 mvaCut to 0.8.
+- From 01Oct26, the canonical DATA path saves Dstar, EventPlane and EventInfo only. The D0 producer and D0 count filter remain as inputs to Dstar reconstruction; the standalone D0 analyzer is absent from the execution path.
+- New task names contain NoD0Tuple_CMSSW13211_01Oct26_v1; workArea is crab_projects/data_mva08_nod0tuple_01Oct26.
 - Raw Dstar kinematics=True, DIAG enabled, GEN matching/GEN ntuples disabled.
 - Existing Golden JSON, HLT/offline cuts, era, GlobalTag and ONNX model apply.
 - The Golden JSON is applied through CMSSW source.lumisToProcess; these userInputFiles tasks have no CRAB Data.lumiMask.
@@ -43,12 +45,12 @@ Use cmsset_default.sh as provided by CVMFS. Build producer/analyzer libraries fr
 
 ## Submit one group
 
-Current authorized submission: **RawPrime0–7 only**. The remaining three groups are prepared for later submission.
+Current authorized submission: **RawPrime8–15 only**. RawPrime0–7 was already submitted with the earlier cfg, which saved the D0 tuple. RawPrime16–23 and 24–31 remain prepared for later submission.
 
 For the junseok account:
 
 ```bash
-bash crab_submit_data_mva08_30Sep26.sh 0_7 junseok
+bash crab_submit_data_mva08_30Sep26.sh 8_15 junseok
 ```
 
 For the other account, replace CERN_ACCOUNT with its CRAB primary username:
