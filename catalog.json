@@ -1,0 +1,204 @@
+{
+  "archive_date": "2026-11-08",
+  "scope": "Historical production source, submitted configuration and referenced model",
+  "versions": [
+    {
+      "version": "an_data_0311",
+      "commit": "938b3bdf99150f27eba7cf1b2d7988c05fb0dcc3",
+      "branch": "archive/production-20261108/an-data-0311",
+      "tree": "e9840462255b427e64d9ce8d38e4e4d2ce23fcd1",
+      "source": "/afs/cern.ch/user/j/junseok/analysis/production_studies/production_versions_20261108/versions/an_data_0311/source",
+      "tag_status": "published",
+      "tag": "production/an-data-0311",
+      "github_url": "https://github.com/JunseokLee3609/VertexCompositeAnalysis/tree/production/an-data-0311"
+    },
+    {
+      "version": "an_mc_01sep26",
+      "commit": "08fd0a11cab3d7258db67d466e5eff8ad55df34d",
+      "branch": "archive/production-20261108/an-mc-01sep26",
+      "tree": "a9d975cf5c7fe038323d02035bfa83056509ca5e",
+      "source": "/afs/cern.ch/user/j/junseok/analysis/production_studies/production_versions_20261108/versions/an_mc_01sep26/source",
+      "tag_status": "published",
+      "tag": "production/an-mc-01sep26-pat6siggen-v1",
+      "github_url": "https://github.com/JunseokLee3609/VertexCompositeAnalysis/tree/production/an-mc-01sep26-pat6siggen-v1"
+    },
+    {
+      "version": "refit_diag_30sep26",
+      "commit": "d9a2abf93eb9b16e237ef9e17e041a55c315343f",
+      "branch": "archive/production-20261108/refit-diag-30sep26",
+      "tag": "production/dstar-refit-diag-30sep26",
+      "source": "/afs/cern.ch/user/j/junseok/analysis/production_studies/production_versions_20261108/versions/refit_diag_30sep26/source",
+      "tag_status": "published",
+      "github_url": "https://github.com/JunseokLee3609/VertexCompositeAnalysis/tree/production/dstar-refit-diag-30sep26"
+    }
+  ],
+  "grouping": {
+    "AN_DATA_and_MC": "Separate tags: archived DStarFitter and PATCompositeTreeProducer6 source differs.",
+    "Before_After_DATA_and_MC": "One tag, using the DATA source for both per explicit user confirmation.",
+    "MB_resolution": {
+      "status": "pending production identification",
+      "choices": [
+        "HIMinimumBias 18Mar26_v3",
+        "RawPrime 0.4% sampling 07Nov26"
+      ],
+      "later_ResolutionHFInfo_excluded": true
+    }
+  },
+  "AFS_archive": "/afs/cern.ch/user/j/junseok/analysis/production_studies/production_versions_20261108",
+  "current_worktree_included": false,
+  "later_matching_changes_included": false,
+  "later_resolution_modules_included": false,
+  "comparison": {
+    "source_files": {
+      "an_mc_01sep26": [
+        {
+          "path": "VertexCompositeProducer/src/D0Fitter.cc",
+          "identical": true
+        },
+        {
+          "path": "VertexCompositeProducer/interface/D0Fitter.h",
+          "identical": true
+        },
+        {
+          "path": "VertexCompositeProducer/src/DStarFitter.cc",
+          "identical": false
+        },
+        {
+          "path": "VertexCompositeProducer/interface/DStarFitter.h",
+          "identical": false
+        },
+        {
+          "path": "VertexCompositeAnalyzer/plugins/PATCompositeTreeProducer6.cc",
+          "identical": false
+        },
+        {
+          "path": "VertexCompositeAnalyzer/plugins/PATCompositeTreeProducer6.h",
+          "identical": false
+        },
+        {
+          "path": "VertexCompositeAnalyzer/plugins/PATEventPlaneTrack.cc",
+          "identical": true
+        },
+        {
+          "path": "VertexCompositeProducer/plugins/TrackAndVertexUnpacker.cc",
+          "identical": true
+        }
+      ],
+      "refit_diag_30sep26": [
+        {
+          "path": "VertexCompositeProducer/src/D0Fitter.cc",
+          "identical": false
+        },
+        {
+          "path": "VertexCompositeProducer/interface/D0Fitter.h",
+          "identical": true
+        },
+        {
+          "path": "VertexCompositeProducer/src/DStarFitter.cc",
+          "identical": false
+        },
+        {
+          "path": "VertexCompositeProducer/interface/DStarFitter.h",
+          "identical": false
+        },
+        {
+          "path": "VertexCompositeAnalyzer/plugins/PATCompositeTreeProducer6.cc",
+          "identical": false
+        },
+        {
+          "path": "VertexCompositeAnalyzer/plugins/PATCompositeTreeProducer6.h",
+          "identical": false
+        },
+        {
+          "path": "VertexCompositeAnalyzer/plugins/PATEventPlaneTrack.cc",
+          "identical": false
+        },
+        {
+          "path": "VertexCompositeProducer/plugins/TrackAndVertexUnpacker.cc",
+          "identical": true
+        }
+      ]
+    },
+    "parameters": {
+      "an_data_0311": {
+        "generalD0CandidatesNew": {
+          "mvaCut": "cms.double(0.9)",
+          "onnxModelFileName": "cms.string('XGBoost_Model_OnlyNonPrompt_05Mar26_Centrality_pTerr_ptErr011_1.onnx')",
+          "tkChi2Cut": "cms.double(5)",
+          "tkDCACut": "cms.double(0.05)",
+          "tkPtCut": "cms.double(1.5)",
+          "tkPtErrCut": "cms.double(0.1)",
+          "trackRecoAlgorithm": "cms.InputTag('unpackedTracksAndVertices')"
+        },
+        "generalDStarCandidatesNew": {
+          "tkChi2Cut": "cms.double(5)",
+          "tkDCACut": "cms.double(9999.0)",
+          "tkPtCut": "cms.double(0.3)",
+          "tkPtErrCut": "cms.double(0.1)",
+          "trackRecoAlgorithm": "cms.InputTag('unpackedTracksAndVertices')"
+        },
+        "unpackedTracksAndVertices": {}
+      },
+      "an_mc_01sep26": {
+        "generalD0CandidatesNew": {
+          "mvaCut": "cms.double(-1)",
+          "onnxModelFileName": "cms.string('XGBoost_Model_OnlyNonPrompt_05Mar26_Centrality_pTerr_ptErr011_1.onnx')",
+          "tkChi2Cut": "cms.double(5)",
+          "tkDCACut": "cms.double(0.05)",
+          "tkPtCut": "cms.double(1.5)",
+          "tkPtErrCut": "cms.double(0.1)",
+          "trackRecoAlgorithm": "cms.InputTag('unpackedTracksAndVertices')"
+        },
+        "generalDStarCandidatesNew": {
+          "tkChi2Cut": "cms.double(5)",
+          "tkDCACut": "cms.double(9999.0)",
+          "tkPtCut": "cms.double(0.3)",
+          "tkPtErrCut": "cms.double(0.1)",
+          "trackRecoAlgorithm": "cms.InputTag('unpackedTracksAndVertices')",
+          "useRawDStarKinematics": "cms.bool(False)"
+        },
+        "unpackedTracksAndVertices": {}
+      },
+      "refit_diag_30sep26": {
+        "generalD0CandidatesNew": {
+          "mvaCut": "cms.double(0.8)",
+          "onnxModelFileName": "cms.string('XGBoost_Model_OnlyNonPrompt_05Mar26_Centrality_pTerr_ptErr011_1.onnx')",
+          "tkChi2Cut": "cms.double(5)",
+          "tkDCACut": "cms.double(0.05)",
+          "tkPtCut": "cms.double(1.5)",
+          "tkPtErrCut": "cms.double(0.1)",
+          "trackRecoAlgorithm": "cms.InputTag('unpackedTracksAndVertices')"
+        },
+        "generalDStarCandidatesNew": {
+          "tkChi2Cut": "cms.double(5)",
+          "tkDCACut": "cms.double(9999.0)",
+          "tkPtCut": "cms.double(0.3)",
+          "tkPtErrCut": "cms.double(0.1)",
+          "trackRecoAlgorithm": "cms.InputTag('unpackedTracksAndVertices')",
+          "useRawDStarKinematics": "cms.bool(True)"
+        },
+        "unpackedTracksAndVertices": {}
+      }
+    },
+    "model_identity": {
+      "an_data_0311": {
+        "VertexCompositeProducer/data/XGBoost_Model_OnlyNonPrompt_05Mar26_Centrality_pTerr_ptErr011_1.onnx": {
+          "bytes": 547090,
+          "sha256": "cd431de656a401610062481e5b6a88f20b534231836f631e9cf49d2461bbc024"
+        }
+      },
+      "an_mc_01sep26": {
+        "VertexCompositeProducer/data/XGBoost_Model_OnlyNonPrompt_05Mar26_Centrality_pTerr_ptErr011_1.onnx": {
+          "bytes": 547090,
+          "sha256": "cd431de656a401610062481e5b6a88f20b534231836f631e9cf49d2461bbc024"
+        }
+      },
+      "refit_diag_30sep26": {
+        "VertexCompositeProducer/data/XGBoost_Model_OnlyNonPrompt_05Mar26_Centrality_pTerr_ptErr011_1.onnx": {
+          "bytes": 547090,
+          "sha256": "cd431de656a401610062481e5b6a88f20b534231836f631e9cf49d2461bbc024"
+        }
+      }
+    }
+  }
+}
