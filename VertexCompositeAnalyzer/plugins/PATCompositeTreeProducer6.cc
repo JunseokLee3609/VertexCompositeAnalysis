@@ -32,6 +32,7 @@ PATCompositeTreeProducer6::PATCompositeTreeProducer6(const edm::ParameterSet& iC
       doGenMatching_(iConfig.getUntrackedParameter<bool>("doGenMatching", true)),
       doGenNtuple_(iConfig.getUntrackedParameter<bool>("doGenNtuple", true)),
       doGenMatchingTOF_(iConfig.getUntrackedParameter<bool>("doGenMatchingTOF", false)),
+      signalOnlyGenMatching_(iConfig.getUntrackedParameter<bool>("signalOnlyGenMatching", false)),
       hasSwap_(iConfig.getUntrackedParameter<bool>("hasSwap", true)),
       decayInGen_(iConfig.getUntrackedParameter<bool>("decayInGen", true)),
       twoLayerDecay_(iConfig.getUntrackedParameter<bool>("twoLayerDecay", true)),
@@ -1128,6 +1129,21 @@ std::vector<reco::GenParticleRef> PATCompositeTreeProducer6::processGenMatching(
     const int id = trk.pdgId();
 
     if (std::abs(id) != std::abs(pid_)) {
+      continue;
+    }
+
+    // Match the MiniAOD signal definition used by PackedGenParticleSignalProducer.
+    // In an embedded event collisionId()==0 is the primary Pythia/EvtGen signal;
+    // non-zero collision IDs belong to the mixed HYDJET background.
+    if (signalOnlyGenMatching_ && trk.collisionId() != 0) {
+      if (debugGenMatching_) {
+        edm::LogVerbatim("PAT6GenMatching")
+            << "reject gen candidate index=" << it
+            << " pdgId=" << id
+            << " collisionId=" << trk.collisionId()
+            << " pt=" << trk.pt()
+            << " reason=non-signal collision";
+      }
       continue;
     }
 

@@ -194,6 +194,7 @@ private:
   bool doGenMatching_;
   bool doGenNtuple_;
   bool doGenMatchingTOF_;
+  bool signalOnlyGenMatching_;
   bool hasSwap_;
   bool decayInGen_;
   bool twoLayerDecay_;

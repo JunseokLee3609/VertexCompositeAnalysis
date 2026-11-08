@@ -817,7 +817,7 @@ PATCompositeTreeProducer::fillRECO(const edm::Event& iEvent, const edm::EventSet
           const double& dzbest = dtrk->dz(bestvtx);
           const double& dxybest = dtrk->dxy(bestvtx);
           const double& dzerror = std::sqrt(dtrk->dzError()*dtrk->dzError() + bestvzError*bestvzError);
-          const double& dxyerror = std::sqrt(dtrk->d0Error()*dtrk->d0Error() + bestvxError*bestvyError);
+          const double& dxyerror = std::sqrt(dtrk->d0Error()*dtrk->d0Error()+bestvxError*bestvyError);
           dzos[iDau][it] = dzbest/dzerror;
           dxyos[iDau][it] = dxybest/dxyerror;
         }
@@ -1005,7 +1005,7 @@ PATCompositeTreeProducer::fillRECO(const edm::Event& iEvent, const edm::EventSet
           const double& gdzbest = gdau->dz(bestvtx);
           const double& gdxybest = gdau->dxy(bestvtx);
           const double& gdzerror = std::sqrt(gdau->dzError()*gdau->dzError() + bestvzError*bestvzError);
-          const double& gdxyerror = std::sqrt(gdau->d0Error()*gdau->d0Error() + bestvxError*bestvyError);
+          const double& gdxyerror = std::sqrt(gdau->d0Error()*gdau->d0Error()+bestvxError*bestvyError);
           grand_dzos[iGDau][it] = gdzbest/gdzerror;
           grand_dxyos[iGDau][it] = gdxybest/gdxyerror;
         }
