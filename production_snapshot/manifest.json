@@ -1,5 +1,5 @@
 {
-  "version": "refit_diag_data_30sep26",
+  "version": "refit_diag_30sep26",
   "source_basis": "99d856887f3f67cd39b3a13e7349a5bda47d8fed",
   "submitted_configs": {
     "data_PD0_7_submitted": {
@@ -227,6 +227,13 @@
   "later_gen_matching_changes_included": false,
   "later_resolution_modules_included": false,
   "coverage_notes": [
-    "Actual DATA PD0-7 and PD8-15 NoD0Tuple submitted PSets are preserved. DIAG MC source identity is not verified and is not grouped here."
-  ]
+    "Actual DATA PD0-7 and PD8-15 NoD0Tuple submitted PSets are preserved.",
+    "DATA/MC production code is grouped based on explicit user confirmation. MC task metadata is preserved; MC original submitted PSet is not recovered."
+  ],
+  "applies_to": [
+    "DATA",
+    "MC"
+  ],
+  "source_identity_basis": "User confirmed on 2026-11-08 that MC used the same production code as DATA",
+  "user_confirmation": "mc\ub3c4 \uac19\uc544 \uadf8\ub0e5 \uadf8\uac78\ub85c\ud574"
 }

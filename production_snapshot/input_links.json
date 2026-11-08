@@ -1,1 +1,64 @@
-{}
+{
+  "diag_mc_original_tasks": [
+    {
+      "tm_taskname": "260930_163436:bputra_crab_PbPb2023_DStarMC_20261001_MVAminus1_bputra_OfficialPromptPthat2Pt4",
+      "tm_username": "bputra",
+      "tm_job_sw": "CMSSW_13_2_11",
+      "tm_job_arch": "el8_amd64_gcc11",
+      "tm_input_dataset": "/promptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+      "tm_user_sandbox": "5e6273d3dbe48de8328134ff3f1a6cbdafc5fc6cfc3bdc6473559cf30f307831.tar.gz",
+      "tm_asyncdest": "T3_KR_KNU",
+      "tm_start_time": "2026-09-30 16:34:36.505470"
+    },
+    {
+      "tm_taskname": "260930_163729:bputra_crab_PbPb2023_DStarMC_20261001_MVAminus1_bputra_OfficialPromptPthat5Pt10",
+      "tm_username": "bputra",
+      "tm_job_sw": "CMSSW_13_2_11",
+      "tm_job_arch": "el8_amd64_gcc11",
+      "tm_input_dataset": "/promptDStarToD0PiToKPiPi_pThat-5_pT-10_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+      "tm_user_sandbox": "5e6273d3dbe48de8328134ff3f1a6cbdafc5fc6cfc3bdc6473559cf30f307831.tar.gz",
+      "tm_asyncdest": "T3_KR_KNU",
+      "tm_start_time": "2026-09-30 16:37:29.482679"
+    },
+    {
+      "tm_taskname": "260930_163755:bputra_crab_PbPb2023_DStarMC_20261001_MVAminus1_bputra_OfficialPromptPthat10Pt20",
+      "tm_username": "bputra",
+      "tm_job_sw": "CMSSW_13_2_11",
+      "tm_job_arch": "el8_amd64_gcc11",
+      "tm_input_dataset": "/promptDStarToD0PiToKPiPi_pThat-10_pT-20_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+      "tm_user_sandbox": "5e6273d3dbe48de8328134ff3f1a6cbdafc5fc6cfc3bdc6473559cf30f307831.tar.gz",
+      "tm_asyncdest": "T3_KR_KNU",
+      "tm_start_time": "2026-09-30 16:37:55.627299"
+    },
+    {
+      "tm_taskname": "260930_163819:bputra_crab_PbPb2023_DStarMC_20261001_MVAminus1_bputra_OfficialNonpromptPthat2Pt4",
+      "tm_username": "bputra",
+      "tm_job_sw": "CMSSW_13_2_11",
+      "tm_job_arch": "el8_amd64_gcc11",
+      "tm_input_dataset": "/nonpromptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+      "tm_user_sandbox": "5e6273d3dbe48de8328134ff3f1a6cbdafc5fc6cfc3bdc6473559cf30f307831.tar.gz",
+      "tm_asyncdest": "T3_KR_KNU",
+      "tm_start_time": "2026-09-30 16:38:19.949938"
+    },
+    {
+      "tm_taskname": "260930_163844:bputra_crab_PbPb2023_DStarMC_20261001_MVAminus1_bputra_OfficialNonpromptPthat5Pt10",
+      "tm_username": "bputra",
+      "tm_job_sw": "CMSSW_13_2_11",
+      "tm_job_arch": "el8_amd64_gcc11",
+      "tm_input_dataset": "/nonpromptDStarToD0PiToKPiPi_pThat-5_pT-10_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+      "tm_user_sandbox": "5e6273d3dbe48de8328134ff3f1a6cbdafc5fc6cfc3bdc6473559cf30f307831.tar.gz",
+      "tm_asyncdest": "T3_KR_KNU",
+      "tm_start_time": "2026-09-30 16:38:44.271862"
+    },
+    {
+      "tm_taskname": "260930_163910:bputra_crab_PbPb2023_DStarMC_20261001_MVAminus1_bputra_OfficialNonpromptPthat10Pt20",
+      "tm_username": "bputra",
+      "tm_job_sw": "CMSSW_13_2_11",
+      "tm_job_arch": "el8_amd64_gcc11",
+      "tm_input_dataset": "/nonpromptDStarToD0PiToKPiPi_pThat-10_pT-20_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+      "tm_user_sandbox": "5e6273d3dbe48de8328134ff3f1a6cbdafc5fc6cfc3bdc6473559cf30f307831.tar.gz",
+      "tm_asyncdest": "T3_KR_KNU",
+      "tm_start_time": "2026-09-30 16:39:10.973064"
+    }
+  ]
+}
