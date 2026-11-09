@@ -1,0 +1,38 @@
+{
+  "base_production_tag": "production/dstar-refit-diag-30sep26",
+  "base_production_commit": "d9a2abf93eb9b16e237ef9e17e041a55c315343f",
+  "matching_source_branch": "archive/production-20261108/an-mc-01sep26",
+  "matching_source_commit": "52ae9e43b28658bc40a3ce5eb369cf0987f8b2e0",
+  "applied_source_files": [
+    "VertexCompositeAnalyzer/plugins/PATCompositeTreeProducer6.cc",
+    "VertexCompositeAnalyzer/plugins/PATCompositeTreeProducer6.h"
+  ],
+  "d0_daughter_track_matching": true,
+  "dstar_daughter_track_matching": true,
+  "default_delta_r": 0.03,
+  "default_max_relative_pt": 0.5,
+  "relative_pt_denominator": "reco_pt",
+  "gen_status": 1,
+  "gen_abs_pdg_ids": [
+    211,
+    321,
+    2212
+  ],
+  "same_charge": true,
+  "require_shared_d0_mother": true,
+  "require_shared_dstar_mother": true,
+  "global_one_to_one": false,
+  "photon_multiplicity_veto": false,
+  "exclusive_daughter_multiplicity_veto": false,
+  "matchGEN_collision_id": 0,
+  "matchHYDJET_collision_id": "nonzero",
+  "applied_utc": "2026-11-09T13:11:24.150685+00:00",
+  "matching_tag": "matching/refit-diag-30sep26-d0-dstar-no-photon-cuts-20261109",
+  "validation": {
+    "compile": "passed",
+    "container": "cmssw/el8",
+    "scram_arch": "el8_amd64_gcc11",
+    "cmssw_release": "CMSSW_13_2_11",
+    "target": "VertexCompositeAnalysis/VertexCompositeAnalyzer"
+  }
+}

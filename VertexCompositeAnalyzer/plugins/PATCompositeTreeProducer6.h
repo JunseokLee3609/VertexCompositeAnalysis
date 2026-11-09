@@ -19,6 +19,7 @@
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/Math/interface/deltaR.h"
 #include "DataFormats/PatCandidates/interface/CompositeCandidate.h"
+#include "DataFormats/PatCandidates/interface/PackedGenParticle.h"
 #include "DataFormats/RecoCandidate/interface/RecoCandidate.h"
 #include "DataFormats/TrackReco/interface/DeDxData.h"
 #include "DataFormats/TrackReco/interface/Track.h"
@@ -69,8 +70,6 @@ private:
   std::vector<reco::GenParticleRef> processGenMatching(const edm::Handle<reco::GenParticleCollection>& genpars);
 
   struct D0DaughterSummary {
-    int gammaCount = 0;
-    int nonGammaCount = 0;
     bool hasKaon = false;
     bool hasPion = false;
   };
@@ -138,11 +137,11 @@ private:
   bool checkSwap(const reco::Candidate* dmeson, const reco::Candidate& gen) const {
     return dmeson->pdgId() != gen.pdgId();
   }
-  void countDstarGenMatchTail(double deltaMass, bool strictNoFSR, bool swap, double slowPionDR);
+  void countDstarGenMatchTail(double deltaMass, bool validChain, bool swap, double slowPionDR);
   void countDstarTailAncestry(double deltaMass,
                               const reco::Candidate* recoSlowPi,
                               const reco::GenParticle* genDStar,
-                              const reco::GenParticle* genSlowPi,
+                              const reco::Candidate* genSlowPi,
                               double slowPionDR);
   reco::GenParticleRef findMother(const reco::GenParticleRef& genParRef) {
     if (genParRef.isNull()) return genParRef;
@@ -180,6 +179,7 @@ private:
   }
 
   edm::EDGetTokenT<reco::GenParticleCollection> tok_genParticle_;
+  edm::EDGetTokenT<pat::PackedGenParticleCollection> tok_packedGenParticle_;
   edm::EDGetTokenT<reco::VertexCollection> tok_offlinePV_;
   edm::EDGetTokenT<reco::TrackCollection> tok_generalTrk_;
   edm::EDGetTokenT<CCC> tok_compositeCandidates_;
@@ -214,6 +214,7 @@ private:
   int pidDau1_;
   int pidDau2_;
   double deltaR_;
+  double maxGenDeltaPtRel_;
   double multMax_;
   double multMin_;
   double massHistPeak_;
@@ -351,6 +352,12 @@ private:
   float dca2D[kMaxGenCand];
   bool isSwap[kMaxGenCand];
   bool matchGEN[kMaxGenCand];
+  bool matchHYDJET[kMaxGenCand];
+  int matchGen_index[kMaxGenCand];
+  int matchGen_pruned_index[kMaxGenCand];
+  int matchGen_collisionId[kMaxGenCand];
+  int matchGen_reason[kMaxGenCand];
+  float matchGen_deltaR[kMaxGenCand];
   int idBAnc_reco[kMaxGenCand];
   int idmom_reco[kMaxGenCand];
   float gen_agl_abs[kMaxGenCand];

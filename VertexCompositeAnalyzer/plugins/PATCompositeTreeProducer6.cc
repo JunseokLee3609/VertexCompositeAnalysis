@@ -6,6 +6,9 @@
 #include <cassert>
 #include <cmath>
 #include <limits>
+#include <map>
+#include <unordered_map>
+#include <unordered_set>
 #include <numeric>
 #include <sstream>
 #include <string>
@@ -14,6 +17,7 @@
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
+#include "FWCore/Utilities/interface/Exception.h"
 
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 #include "DataFormats/Math/interface/deltaR.h"
@@ -25,6 +29,8 @@
 PATCompositeTreeProducer6::PATCompositeTreeProducer6(const edm::ParameterSet& iConfig)
     : tok_genParticle_(consumes<reco::GenParticleCollection>(
           iConfig.getUntrackedParameter<edm::InputTag>("GenParticleCollection", edm::InputTag("genParticles")))),
+      tok_packedGenParticle_(consumes<pat::PackedGenParticleCollection>(
+          iConfig.getUntrackedParameter<edm::InputTag>("PackedGenParticleCollection", edm::InputTag("packedGenParticles")))),
       tok_offlinePV_(consumes<reco::VertexCollection>(
           iConfig.getUntrackedParameter<edm::InputTag>("VertexCollection", edm::InputTag("offlinePrimaryVertices")))),
       tok_generalTrk_(consumes<reco::TrackCollection>(
@@ -52,6 +58,7 @@ PATCompositeTreeProducer6::PATCompositeTreeProducer6(const edm::ParameterSet& iC
       pidDau1_(iConfig.getUntrackedParameter<int>("PID_dau1", 421)),
       pidDau2_(iConfig.getUntrackedParameter<int>("PID_dau2", 211)),
       deltaR_(iConfig.getUntrackedParameter<double>("deltaR", 0.03)),
+      maxGenDeltaPtRel_(iConfig.getUntrackedParameter<double>("maxGenDeltaPtRel", 0.5)),
       multMax_(iConfig.getUntrackedParameter<double>("multMax", -1)),
       multMin_(iConfig.getUntrackedParameter<double>("multMin", -1)),
       massHistPeak_(iConfig.getUntrackedParameter<double>("massHistPeak", 0.147)),
@@ -156,7 +163,7 @@ PATCompositeTreeProducer6::PATCompositeTreeProducer6(const edm::ParameterSet& iC
   }
 }
 
-void PATCompositeTreeProducer6::countDstarGenMatchTail(double deltaMass, bool strictNoFSR, bool swap, double slowPionDR) {
+void PATCompositeTreeProducer6::countDstarGenMatchTail(double deltaMass, bool validChain, bool swap, double slowPionDR) {
   if (!std::isfinite(deltaMass)) return;
 
   int region = -1;
@@ -170,7 +177,7 @@ void PATCompositeTreeProducer6::countDstarGenMatchTail(double deltaMass, bool st
   };
 
   fillStage(0);
-  if (!strictNoFSR) return;
+  if (!validChain) return;
   fillStage(1);
   if (swap) return;
   fillStage(2);
@@ -183,7 +190,7 @@ void PATCompositeTreeProducer6::countDstarGenMatchTail(double deltaMass, bool st
 void PATCompositeTreeProducer6::countDstarTailAncestry(double deltaMass,
                                                        const reco::Candidate* recoSlowPi,
                                                        const reco::GenParticle* genDStar,
-                                                       const reco::GenParticle* genSlowPi,
+                                                       const reco::Candidate* genSlowPi,
                                                        double slowPionDR) {
   if (!std::isfinite(deltaMass) || !genDStar || !genSlowPi) return;
 
@@ -295,11 +302,7 @@ PATCompositeTreeProducer6::D0DaughterSummary PATCompositeTreeProducer6::summariz
     const auto* dau = d0->daughter(idau);
     if (!dau) continue;
     const int absId = std::abs(dau->pdgId());
-    if (absId == kPdgGamma) {
-      ++out.gammaCount;
-      continue;
-    }
-    ++out.nonGammaCount;
+    if (absId == kPdgGamma) continue;
     if (absId == kPdgKaon) out.hasKaon = true;
     if (absId == kPdgPion) out.hasPion = true;
   }
@@ -308,6 +311,12 @@ PATCompositeTreeProducer6::D0DaughterSummary PATCompositeTreeProducer6::summariz
 
 void PATCompositeTreeProducer6::resetRecoGenMatch(unsigned int idx) {
   matchGEN[idx] = false;
+  matchHYDJET[idx] = false;
+  matchGen_index[idx] = -1;
+  matchGen_pruned_index[idx] = -1;
+  matchGen_collisionId[idx] = -1;
+  matchGen_reason[idx] = 0;
+  matchGen_deltaR[idx] = kInvalidValue;
   isSwap[idx] = false;
   idmom_reco[idx] = -99;
   idBAnc_reco[idx] = -99;
@@ -854,6 +863,12 @@ void PATCompositeTreeProducer6::initTree() {
         PATCompositeNtuple_->Branch("idmom_reco", &idmom_reco, "idmom_reco[candSize]/I");
         PATCompositeNtuple_->Branch("idBAnc_reco", &idBAnc_reco, "idBAnc_reco[candSize]/I");
         PATCompositeNtuple_->Branch("matchGEN", &matchGEN, "matchGEN[candSize]/O");
+        PATCompositeNtuple_->Branch("matchHYDJET", matchHYDJET, "matchHYDJET[candSize]/O");
+        PATCompositeNtuple_->Branch("matchGen_index", matchGen_index, "matchGen_index[candSize]/I");
+        PATCompositeNtuple_->Branch("matchGen_pruned_index", matchGen_pruned_index, "matchGen_pruned_index[candSize]/I");
+        PATCompositeNtuple_->Branch("matchGen_collisionId", matchGen_collisionId, "matchGen_collisionId[candSize]/I");
+        PATCompositeNtuple_->Branch("matchGen_reason", matchGen_reason, "matchGen_reason[candSize]/I");
+        PATCompositeNtuple_->Branch("matchGen_deltaR", matchGen_deltaR, "matchGen_deltaR[candSize]/F");
         PATCompositeNtuple_->Branch("matchGen3DPointingAngle", &gen_agl_abs, "gen3DPointingAngle[candSize]/F");
         PATCompositeNtuple_->Branch("matchGen2DPointingAngle", &gen_agl2D_abs, "gen2DPointingAngle[candSize]/F");
         PATCompositeNtuple_->Branch("matchGen3DDecayLength", &gen_dl, "gen3DDecayLength[candSize]/F");
@@ -1098,42 +1113,6 @@ void PATCompositeTreeProducer6::initTree() {
 std::vector<reco::GenParticleRef> PATCompositeTreeProducer6::processGenMatching(const edm::Handle<reco::GenParticleCollection>& genpars) {
   std::vector<reco::GenParticleRef> genRefs;
 
-  auto hasKPiFromDaughters = [&](const reco::Candidate* cand) {
-    if (!cand || cand->numberOfDaughters() < 2) { return false; }
-    std::vector<unsigned int> perm(2);
-    std::iota(perm.begin(), perm.end(), 0);
-    std::sort(perm.begin(), perm.end());
-    do {
-      const reco::Candidate* d1 = cand->daughter(perm[0]);
-      const reco::Candidate* d2 = cand->daughter(perm[1]);
-      if (!d1 || !d2) { continue;}
-      if (std::abs(d1->pdgId()) == kPdgKaon && std::abs(d2->pdgId()) == kPdgPion) { return true; }
-    } while (std::next_permutation(perm.begin(), perm.end()));
-    return false;
-  };
-
-  auto hasKPiGammaFromDaughters = [&](const reco::Candidate* cand) {
-    if (!cand || cand->numberOfDaughters() < 3) {
-      return false;
-    }
-    std::vector<unsigned int> perm(3);
-    std::iota(perm.begin(), perm.end(), 0);
-    std::sort(perm.begin(), perm.end());
-    do {
-      const reco::Candidate* d1 = cand->daughter(perm[0]);
-      const reco::Candidate* d2 = cand->daughter(perm[1]);
-      const reco::Candidate* d3 = cand->daughter(perm[2]);
-      if (!d1 || !d2 || !d3) {
-        continue;
-      }
-      if (std::abs(d1->pdgId()) == kPdgKaon && std::abs(d2->pdgId()) == kPdgPion &&
-          std::abs(d3->pdgId()) == kPdgGamma) {
-        return true;
-      }
-    } while (std::next_permutation(perm.begin(), perm.end()));
-    return false;
-  };
-
   if (!doGenMatching_) {
     return genRefs;
   }
@@ -1170,106 +1149,24 @@ std::vector<reco::GenParticleRef> PATCompositeTreeProducer6::processGenMatching(
       continue;
     }
 
-    int dstarGammaCount = 0;
-    std::vector<unsigned int> dstarNonGammaIdx;
-    dstarNonGammaIdx.reserve(trk.numberOfDaughters());
+    bool hasDaughter1 = false;
+    bool hasDaughter2 = false;
     for (size_t idau = 0; idau < trk.numberOfDaughters(); ++idau) {
-      const reco::Candidate* dau = trk.daughter(idau);
-      if (!dau) {
-        continue;
-      }
-      if (std::abs(dau->pdgId()) == kPdgGamma) {
-        ++dstarGammaCount;
-      } else {
-        dstarNonGammaIdx.push_back(static_cast<unsigned int>(idau));
+      const auto* daughter = trk.daughter(idau);
+      if (!daughter) continue;
+      const int absId = std::abs(daughter->pdgId());
+      if (absId == std::abs(pidDau2_)) hasDaughter2 = true;
+      if (absId == std::abs(pidDau1_)) {
+        const auto summary = summarizeD0Daughters(daughter);
+        if (!twoLayerDecay_ || (summary.hasKaon && summary.hasPion)) hasDaughter1 = true;
       }
     }
-
-    if (twoLayerDecay_ && dstarGammaCount > 0) {
-      continue;
+    if (!hasDaughter1 || !hasDaughter2) continue;
+    if (!twoLayerDecay_) {
+      const auto summary = summarizeD0Daughters(&trk);
+      if (!summary.hasKaon || !summary.hasPion) continue;
     }
-
-    if (dstarNonGammaIdx.size() != 2) {
-      continue;
-    }
-
-    int idxLayer1 = -1;
-    std::sort(dstarNonGammaIdx.begin(), dstarNonGammaIdx.end());
-    do {
-      const reco::Candidate* Dd1 = trk.daughter(dstarNonGammaIdx[0]);
-      const reco::Candidate* Dd2 = trk.daughter(dstarNonGammaIdx[1]);
-      if (!Dd1 || !Dd2) {
-        continue;
-      }
-      if (std::abs(Dd1->pdgId()) == std::abs(pidDau1_) && std::abs(Dd2->pdgId()) == std::abs(pidDau2_)) {
-        idxLayer1 = static_cast<int>(dstarNonGammaIdx[0]);
-        break;
-      }
-    } while (std::next_permutation(dstarNonGammaIdx.begin(), dstarNonGammaIdx.end()));
-
-    if (idxLayer1 < 0) {
-      continue;
-    }
-
-    if (twoLayerDecay_) {
-      const reco::Candidate* d0 = trk.daughter(static_cast<unsigned int>(idxLayer1));
-      if (!d0) {
-        continue;
-      }
-
-      int d0GammaCount = 0;
-      int d0NonGammaCount = 0;
-      for (size_t idau = 0; idau < d0->numberOfDaughters(); ++idau) {
-        const reco::Candidate* dau = d0->daughter(idau);
-        if (!dau) {
-          continue;
-        }
-        if (std::abs(dau->pdgId()) == kPdgGamma) {
-          ++d0GammaCount;
-        } else {
-          ++d0NonGammaCount;
-        }
-      }
-
-      if (d0GammaCount > 0) {
-        if (d0->numberOfDaughters() != 3 || d0NonGammaCount != 2 || d0GammaCount != 1) {
-          continue;
-        }
-        if (!hasKPiGammaFromDaughters(d0)) {
-          continue;
-        }
-      } else {
-        if (d0->numberOfDaughters() != 2 || d0NonGammaCount != 2) {
-          continue;
-        }
-        if (!hasKPiFromDaughters(d0)) {
-          continue;
-        }
-      }
-
-      genRefs.emplace_back(genpars, it);
-    } else {
-      const int singleLayerGammaCount = dstarGammaCount;
-      const int singleLayerNonGammaCount = static_cast<int>(dstarNonGammaIdx.size());
-
-      if (singleLayerGammaCount > 0) {
-        if (trk.numberOfDaughters() != 3 || singleLayerNonGammaCount != 2 || singleLayerGammaCount != 1) {
-          continue;
-        }
-        if (!hasKPiGammaFromDaughters(&trk)) {
-          continue;
-        }
-      } else {
-        if (trk.numberOfDaughters() != 2 || singleLayerNonGammaCount != 2) {
-          continue;
-        }
-        if (!hasKPiFromDaughters(&trk)) {
-          continue;
-        }
-      }
-
-      genRefs.emplace_back(genpars, it);
-    }
+    genRefs.emplace_back(genpars, it);
   }
 
   return genRefs;
@@ -1293,8 +1190,175 @@ void PATCompositeTreeProducer6::processCandidates(const CCC* v0candidates_,
   }
   candSize = static_cast<int>(nCand);
 
+  // Match original tracks independently before checking the common D0/D* ancestry.
+  const bool useD0DaughterTrackMatching = doGenMatching_ && !twoLayerDecay_ && std::abs(pid_) == 421;
+  const bool useDaughterTrackMatching =
+      (doGenMatching_ && twoLayerDecay_ && std::abs(pid_) == 413) || useD0DaughterTrackMatching;
+  std::vector<int> daughterGenIndex(nCand, -1);
+  std::vector<int> daughterMatchReason(nCand, 0);
+  std::vector<bool> daughterSwap(nCand, false);
+  std::vector<const reco::Candidate*> daughterGenD0(nCand, nullptr);
+  std::vector<const reco::Candidate*> daughterGenSlowPion(nCand, nullptr);
+  std::vector<const reco::Candidate*> daughterGenKaon(nCand, nullptr);
+  std::vector<const reco::Candidate*> daughterGenPion(nCand, nullptr);
+  if (useDaughterTrackMatching && nCand > 0) {
+    edm::Handle<pat::PackedGenParticleCollection> packedGen;
+    iEvent.getByToken(tok_packedGenParticle_, packedGen);
+    if (!genpars.isValid() || !packedGen.isValid()) {
+      throw cms::Exception("ProductNotFound")
+          << "D0/D* daughter-track matching requires pruned and packed GEN particles.";
+    }
+    struct GenTrack {
+      const reco::Candidate* particle;
+    };
+    std::vector<GenTrack> pool;
+    std::unordered_set<unsigned int> represented;
+    std::unordered_map<const reco::Candidate*, int> prunedIndex;
+    for (unsigned int i = 0; i < genpars->size(); ++i) prunedIndex[&(*genpars)[i]] = i;
+    auto isHadron = [](int id) {
+      id = std::abs(id);
+      return id == 211 || id == 321 || id == 2212;
+    };
+    for (const auto& particle : *packedGen) {
+      if (particle.charge() == 0) continue;
+      const auto ref = particle.lastPrunedRef();
+      if (ref.isNonnull() && ref.isAvailable() && ref->status() == 1) {
+        represented.insert(ref.key());
+        if (isHadron(ref->pdgId())) pool.push_back({ref.get()});
+      } else if (isHadron(particle.pdgId())) {
+        pool.push_back({&particle});
+      }
+    }
+    for (unsigned int i = 0; i < genpars->size(); ++i) {
+      const auto& particle = (*genpars)[i];
+      if (particle.status() == 1 && particle.charge() != 0 &&
+          isHadron(particle.pdgId()) && !represented.count(i)) {
+        pool.push_back({&particle});
+      }
+    }
+
+    constexpr int nPhi = 180;
+    const double twoPi = 2. * std::acos(-1.);
+    std::map<std::pair<int, int>, std::vector<unsigned int>> cells;
+    auto phiCell = [&](double phi) {
+      double wrapped = std::fmod(phi, twoPi);
+      if (wrapped < 0.) wrapped += twoPi;
+      return std::min(nPhi - 1, static_cast<int>(wrapped / twoPi * nPhi));
+    };
+    for (unsigned int i = 0; i < pool.size(); ++i) {
+      const auto* particle = pool[i].particle;
+      if (!std::isfinite(particle->eta()) || !std::isfinite(particle->phi())) continue;
+      cells[{static_cast<int>(std::floor(particle->eta() / .04)), phiCell(particle->phi())}].push_back(i);
+    }
+    const int etaSpan = static_cast<int>(std::ceil(deltaR_ / .04));
+    const int phiSpan = static_cast<int>(std::ceil(deltaR_ / (twoPi / nPhi)));
+    std::unordered_map<const reco::Track*, int> selected;
+    auto nearestGen = [&](const reco::Track* track) -> int {
+      if (!track) return -1;
+      const auto cached = selected.find(track);
+      if (cached != selected.end()) return cached->second;
+      int best = -1;
+      double bestDistance = deltaR_ * deltaR_;
+      std::vector<unsigned int> nearby;
+      if (std::isfinite(track->eta()) && std::isfinite(track->phi()) && track->pt() > 0.) {
+        const int eta = static_cast<int>(std::floor(track->eta() / .04));
+        const int phi = phiCell(track->phi());
+        for (int de = -etaSpan; de <= etaSpan; ++de) {
+          for (int dp = -phiSpan; dp <= phiSpan; ++dp) {
+            const auto found = cells.find({eta + de, (phi + dp + nPhi) % nPhi});
+            if (found != cells.end()) nearby.insert(nearby.end(), found->second.begin(), found->second.end());
+          }
+        }
+        std::sort(nearby.begin(), nearby.end());
+        for (unsigned int i : nearby) {
+          const auto* particle = pool[i].particle;
+          if (particle->charge() != track->charge() || particle->pt() <= 0.) continue;
+          if (std::abs(track->pt() - particle->pt()) / track->pt() >= maxGenDeltaPtRel_) continue;
+          const double dPhi = std::remainder(particle->phi() - track->phi(), twoPi);
+          const double dEta = particle->eta() - track->eta();
+          const double distance = dEta * dEta + dPhi * dPhi;
+          if (distance < bestDistance) {
+            best = i;
+            bestDistance = distance;
+          }
+        }
+      }
+      selected[track] = best;
+      return best;
+    };
+    auto mother = [](const reco::Candidate* particle) -> const reco::Candidate* {
+      return particle && particle->numberOfMothers() ? particle->mother(0) : nullptr;
+    };
+    for (unsigned int i = 0; i < nCand; ++i) {
+      const auto& candidate = (*v0candidates_)[i];
+      const auto* d0 = useD0DaughterTrackMatching ? &candidate : candidate.daughter(0);
+      const std::array<const reco::Candidate*, 3> daughters = {{
+          d0->daughter(0), d0->daughter(1),
+          useD0DaughterTrackMatching ? nullptr : candidate.daughter(1)}};
+      const unsigned int nDaughters = useD0DaughterTrackMatching ? 2 : 3;
+      std::array<const reco::Candidate*, 3> leaves = {{nullptr, nullptr, nullptr}};
+      bool missingTrack = false;
+      for (unsigned int j = 0; j < nDaughters; ++j) {
+        const auto* track = daughters[j] ? daughters[j]->bestTrack() : nullptr;
+        if (!track) missingTrack = true;
+        const int chosen = nearestGen(track);
+        if (chosen >= 0) leaves[j] = pool[chosen].particle;
+      }
+      auto reject = [&](int reason) { daughterMatchReason[i] = reason; };
+      if (missingTrack) { reject(1); continue; }
+      if (!leaves[0] || !leaves[1] || (!useD0DaughterTrackMatching && !leaves[2])) {
+        reject(2); continue;
+      }
+      if (leaves[0] == leaves[1] ||
+          (!useD0DaughterTrackMatching && (leaves[0] == leaves[2] || leaves[1] == leaves[2]))) {
+        reject(3); continue;
+      }
+      const int id0 = std::abs(leaves[0]->pdgId()), id1 = std::abs(leaves[1]->pdgId());
+      if (!((id0 == 321 && id1 == 211) || (id0 == 211 && id1 == 321)) ||
+          (!useD0DaughterTrackMatching && std::abs(leaves[2]->pdgId()) != 211)) {
+        reject(4); continue;
+      }
+      const auto* genD0 = mother(leaves[0]);
+      if (!genD0 || genD0 != mother(leaves[1]) || std::abs(genD0->pdgId()) != 421) {
+        reject(5); continue;
+      }
+      if (useD0DaughterTrackMatching) {
+        const auto* gen = dynamic_cast<const reco::GenParticle*>(genD0);
+        const auto found = prunedIndex.find(genD0);
+        if (!gen || found == prunedIndex.end()) {
+          throw cms::Exception("LogicError") << "Matched D0 is absent from the input GEN particles.";
+        }
+        daughterGenIndex[i] = found->second;
+        daughterGenKaon[i] = id0 == 321 ? leaves[0] : leaves[1];
+        daughterGenPion[i] = id0 == 211 ? leaves[0] : leaves[1];
+        const unsigned int kaonLeg = daughters[0]->mass() > daughters[1]->mass() ? 0 : 1;
+        daughterSwap[i] = std::abs(leaves[kaonLeg]->pdgId()) != 321;
+        daughterMatchReason[i] = gen->collisionId() == 0 ? 10 : 11;
+        continue;
+      }
+      const auto* genDstar = mother(genD0);
+      if (!genDstar || genDstar != mother(leaves[2]) || std::abs(genDstar->pdgId()) != 413) {
+        reject(6); continue;
+      }
+      const auto* gen = dynamic_cast<const reco::GenParticle*>(genDstar);
+      const auto found = prunedIndex.find(genDstar);
+      if (!gen || found == prunedIndex.end()) {
+        throw cms::Exception("LogicError") << "Matched D* is absent from pruned GEN particles.";
+      }
+      daughterGenIndex[i] = found->second;
+      daughterGenD0[i] = genD0;
+      daughterGenSlowPion[i] = leaves[2];
+      daughterGenKaon[i] = id0 == kPdgKaon ? leaves[0] : leaves[1];
+      daughterGenPion[i] = id0 == kPdgPion ? leaves[0] : leaves[1];
+      const unsigned int kaonLeg = daughters[0]->mass() > daughters[1]->mass() ? 0 : 1;
+      daughterSwap[i] = std::abs(leaves[kaonLeg]->pdgId()) != 321;
+      daughterMatchReason[i] = gen->collisionId() == 0 ? 10 : 11;
+    }
+  }
+
   for (unsigned int it = 0; it < nCand; ++it) {
     resetCandidateOutputs(it);
+    if (useDaughterTrackMatching) matchGen_reason[it] = daughterMatchReason[it];
     ++nRecoCandidatesProcessed_;
     const CC& trk = (*v0candidates_)[it];
     if (twoLayerDecay_ && std::abs(pid_) == 413) {
@@ -1345,44 +1409,58 @@ void PATCompositeTreeProducer6::processCandidates(const CCC* v0candidates_,
       if (twoLayerDecay_) {
         const reco::Candidate* recoD0 = d1;
         const reco::Candidate* recoSlowPi = d2;
-        for (unsigned int igen = 0; igen < genRefs.size(); ++igen) {
-          const reco::GenParticle* genDStar = genRefs[igen].get();
-          const int idxD0 = (std::abs(genDStar->daughter(0)->pdgId()) == kPdgD0) ? 0 : 1;
-          const reco::GenParticle* genD0Ref = static_cast<const reco::GenParticle*>(genDStar->daughter(idxD0));
-          const reco::GenParticle* genSlowPiRef = static_cast<const reco::GenParticle*>(genDStar->daughter(1 - idxD0));
+        const unsigned int nGenMatches = useDaughterTrackMatching ? 1 : genRefs.size();
+        for (unsigned int igen = 0; igen < nGenMatches; ++igen) {
+          if (useDaughterTrackMatching && daughterGenIndex[it] < 0) continue;
+          const reco::GenParticle* genDStar = useDaughterTrackMatching
+              ? &(*genpars)[daughterGenIndex[it]] : genRefs[igen].get();
+          const reco::Candidate* genD0Ref = useDaughterTrackMatching ? daughterGenD0[it] : nullptr;
+          const reco::Candidate* genSlowPiRef = useDaughterTrackMatching ? daughterGenSlowPion[it] : nullptr;
+          if (!useDaughterTrackMatching) {
+            for (size_t idau = 0; idau < genDStar->numberOfDaughters(); ++idau) {
+              const auto* daughter = genDStar->daughter(idau);
+              if (!daughter) continue;
+              if (std::abs(daughter->pdgId()) == kPdgD0 && !genD0Ref) {
+                const auto summary = summarizeD0Daughters(daughter);
+                if (summary.hasKaon && summary.hasPion) genD0Ref = daughter;
+              }
+              if (std::abs(daughter->pdgId()) == kPdgPion && !genSlowPiRef) genSlowPiRef = daughter;
+            }
+          }
+          if (!genD0Ref || !genSlowPiRef) continue;
           const reco::Candidate* genD0 = genD0Ref;
           const reco::Candidate* genSlowPi = genSlowPiRef;
-          const bool passD0Match = matchHadron(recoD0, *genD0, true);
-          const bool passSlowPiMatch = matchHadron(recoSlowPi, *genSlowPi, false);
-          if (!(passD0Match && passSlowPiMatch)) {
-            continue;
+          if (!useDaughterTrackMatching) {
+            const bool passD0Match = matchHadron(recoD0, *genD0, true);
+            const bool passSlowPiMatch = matchHadron(recoSlowPi, *genSlowPi, false);
+            if (!(passD0Match && passSlowPiMatch)) continue;
           }
 
-          const reco::Candidate* genKaon = nullptr;
-          const reco::Candidate* genPion = nullptr;
-          for (size_t idau = 0; idau < genD0Ref->numberOfDaughters(); ++idau) {
-            const reco::Candidate* dau = genD0Ref->daughter(idau);
-            if (std::abs(dau->pdgId()) == kPdgGamma) continue;
-            if (std::abs(dau->pdgId()) == kPdgKaon && !genKaon) genKaon = dau;
-            if (std::abs(dau->pdgId()) == kPdgPion && !genPion) genPion = dau;
+          const reco::Candidate* genKaon = useDaughterTrackMatching ? daughterGenKaon[it] : nullptr;
+          const reco::Candidate* genPion = useDaughterTrackMatching ? daughterGenPion[it] : nullptr;
+          if (!useDaughterTrackMatching) {
+            for (size_t idau = 0; idau < genD0Ref->numberOfDaughters(); ++idau) {
+              const auto* dau = genD0Ref->daughter(idau);
+              if (!dau) continue;
+              if (std::abs(dau->pdgId()) == kPdgKaon && !genKaon) genKaon = dau;
+              if (std::abs(dau->pdgId()) == kPdgPion && !genPion) genPion = dau;
+            }
           }
           if (!genKaon || !genPion) {
             continue;
           }
 
           const auto d0Summary = summarizeD0Daughters(genD0Ref);
-          const bool validD0Inclusive = (d0Summary.nonGammaCount == 2 && d0Summary.hasKaon && d0Summary.hasPion);
-          const bool validD0StrictNoFSR = (validD0Inclusive && d0Summary.gammaCount == 0);
-          matchGen_validD0chain_[it] = validD0StrictNoFSR;
-          // genDStar is from processGenMatching(), so D* topology is already prefiltered there.
-          // inclusive reco-gen match flag (D0 FSR gamma allowed)
+          const bool validD0Inclusive = useDaughterTrackMatching || (d0Summary.hasKaon && d0Summary.hasPion);
+          matchGen_validD0chain_[it] = validD0Inclusive;
+          // Matched track identities and their common parents define the chain.
+          // Additional daughters do not restrict the match or either chain flag.
           matchGEN[it] = validD0Inclusive;
-          // strict non-gamma D* chain flag (for dedicated non-gamma studies)
-          matchGen_validDstarChain_[it] = validD0StrictNoFSR;
+          matchGen_validDstarChain_[it] = validD0Inclusive;
           if (!matchGEN[it]) continue;
           ++nRecoCandidatesMatched_;
 
-          isSwap[it] = checkSwap(recoD0, *genD0Ref);
+          isSwap[it] = useDaughterTrackMatching ? daughterSwap[it] : checkSwap(recoD0, *genD0Ref);
           matchGen_D0Dau1_pT_[it] = genKaon->pt();
           matchGen_D0Dau1_eta_[it] = genKaon->eta();
           matchGen_D0Dau1_phi_[it] = genKaon->phi();
@@ -1458,6 +1536,16 @@ void PATCompositeTreeProducer6::processCandidates(const CCC* v0candidates_,
           matchGen_D0Dau2_motherNDau_[it] = m2 ? static_cast<int>(m2->numberOfDaughters()) : -99;
           matchGen_D1_motherPdgId_[it] = m3 ? m3->pdgId() : -99;
           matchGen_D1_motherNDau_[it] = m3 ? static_cast<int>(m3->numberOfDaughters()) : -99;
+          if (useDaughterTrackMatching) {
+            matchGen_pruned_index[it] = daughterGenIndex[it];
+            matchGen_collisionId[it] = genDStar->collisionId();
+            matchGen_deltaR[it] = reco::deltaR(trk, *genDStar);
+            for (unsigned int j = 0; j < genRefs.size(); ++j) {
+              if (genRefs[j].get() == genDStar) { matchGen_index[it] = j; break; }
+            }
+            matchHYDJET[it] = genDStar->collisionId() != 0;
+            matchGEN[it] = !matchHYDJET[it];
+          }
           break;
         }
       } else {
@@ -1466,32 +1554,49 @@ void PATCompositeTreeProducer6::processCandidates(const CCC* v0candidates_,
         const reco::Candidate* matchedGenPion = nullptr;
         int matchedIgen = -1;
 
-        for (unsigned int igen = 0; igen < genRefs.size(); ++igen) {
-          const reco::GenParticle* theGen = genRefs[igen].get();
-          if (!theGen) continue;
-          if (!matchHadron(&trk, *theGen, true)) continue;
-
-          const reco::Candidate* genKaon = nullptr;
-          const reco::Candidate* genPion = nullptr;
-          for (size_t idau = 0; idau < theGen->numberOfDaughters(); ++idau) {
-            const reco::Candidate* dau = theGen->daughter(idau);
-            if (!dau || std::abs(dau->pdgId()) == kPdgGamma) continue;
-            if (std::abs(dau->pdgId()) == kPdgKaon && !genKaon) genKaon = dau;
-            if (std::abs(dau->pdgId()) == kPdgPion && !genPion) genPion = dau;
+        if (useD0DaughterTrackMatching) {
+          if (daughterGenIndex[it] >= 0) {
+            matchedGenD0 = &(*genpars)[daughterGenIndex[it]];
+            matchedGenKaon = daughterGenKaon[it];
+            matchedGenPion = daughterGenPion[it];
+            for (unsigned int igen = 0; igen < genRefs.size(); ++igen) {
+              if (genRefs[igen].get() == matchedGenD0) {
+                matchedIgen = static_cast<int>(igen);
+                break;
+              }
+            }
           }
-          if (!genKaon || !genPion) continue;
-          matchedGenD0 = theGen;
-          matchedGenKaon = genKaon;
-          matchedGenPion = genPion;
-          matchedIgen = static_cast<int>(igen);
-          break;
+        } else {
+          for (unsigned int igen = 0; igen < genRefs.size(); ++igen) {
+            const reco::GenParticle* theGen = genRefs[igen].get();
+            if (!theGen) continue;
+            if (!matchHadron(&trk, *theGen, true)) continue;
+
+            const reco::Candidate* genKaon = nullptr;
+            const reco::Candidate* genPion = nullptr;
+            for (size_t idau = 0; idau < theGen->numberOfDaughters(); ++idau) {
+              const reco::Candidate* dau = theGen->daughter(idau);
+              if (!dau || std::abs(dau->pdgId()) == kPdgGamma) continue;
+              if (std::abs(dau->pdgId()) == kPdgKaon && !genKaon) genKaon = dau;
+              if (std::abs(dau->pdgId()) == kPdgPion && !genPion) genPion = dau;
+            }
+            if (!genKaon || !genPion) continue;
+            matchedGenD0 = theGen;
+            matchedGenKaon = genKaon;
+            matchedGenPion = genPion;
+            matchedIgen = static_cast<int>(igen);
+            break;
+          }
         }
 
-        if (matchedGenD0 && matchedGenKaon && matchedGenPion && matchedIgen >= 0) {
+        if (matchedGenD0 && matchedGenKaon && matchedGenPion &&
+            (useD0DaughterTrackMatching || matchedIgen >= 0)) {
           matchGEN[it] = true;
           ++nRecoCandidatesMatched_;
-          isSwap[it] = checkSwap(&trk, *matchedGenD0);
-          auto momRef = findMother(genRefs[matchedIgen]);
+          isSwap[it] = useD0DaughterTrackMatching ? daughterSwap[it] : checkSwap(&trk, *matchedGenD0);
+          const reco::GenParticleRef matchedRef = useD0DaughterTrackMatching
+              ? reco::GenParticleRef(genpars, daughterGenIndex[it]) : genRefs[matchedIgen];
+          auto momRef = findMother(matchedRef);
           if (momRef.isNonnull()) idmom_reco[it] = momRef->pdgId();
           int countAnc = 0;
           auto ancRef = momRef;
@@ -1533,10 +1638,23 @@ void PATCompositeTreeProducer6::processCandidates(const CCC* v0candidates_,
           matchGen_D0Dau2_pdgId_[it] = matchedGenPion->pdgId();
 
           const auto d0Summary = summarizeD0Daughters(matchedGenD0);
-          const bool validD0Inclusive = (d0Summary.nonGammaCount == 2 && d0Summary.hasKaon && d0Summary.hasPion);
-          const bool validD0StrictNoFSR = (validD0Inclusive && d0Summary.gammaCount == 0);
-          matchGen_validD0chain_[it] = validD0StrictNoFSR;
+          const bool validD0Inclusive = useD0DaughterTrackMatching || (d0Summary.hasKaon && d0Summary.hasPion);
+          matchGen_validD0chain_[it] = validD0Inclusive;
           matchGEN[it] = validD0Inclusive;
+          if (useD0DaughterTrackMatching) {
+            matchGen_index[it] = matchedIgen;
+            matchGen_pruned_index[it] = daughterGenIndex[it];
+            matchGen_collisionId[it] = matchedGenD0->collisionId();
+            matchGen_deltaR[it] = reco::deltaR(trk, *matchedGenD0);
+            matchHYDJET[it] = matchedGenD0->collisionId() != 0;
+            matchGEN[it] = !matchHYDJET[it];
+            const auto* kaonMother = matchedGenKaon->mother();
+            const auto* pionMother = matchedGenPion->mother();
+            matchGen_D0Dau1_motherPdgId_[it] = kaonMother ? kaonMother->pdgId() : -99;
+            matchGen_D0Dau1_motherNDau_[it] = kaonMother ? kaonMother->numberOfDaughters() : -99;
+            matchGen_D0Dau2_motherPdgId_[it] = pionMother ? pionMother->pdgId() : -99;
+            matchGen_D0Dau2_motherNDau_[it] = pionMother ? pionMother->numberOfDaughters() : -99;
+          }
         }
       }
     }
@@ -1973,24 +2091,18 @@ void PATCompositeTreeProducer6::fillGEN(const edm::Event& iEvent, const edm::Eve
     if (twoLayerDecay_) {
       const reco::Candidate* genD0 = nullptr;
       const reco::Candidate* genSlowPi = nullptr;
-      int dstarGammaCount = 0;
-      int dstarNonGammaCount = 0;
-      int dstarD0Count = 0;
-      int dstarPiCount = 0;
       for (size_t idau = 0; idau < theGen->numberOfDaughters(); ++idau) {
         const reco::Candidate* dau = theGen->daughter(idau);
         if (!dau) continue;
         const int absId = std::abs(dau->pdgId());
-        if (absId == kPdgGamma) {
-          ++dstarGammaCount;
-          continue;
-        }
-        ++dstarNonGammaCount;
+        if (absId == kPdgGamma) continue;
         if (absId == kPdgD0) {
-          ++dstarD0Count;
-          if (!genD0) genD0 = dau;
+          const auto summary = summarizeD0Daughters(dau);
+          const auto current = summarizeD0Daughters(genD0);
+          if (!genD0 || (!(current.hasKaon && current.hasPion) && summary.hasKaon && summary.hasPion)) {
+            genD0 = dau;
+          }
         } else if (absId == kPdgPion) {
-          ++dstarPiCount;
           if (!genSlowPi) genSlowPi = dau;
         }
       }
@@ -2014,8 +2126,6 @@ void PATCompositeTreeProducer6::fillGEN(const edm::Event& iEvent, const edm::Eve
         gen_D1charge_[igen] = genSlowPi->charge();
       }
 
-      int d0GammaCount = 0;
-      int d0NonGammaCount = 0;
       const reco::Candidate* d0Kaon = nullptr;
       const reco::Candidate* d0Pion = nullptr;
       if (genD0) {
@@ -2023,11 +2133,7 @@ void PATCompositeTreeProducer6::fillGEN(const edm::Event& iEvent, const edm::Eve
           const reco::Candidate* dau = genD0->daughter(idau);
           if (!dau) continue;
           const int absId = std::abs(dau->pdgId());
-          if (absId == kPdgGamma) {
-            ++d0GammaCount;
-            continue;
-          }
-          ++d0NonGammaCount;
+          if (absId == kPdgGamma) continue;
           if (absId == kPdgKaon && !d0Kaon) d0Kaon = dau;
           if (absId == kPdgPion && !d0Pion) d0Pion = dau;
         }
@@ -2051,12 +2157,8 @@ void PATCompositeTreeProducer6::fillGEN(const edm::Event& iEvent, const edm::Eve
         gen_D0Dau2_pdgId_[igen] = d0Pion->pdgId();
       }
 
-      const bool d0TopologyOK = genD0 && ((d0GammaCount == 0 && genD0->numberOfDaughters() == 2) ||
-                                          (d0GammaCount == 1 && genD0->numberOfDaughters() == 3));
-      gen_validD0chain_[igen] = (d0TopologyOK && d0NonGammaCount == 2 && d0Kaon && d0Pion);
-      gen_validDstarChain_[igen] = (dstarGammaCount == 0 && dstarNonGammaCount == 2 &&
-                                    dstarD0Count == 1 && dstarPiCount == 1 &&
-                                    gen_validD0chain_[igen]);
+      gen_validD0chain_[igen] = (genD0 && d0Kaon && d0Pion);
+      gen_validDstarChain_[igen] = (genSlowPi && gen_validD0chain_[igen]);
     } else {
       const reco::Candidate* genD0 = theGen;
       gen_D0mass_[igen] = genD0->mass();
@@ -2067,19 +2169,13 @@ void PATCompositeTreeProducer6::fillGEN(const edm::Event& iEvent, const edm::Eve
       gen_D0pdgId_[igen] = genD0->pdgId();
       gen_D0charge_[igen] = genD0->charge();
 
-      int d0GammaCount = 0;
-      int d0NonGammaCount = 0;
       const reco::Candidate* d0Kaon = nullptr;
       const reco::Candidate* d0Pion = nullptr;
       for (size_t idau = 0; idau < genD0->numberOfDaughters(); ++idau) {
         const reco::Candidate* dau = genD0->daughter(idau);
         if (!dau) continue;
         const int absId = std::abs(dau->pdgId());
-        if (absId == kPdgGamma) {
-          ++d0GammaCount;
-          continue;
-        }
-        ++d0NonGammaCount;
+        if (absId == kPdgGamma) continue;
         if (absId == kPdgKaon && !d0Kaon) d0Kaon = dau;
         if (absId == kPdgPion && !d0Pion) d0Pion = dau;
       }
@@ -2102,9 +2198,7 @@ void PATCompositeTreeProducer6::fillGEN(const edm::Event& iEvent, const edm::Eve
         gen_D0Dau2_pdgId_[igen] = d0Pion->pdgId();
       }
 
-      const bool d0TopologyOK = ((d0GammaCount == 0 && genD0->numberOfDaughters() == 2) ||
-                                 (d0GammaCount == 1 && genD0->numberOfDaughters() == 3));
-      gen_validD0chain_[igen] = (d0TopologyOK && d0NonGammaCount == 2 && d0Kaon && d0Pion);
+      gen_validD0chain_[igen] = (d0Kaon && d0Pion);
       gen_validDstarChain_[igen] = false;
     }
   }
@@ -2122,10 +2216,10 @@ void PATCompositeTreeProducer6::endJob() {
 
   static const char* kStageNames[] = {
       "matchGEN inclusive",
-      "strict no-FSR",
-      "strict no-FSR && !isSwap",
-      "strict no-FSR && !isSwap && slowPi dR < 0.01",
-      "strict no-FSR && !isSwap && slowPi dR < 0.005"};
+      "valid decay chain",
+      "valid decay chain && !isSwap",
+      "valid decay chain && !isSwap && slowPi dR < 0.01",
+      "valid decay chain && !isSwap && slowPi dR < 0.005"};
   static const char* kRegionNames[] = {
       "0.139<=dM<0.144",
       "0.144<=dM<0.147",
