@@ -19,6 +19,7 @@
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/Math/interface/deltaR.h"
 #include "DataFormats/PatCandidates/interface/CompositeCandidate.h"
+#include "DataFormats/PatCandidates/interface/PackedGenParticle.h"
 #include "DataFormats/RecoCandidate/interface/RecoCandidate.h"
 #include "DataFormats/TrackReco/interface/DeDxData.h"
 #include "DataFormats/TrackReco/interface/Track.h"
@@ -180,6 +181,7 @@ private:
   }
 
   edm::EDGetTokenT<reco::GenParticleCollection> tok_genParticle_;
+  edm::EDGetTokenT<pat::PackedGenParticleCollection> tok_packedGenParticle_;
   edm::EDGetTokenT<reco::VertexCollection> tok_offlinePV_;
   edm::EDGetTokenT<reco::TrackCollection> tok_generalTrk_;
   edm::EDGetTokenT<CCC> tok_compositeCandidates_;
@@ -214,6 +216,7 @@ private:
   int pidDau1_;
   int pidDau2_;
   double deltaR_;
+  double maxGenDeltaPtRel_;
   double multMax_;
   double multMin_;
   double massHistPeak_;
@@ -336,6 +339,12 @@ private:
   float dca2D[kMaxGenCand];
   bool isSwap[kMaxGenCand];
   bool matchGEN[kMaxGenCand];
+  bool matchHYDJET[kMaxGenCand];
+  int matchGen_index[kMaxGenCand];
+  int matchGen_pruned_index[kMaxGenCand];
+  int matchGen_collisionId[kMaxGenCand];
+  int matchGen_reason[kMaxGenCand];
+  float matchGen_deltaR[kMaxGenCand];
   int idBAnc_reco[kMaxGenCand];
   int idmom_reco[kMaxGenCand];
   float gen_agl_abs[kMaxGenCand];
