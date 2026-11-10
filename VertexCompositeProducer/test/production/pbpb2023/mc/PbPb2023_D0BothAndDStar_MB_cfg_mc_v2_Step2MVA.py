@@ -357,6 +357,7 @@ process.d0candCountFilter = cms.EDFilter("CandViewCountFilter",
 
 process.dStarAna_step = cms.Path(
     process.eventFilter_HM
+    * process.phfCoincFilter2Th4
     * process.generalD0CandidatesNew
     * process.generalDStarCandidatesNew
     * process.d0candCountFilter
@@ -401,11 +402,11 @@ process.schedule = cms.Schedule(
 
 # Add the event selection filters
 process.Flag_colEvtSel = cms.Path(process.eventFilter_HM * process.colEvtSel)
-#process.Flag_hfCoincFilter = cms.Path(process.eventFilter_HM * process.hfCoincFilter2Th4)
+process.Flag_hfCoincFilter = cms.Path(process.eventFilter_HM * process.phfCoincFilter2Th4)
 process.Flag_primaryVertexFilter = cms.Path(process.eventFilter_HM * process.primaryVertexFilter * process.clusterCompatibilityFilter)
 # follow the exactly same config of process.eventinfoana.eventFilterNames
 #eventFilterPaths = [ process.Flag_colEvtSel , process.Flag_hfCoincFilter , process.Flag_primaryVertexFilter ]
-eventFilterPaths = [ process.Flag_colEvtSel  , process.Flag_primaryVertexFilter ]
+eventFilterPaths = [ process.Flag_colEvtSel , process.Flag_hfCoincFilter , process.Flag_primaryVertexFilter ]
 for P in eventFilterPaths:
     process.schedule.insert(0, P)
 
