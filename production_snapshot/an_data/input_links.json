@@ -1,0 +1,31 @@
+{
+  "AN_campaign": "campaign_26Sep25_slowpion_source_family_matched_1to1",
+  "AN_data_central": "/home/jun502s/DstarAna/DStarAnalysis/Fit/PbPb/Test/SpinAlignment/output/campaign_26Sep10_slowpion_mc4d_fixed_dca_shape_nominal/data/central_roodataset/nominal/default/data/PbPb_Data_NewBDT_26Jul22_CentralityTableSys/central_roodataset.root",
+  "AN_data_flat": {
+    "file": "/home/CMS/junseok/DStarAna/Data/FlatSample/PbPbData/DStar/newBDT_0311_AllData_chunk50_Mar24_fixcalib_localcopy_dca3DErr_evtSel2_centralityTableSys2023",
+    "dataset_name": "skimTreeFlat",
+    "description": "PbPb 2023 data flat skim with evtSel[2] and nominal/systematic-UP/systematic-DOWN HFtowers200 centrality tables (July 22, 2026)"
+  },
+  "AN_data_original_tasks": [
+    {
+      "request": "DStarAna_Data_Step2MVA_HIPhysicsRawPrime16_23_wEvtplane_CMSSW_13_2_13_MVA0p9_09Mar26_v2",
+      "upstream_directory": "/home/CMS/junseok/DStarAna/Data/Data/HIPhysicsRawPrime/newBDT_0311/Data/DStarAna_Data_Step2MVA_HIPhysicsRawPrime16_23_wEvtplane_CMSSW_13_2_13_MVA0p9_09Mar26_v2",
+      "example_job_log": "/home/CMS/junseok/DStarAna/Data/Data/HIPhysicsRawPrime/newBDT_0311/Data/DStarAna_Data_Step2MVA_HIPhysicsRawPrime16_23_wEvtplane_CMSSW_13_2_13_MVA0p9_09Mar26_v2/CRAB_UserFiles/crab_DStarAna_Data_Step2MVA_HIPhysicsRawPrime16_23_wEvtplane_CMSSW_13_2_13_MVA0p9_09Mar26_v2/260309_055717/0000/log/cmsRun_1.log.tar.gz"
+    },
+    {
+      "request": "DStarAna_Data_Step2MVA_HIPhysicsRawPrime0_7_wEvtplane_CMSSW_13_2_13_MVA0p9_9Mar26_v1",
+      "upstream_directory": "/home/CMS/junseok/DStarAna/Data/Data/HIPhysicsRawPrime/newBDT_0311/Data/DStarAna_Data_Step2MVA_HIPhysicsRawPrime0_7_wEvtplane_CMSSW_13_2_13_MVA0p9_9Mar26_v1",
+      "example_job_log": "/home/CMS/junseok/DStarAna/Data/Data/HIPhysicsRawPrime/newBDT_0311/Data/DStarAna_Data_Step2MVA_HIPhysicsRawPrime0_7_wEvtplane_CMSSW_13_2_13_MVA0p9_9Mar26_v1/CRAB_UserFiles/crab_DStarAna_Data_Step2MVA_HIPhysicsRawPrime0_7_wEvtplane_CMSSW_13_2_13_MVA0p9_9Mar26_v1/260309_052930/0000/log/cmsRun_1.log.tar.gz"
+    },
+    {
+      "request": "DStarAna_Data_Step2MVA_HIPhysicsRawPrime24_31_wEvtplane_CMSSW_13_2_13_MVA0p9_18Mar26_v1",
+      "upstream_directory": "/home/CMS/junseok/DStarAna/Data/Data/HIPhysicsRawPrime/newBDT_0311/Data/DStarAna_Data_Step2MVA_HIPhysicsRawPrime24_31_wEvtplane_CMSSW_13_2_13_MVA0p9_18Mar26_v1",
+      "example_job_log": "/home/CMS/junseok/DStarAna/Data/Data/HIPhysicsRawPrime/newBDT_0311/Data/DStarAna_Data_Step2MVA_HIPhysicsRawPrime24_31_wEvtplane_CMSSW_13_2_13_MVA0p9_18Mar26_v1/CRAB_UserFiles/crab_DStarAna_Data_Step2MVA_HIPhysicsRawPrime24_31_wEvtplane_CMSSW_13_2_13_MVA0p9_18Mar26_v1/260318_173439/0000/log/cmsRun_1.log.tar.gz"
+    },
+    {
+      "request": "DStarAna_Data_Step2MVA_HIPhysicsRawPrime8_15_wEvtplane_CMSSW_13_2_13_MVA0p9_09Mar26_v2",
+      "upstream_directory": "/home/CMS/junseok/DStarAna/Data/Data/HIPhysicsRawPrime/newBDT_0311/Data/DStarAna_Data_Step2MVA_HIPhysicsRawPrime8_15_wEvtplane_CMSSW_13_2_13_MVA0p9_09Mar26_v2",
+      "example_job_log": "/home/CMS/junseok/DStarAna/Data/Data/HIPhysicsRawPrime/newBDT_0311/Data/DStarAna_Data_Step2MVA_HIPhysicsRawPrime8_15_wEvtplane_CMSSW_13_2_13_MVA0p9_09Mar26_v2/CRAB_UserFiles/crab_DStarAna_Data_Step2MVA_HIPhysicsRawPrime8_15_wEvtplane_CMSSW_13_2_13_MVA0p9_09Mar26_v2/260317_060837/0000/log/cmsRun_1.log.tar.gz"
+    }
+  ]
+}
