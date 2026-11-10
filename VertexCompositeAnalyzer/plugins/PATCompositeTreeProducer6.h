@@ -70,6 +70,8 @@ private:
   std::vector<reco::GenParticleRef> processGenMatching(const edm::Handle<reco::GenParticleCollection>& genpars);
 
   struct D0DaughterSummary {
+    int gammaCount = 0;
+    int nonGammaCount = 0;
     bool hasKaon = false;
     bool hasPion = false;
   };
@@ -137,11 +139,11 @@ private:
   bool checkSwap(const reco::Candidate* dmeson, const reco::Candidate& gen) const {
     return dmeson->pdgId() != gen.pdgId();
   }
-  void countDstarGenMatchTail(double deltaMass, bool validChain, bool swap, double slowPionDR);
+  void countDstarGenMatchTail(double deltaMass, bool strictNoFSR, bool swap, double slowPionDR);
   void countDstarTailAncestry(double deltaMass,
                               const reco::Candidate* recoSlowPi,
                               const reco::GenParticle* genDStar,
-                              const reco::Candidate* genSlowPi,
+                              const reco::GenParticle* genSlowPi,
                               double slowPionDR);
   reco::GenParticleRef findMother(const reco::GenParticleRef& genParRef) {
     if (genParRef.isNull()) return genParRef;
