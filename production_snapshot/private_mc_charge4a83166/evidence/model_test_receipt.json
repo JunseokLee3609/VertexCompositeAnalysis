@@ -1,0 +1,10 @@
+{
+  "status": "success",
+  "test": "Actual packaged CRAB dry-run",
+  "source_commit": "4a83166593801e615aa9ba55952bd6de1dc31143",
+  "exitCode": 0,
+  "events": 11,
+  "peak_rss_MB": "1260.38",
+  "model_ready": true,
+  "unitsPerJob_kept": 1
+}

@@ -1,0 +1,163 @@
+{
+  "created_utc": "2026-11-10T09:29:51.664205+00:00",
+  "production_kind": "full MiniAOD-to-ntuple production",
+  "source_worktree": "/afs/cern.ch/user/j/junseok/analysis/production_studies/production_versions_20261108/work/an_mc_01sep26_matching_20261109/source/VertexCompositeAnalysis",
+  "source_commit": "4a83166593801e615aa9ba55952bd6de1dc31143",
+  "source_branch": "archive/production-20261108/an-mc-01sep26",
+  "historical_source_tag": "production/an-mc-01sep26-pat6siggen-v1",
+  "baseline_psets": {
+    "prompt": "/afs/cern.ch/user/j/junseok/analysis/production_studies/production_versions_20261108/work/an_mc_01sep26_matching_20261109/source/VertexCompositeAnalysis/production_snapshot/submitted/prompt_2_4_submitted.py",
+    "nonprompt": "/afs/cern.ch/user/j/junseok/analysis/production_studies/production_versions_20261108/work/an_mc_01sep26_matching_20261109/source/VertexCompositeAnalysis/production_snapshot/submitted/nonprompt_2_4_submitted.py"
+  },
+  "model": "/afs/cern.ch/user/j/junseok/analysis/production_studies/production_versions_20261108/work/an_mc_01sep26_matching_20261109/source/VertexCompositeAnalysis/VertexCompositeProducer/data/XGBoost_Model_OnlyNonPrompt_05Mar26_Centrality_pTerr_ptErr011_1.onnx",
+  "globalTag": "132X_mcRun3_2023_realistic_HI_v9",
+  "execution": {
+    "numCores": 1,
+    "numberOfThreads": 1,
+    "numberOfStreams": 1,
+    "maxMemoryMB": 3000,
+    "maxEvents": -1,
+    "totalUnits": -1,
+    "splitting": "FileBased",
+    "unitsPerJob": 1
+  },
+  "physics_overrides": {
+    "deltaR": 0.03,
+    "maxGenDeltaPtRel": 0.5,
+    "matching_code": "Independent daughter tracks and common-parent ancestry with D0 Kpi plus zero or one direct gamma and opposite GEN kaon/slow-pion charges for Dstar"
+  },
+  "storageSite": "T3_KR_KNU",
+  "samples": [
+    {
+      "label": "Private3MNonpromptPt4to15Y12",
+      "channel": "nonprompt",
+      "dataset": "/DstarNonpromptPthat2Pt4to15Y12PrivateMC/junseok-FullChainPt4to15Y12CERNtoKISTI_20260925-8117ce608359f6260196c7541c15b96e/USER",
+      "inputDBS": "phys03",
+      "reference_crab_config": "/afs/cern.ch/user/j/junseok/analysis/dstarana/vertexcomposite/CMSSW_13_2_11/src/VertexCompositeAnalysis/test/hydjet_origin_20261102/production_knu/configuration/crab_Private3MNonpromptPt4to15Y12.py",
+      "previous_inventory": {
+        "nevents": 2999000,
+        "nfiles": 2999,
+        "source": "/afs/cern.ch/user/j/junseok/analysis/dstarana/vertexcomposite/CMSSW_13_2_11/src/VertexCompositeAnalysis/test/hydjet_origin_20261102/production_knu/inventory/Private3MNonpromptPt4to15Y12_summary.json"
+      },
+      "requestName": "DStarOnly_ANMC_Charge4a83166_10Nov26_Private3MNonpromptPt4to15Y12_v1",
+      "crab_config": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/configuration/crab_Private3MNonpromptPt4to15Y12.py",
+      "pset": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/configuration/crab_pset_nonprompt.py",
+      "project": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/submission/crab_projects/crab_DStarOnly_ANMC_Charge4a83166_10Nov26_Private3MNonpromptPt4to15Y12_v1",
+      "outLFNDirBase": "/store/user/junseok/DStarMC/ANMC01Sep26_DStarOnly_Charge4a83166_10Nov26/Private3MNonpromptPt4to15Y12",
+      "first_file_for_channel": "/store/user/rucio/junseok/DstarNonpromptPt4to15Y12_3M_20260925/DstarNonpromptPthat2Pt4to15Y12PrivateMC/FullChainPt4to15Y12CERNtoKISTI_20260925/260925_192909/0000/MINIAODSIM_75.root",
+      "superseded_project_v1": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_daughtermatch_20261109_v3/archive/crab_projects_v1_v2/crab_DStarOnly_ANMC_DauMatch_09Nov26_Private3MNonpromptPt4to15Y12_v1"
+    },
+    {
+      "label": "Private3MPromptPt4to15Y12",
+      "channel": "prompt",
+      "dataset": "/DstarPromptPthat2Pt4to15Y12PrivateMC/junseok-FullChainPt4to15Y12CERNtoKISTI_20260925-8117ce608359f6260196c7541c15b96e/USER",
+      "inputDBS": "phys03",
+      "reference_crab_config": "/afs/cern.ch/user/j/junseok/analysis/dstarana/vertexcomposite/CMSSW_13_2_11/src/VertexCompositeAnalysis/test/hydjet_origin_20261102/production_knu/configuration/crab_Private3MPromptPt4to15Y12.py",
+      "previous_inventory": {
+        "nevents": 2998000,
+        "nfiles": 2998,
+        "source": "/afs/cern.ch/user/j/junseok/analysis/dstarana/vertexcomposite/CMSSW_13_2_11/src/VertexCompositeAnalysis/test/hydjet_origin_20261102/production_knu/inventory/Private3MPromptPt4to15Y12_summary.json"
+      },
+      "requestName": "DStarOnly_ANMC_Charge4a83166_10Nov26_Private3MPromptPt4to15Y12_v1",
+      "crab_config": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/configuration/crab_Private3MPromptPt4to15Y12.py",
+      "pset": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/configuration/crab_pset_prompt.py",
+      "project": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/submission/crab_projects/crab_DStarOnly_ANMC_Charge4a83166_10Nov26_Private3MPromptPt4to15Y12_v1",
+      "outLFNDirBase": "/store/user/junseok/DStarMC/ANMC01Sep26_DStarOnly_Charge4a83166_10Nov26/Private3MPromptPt4to15Y12",
+      "first_file_for_channel": "/store/user/rucio/junseok/DstarPromptPt4to15Y12_3M_20260925/DstarPromptPthat2Pt4to15Y12PrivateMC/FullChainPt4to15Y12CERNtoKISTI_20260925/260925_192735/0000/MINIAODSIM_56.root",
+      "superseded_project_v1": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_daughtermatch_20261109_v3/archive/crab_projects_v1_v2/crab_DStarOnly_ANMC_DauMatch_09Nov26_Private3MPromptPt4to15Y12_v1"
+    },
+    {
+      "label": "Private5MNonpromptPthat2Pt4Y12",
+      "channel": "nonprompt",
+      "dataset": "/DstarNonpromptPthat2Pt4Y12PrivateMC/junseok-FullChainY12CERNtoKISTI_20260924-8117ce608359f6260196c7541c15b96e/USER",
+      "inputDBS": "phys03",
+      "reference_crab_config": "/afs/cern.ch/user/j/junseok/analysis/dstarana/vertexcomposite/CMSSW_13_2_11/src/VertexCompositeAnalysis/test/hydjet_origin_20261102/production_knu/configuration/crab_Private5MNonpromptPthat2Pt4Y12.py",
+      "previous_inventory": {
+        "nevents": 4867713,
+        "nfiles": 3000,
+        "source": "/afs/cern.ch/user/j/junseok/analysis/dstarana/vertexcomposite/CMSSW_13_2_11/src/VertexCompositeAnalysis/test/hydjet_origin_20261102/production_knu/inventory/Private5MNonpromptPthat2Pt4Y12_summary.json"
+      },
+      "requestName": "DStarOnly_ANMC_Charge4a83166_10Nov26_Private5MNonpromptPthat2Pt4Y12_v1",
+      "crab_config": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/configuration/crab_Private5MNonpromptPthat2Pt4Y12.py",
+      "pset": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/configuration/crab_pset_nonprompt.py",
+      "project": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/submission/crab_projects/crab_DStarOnly_ANMC_Charge4a83166_10Nov26_Private5MNonpromptPthat2Pt4Y12_v1",
+      "outLFNDirBase": "/store/user/junseok/DStarMC/ANMC01Sep26_DStarOnly_Charge4a83166_10Nov26/Private5MNonpromptPthat2Pt4Y12",
+      "first_file_for_channel": "/store/user/rucio/junseok/DstarNonpromptPt4to15Y12_3M_20260925/DstarNonpromptPthat2Pt4to15Y12PrivateMC/FullChainPt4to15Y12CERNtoKISTI_20260925/260925_192909/0000/MINIAODSIM_75.root",
+      "superseded_project_v1": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_daughtermatch_20261109_v3/archive/crab_projects_v1_v2/crab_DStarOnly_ANMC_DauMatch_09Nov26_Private5MNonpromptPthat2Pt4Y12_v1"
+    },
+    {
+      "label": "Private5MPromptPthat2Pt4Y12",
+      "channel": "prompt",
+      "dataset": "/DstarPromptPthat2Pt4Y12PrivateMC/junseok-FullChainY12CERNtoKISTI_20260924-8117ce608359f6260196c7541c15b96e/USER",
+      "inputDBS": "phys03",
+      "reference_crab_config": "/afs/cern.ch/user/j/junseok/analysis/dstarana/vertexcomposite/CMSSW_13_2_11/src/VertexCompositeAnalysis/test/hydjet_origin_20261102/production_knu/configuration/crab_Private5MPromptPthat2Pt4Y12.py",
+      "previous_inventory": {
+        "nevents": 4923115,
+        "nfiles": 3000,
+        "source": "/afs/cern.ch/user/j/junseok/analysis/dstarana/vertexcomposite/CMSSW_13_2_11/src/VertexCompositeAnalysis/test/hydjet_origin_20261102/production_knu/inventory/Private5MPromptPthat2Pt4Y12_summary.json"
+      },
+      "requestName": "DStarOnly_ANMC_Charge4a83166_10Nov26_Private5MPromptPthat2Pt4Y12_v1",
+      "crab_config": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/configuration/crab_Private5MPromptPthat2Pt4Y12.py",
+      "pset": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/configuration/crab_pset_prompt.py",
+      "project": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/submission/crab_projects/crab_DStarOnly_ANMC_Charge4a83166_10Nov26_Private5MPromptPthat2Pt4Y12_v1",
+      "outLFNDirBase": "/store/user/junseok/DStarMC/ANMC01Sep26_DStarOnly_Charge4a83166_10Nov26/Private5MPromptPthat2Pt4Y12",
+      "first_file_for_channel": "/store/user/rucio/junseok/DstarPromptPt4to15Y12_3M_20260925/DstarPromptPthat2Pt4to15Y12PrivateMC/FullChainPt4to15Y12CERNtoKISTI_20260925/260925_192735/0000/MINIAODSIM_56.root",
+      "superseded_project_v1": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_daughtermatch_20261109_v3/archive/crab_projects_v1_v2/crab_DStarOnly_ANMC_DauMatch_09Nov26_Private5MPromptPthat2Pt4Y12_v1"
+    },
+    {
+      "label": "Private8MNonpromptPt4to15Y12",
+      "channel": "nonprompt",
+      "dataset": "/DstarNonpromptPthat2Pt4to15Y12PrivateMC/junseok-FullChainPt4to15Y12Additional8M_20260926-8117ce608359f6260196c7541c15b96e/USER",
+      "inputDBS": "phys03",
+      "reference_crab_config": "/afs/cern.ch/user/j/junseok/analysis/dstarana/vertexcomposite/CMSSW_13_2_11/src/VertexCompositeAnalysis/test/hydjet_origin_20261102/production_knu/configuration/crab_Private8MNonpromptPt4to15Y12.py",
+      "previous_inventory": {
+        "nevents": 8000000,
+        "nfiles": 8000,
+        "source": "/afs/cern.ch/user/j/junseok/analysis/dstarana/vertexcomposite/CMSSW_13_2_11/src/VertexCompositeAnalysis/test/hydjet_origin_20261102/production_knu/inventory/Private8MNonpromptPt4to15Y12_summary.json"
+      },
+      "requestName": "DStarOnly_ANMC_Charge4a83166_10Nov26_Private8MNonpromptPt4to15Y12_v1",
+      "crab_config": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/configuration/crab_Private8MNonpromptPt4to15Y12.py",
+      "pset": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/configuration/crab_pset_nonprompt.py",
+      "project": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/submission/crab_projects/crab_DStarOnly_ANMC_Charge4a83166_10Nov26_Private8MNonpromptPt4to15Y12_v1",
+      "outLFNDirBase": "/store/user/junseok/DStarMC/ANMC01Sep26_DStarOnly_Charge4a83166_10Nov26/Private8MNonpromptPt4to15Y12",
+      "first_file_for_channel": "/store/user/rucio/junseok/DstarNonpromptPt4to15Y12_3M_20260925/DstarNonpromptPthat2Pt4to15Y12PrivateMC/FullChainPt4to15Y12CERNtoKISTI_20260925/260925_192909/0000/MINIAODSIM_75.root",
+      "superseded_project_v1": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_daughtermatch_20261109_v3/archive/crab_projects_v1_v2/crab_DStarOnly_ANMC_DauMatch_09Nov26_Private8MNonpromptPt4to15Y12_v1"
+    },
+    {
+      "label": "Private8MPromptPt4to15Y12",
+      "channel": "prompt",
+      "dataset": "/DstarPromptPthat2Pt4to15Y12PrivateMC/junseok-FullChainPt4to15Y12Additional8M_20260926-8117ce608359f6260196c7541c15b96e/USER",
+      "inputDBS": "phys03",
+      "reference_crab_config": "/afs/cern.ch/user/j/junseok/analysis/dstarana/vertexcomposite/CMSSW_13_2_11/src/VertexCompositeAnalysis/test/hydjet_origin_20261102/production_knu/configuration/crab_Private8MPromptPt4to15Y12.py",
+      "previous_inventory": {
+        "nevents": 8000000,
+        "nfiles": 8000,
+        "source": "/afs/cern.ch/user/j/junseok/analysis/dstarana/vertexcomposite/CMSSW_13_2_11/src/VertexCompositeAnalysis/test/hydjet_origin_20261102/production_knu/inventory/Private8MPromptPt4to15Y12_summary.json"
+      },
+      "requestName": "DStarOnly_ANMC_Charge4a83166_10Nov26_Private8MPromptPt4to15Y12_v1",
+      "crab_config": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/configuration/crab_Private8MPromptPt4to15Y12.py",
+      "pset": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/configuration/crab_pset_prompt.py",
+      "project": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/submission/crab_projects/crab_DStarOnly_ANMC_Charge4a83166_10Nov26_Private8MPromptPt4to15Y12_v1",
+      "outLFNDirBase": "/store/user/junseok/DStarMC/ANMC01Sep26_DStarOnly_Charge4a83166_10Nov26/Private8MPromptPt4to15Y12",
+      "first_file_for_channel": "/store/user/rucio/junseok/DstarPromptPt4to15Y12_3M_20260925/DstarPromptPthat2Pt4to15Y12PrivateMC/FullChainPt4to15Y12CERNtoKISTI_20260925/260925_192735/0000/MINIAODSIM_56.root",
+      "superseded_project_v1": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_daughtermatch_20261109_v3/archive/crab_projects_v1_v2/crab_DStarOnly_ANMC_DauMatch_09Nov26_Private8MPromptPt4to15Y12_v1"
+    }
+  ],
+  "output_scope": "Dstar ntuple only; D0 reconstruction retained and D0 ntuple analyzer removed",
+  "site_whitelist": [
+    "T2_CH_CERN",
+    "T2_KR_KISTI",
+    "T3_KR_KNU"
+  ],
+  "submission_version": 1,
+  "build_container": "cmssw/el8",
+  "build_architecture": "el8_amd64_gcc11",
+  "storage_root": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110",
+  "retry_version": 1,
+  "previous_manifest": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/evidence/previous_production_manifest.json",
+  "afs_case": "/afs/cern.ch/user/j/junseok/analysis/production_studies/private_mc_3m_5m_8m_anmc_charge4a83166_20261110",
+  "supersedes": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_daughtermatch_20261109_v4",
+  "outLFNDirBase": "/store/user/junseok/DStarMC/ANMC01Sep26_DStarOnly_Charge4a83166_10Nov26",
+  "packaging_fix": "Unchanged v4 run_with_model.sh and packaged input_payload/src",
+  "existing_validation": "/afs/cern.ch/user/j/junseok/analysis/production_studies/dstar_charge_d0_matching_fix_20261110/evidence/targeted_checks.json"
+}

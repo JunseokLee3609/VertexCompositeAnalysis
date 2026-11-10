@@ -1,0 +1,63 @@
+{
+  "source_commit": "4a83166593801e615aa9ba55952bd6de1dc31143",
+  "total_input_files": 27997,
+  "storage_site": "T3_KR_KNU",
+  "storage_root_eos": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110",
+  "task_rows": [
+    {
+      "sample": "Private3MNonpromptPt4to15Y12",
+      "request": "DStarOnly_ANMC_Charge4a83166_10Nov26_Private3MNonpromptPt4to15Y12_v1",
+      "project": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/submission/crab_projects/crab_DStarOnly_ANMC_Charge4a83166_10Nov26_Private3MNonpromptPt4to15Y12_v1",
+      "task": "261110_093234:junseok_crab_DStarOnly_ANMC_Charge4a83166_10Nov26_Private3MNonpromptPt4to15Y12_v1",
+      "returncode": 0,
+      "log": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/logs/proceed_Private3MNonpromptPt4to15Y12.log",
+      "utc": "2026-11-10T09:38:38.362363+00:00"
+    },
+    {
+      "sample": "Private3MPromptPt4to15Y12",
+      "request": "DStarOnly_ANMC_Charge4a83166_10Nov26_Private3MPromptPt4to15Y12_v1",
+      "project": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/submission/crab_projects/crab_DStarOnly_ANMC_Charge4a83166_10Nov26_Private3MPromptPt4to15Y12_v1",
+      "task": "261110_093859:junseok_crab_DStarOnly_ANMC_Charge4a83166_10Nov26_Private3MPromptPt4to15Y12_v1",
+      "returncode": 0,
+      "log": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/logs/submit_Private3MPromptPt4to15Y12.log",
+      "utc": "2026-11-10T09:38:59.979306+00:00"
+    },
+    {
+      "sample": "Private5MNonpromptPthat2Pt4Y12",
+      "request": "DStarOnly_ANMC_Charge4a83166_10Nov26_Private5MNonpromptPthat2Pt4Y12_v1",
+      "project": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/submission/crab_projects/crab_DStarOnly_ANMC_Charge4a83166_10Nov26_Private5MNonpromptPthat2Pt4Y12_v1",
+      "task": "261110_093919:junseok_crab_DStarOnly_ANMC_Charge4a83166_10Nov26_Private5MNonpromptPthat2Pt4Y12_v1",
+      "returncode": 0,
+      "log": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/logs/submit_Private5MNonpromptPthat2Pt4Y12.log",
+      "utc": "2026-11-10T09:39:20.071230+00:00"
+    },
+    {
+      "sample": "Private5MPromptPthat2Pt4Y12",
+      "request": "DStarOnly_ANMC_Charge4a83166_10Nov26_Private5MPromptPthat2Pt4Y12_v1",
+      "project": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/submission/crab_projects/crab_DStarOnly_ANMC_Charge4a83166_10Nov26_Private5MPromptPthat2Pt4Y12_v1",
+      "task": "261110_093939:junseok_crab_DStarOnly_ANMC_Charge4a83166_10Nov26_Private5MPromptPthat2Pt4Y12_v1",
+      "returncode": 0,
+      "log": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/logs/submit_Private5MPromptPthat2Pt4Y12.log",
+      "utc": "2026-11-10T09:39:39.923908+00:00"
+    },
+    {
+      "sample": "Private8MNonpromptPt4to15Y12",
+      "request": "DStarOnly_ANMC_Charge4a83166_10Nov26_Private8MNonpromptPt4to15Y12_v1",
+      "project": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/submission/crab_projects/crab_DStarOnly_ANMC_Charge4a83166_10Nov26_Private8MNonpromptPt4to15Y12_v1",
+      "task": "261110_093958:junseok_crab_DStarOnly_ANMC_Charge4a83166_10Nov26_Private8MNonpromptPt4to15Y12_v1",
+      "returncode": 0,
+      "log": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/logs/submit_Private8MNonpromptPt4to15Y12.log",
+      "utc": "2026-11-10T09:39:59.024211+00:00"
+    },
+    {
+      "sample": "Private8MPromptPt4to15Y12",
+      "request": "DStarOnly_ANMC_Charge4a83166_10Nov26_Private8MPromptPt4to15Y12_v1",
+      "project": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/submission/crab_projects/crab_DStarOnly_ANMC_Charge4a83166_10Nov26_Private8MPromptPt4to15Y12_v1",
+      "task": "261110_094022:junseok_crab_DStarOnly_ANMC_Charge4a83166_10Nov26_Private8MPromptPt4to15Y12_v1",
+      "returncode": 0,
+      "log": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_charge4a83166_20261110/logs/submit_Private8MPromptPt4to15Y12.log",
+      "utc": "2026-11-10T09:40:22.837235+00:00"
+    }
+  ],
+  "full_production_submitted": 6
+}

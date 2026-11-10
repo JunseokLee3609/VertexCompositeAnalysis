@@ -1,0 +1,162 @@
+{
+  "source_commit": "4a83166593801e615aa9ba55952bd6de1dc31143",
+  "crab_configs": [
+    {
+      "sample": "Private3MNonpromptPt4to15Y12",
+      "physics_and_resources_unchanged": true,
+      "inputDataset": "/DstarNonpromptPthat2Pt4to15Y12PrivateMC/junseok-FullChainPt4to15Y12CERNtoKISTI_20260925-8117ce608359f6260196c7541c15b96e/USER",
+      "inputDBS": "phys03",
+      "unitsPerJob": 1,
+      "numCores": 1,
+      "maxMemoryMB": 3000,
+      "outputFiles": [
+        "dstar_tree_mc.root"
+      ],
+      "storageSite": "T3_KR_KNU"
+    },
+    {
+      "sample": "Private3MPromptPt4to15Y12",
+      "physics_and_resources_unchanged": true,
+      "inputDataset": "/DstarPromptPthat2Pt4to15Y12PrivateMC/junseok-FullChainPt4to15Y12CERNtoKISTI_20260925-8117ce608359f6260196c7541c15b96e/USER",
+      "inputDBS": "phys03",
+      "unitsPerJob": 1,
+      "numCores": 1,
+      "maxMemoryMB": 3000,
+      "outputFiles": [
+        "dstar_tree_mc.root"
+      ],
+      "storageSite": "T3_KR_KNU"
+    },
+    {
+      "sample": "Private5MNonpromptPthat2Pt4Y12",
+      "physics_and_resources_unchanged": true,
+      "inputDataset": "/DstarNonpromptPthat2Pt4Y12PrivateMC/junseok-FullChainY12CERNtoKISTI_20260924-8117ce608359f6260196c7541c15b96e/USER",
+      "inputDBS": "phys03",
+      "unitsPerJob": 1,
+      "numCores": 1,
+      "maxMemoryMB": 3000,
+      "outputFiles": [
+        "dstar_tree_mc.root"
+      ],
+      "storageSite": "T3_KR_KNU"
+    },
+    {
+      "sample": "Private5MPromptPthat2Pt4Y12",
+      "physics_and_resources_unchanged": true,
+      "inputDataset": "/DstarPromptPthat2Pt4Y12PrivateMC/junseok-FullChainY12CERNtoKISTI_20260924-8117ce608359f6260196c7541c15b96e/USER",
+      "inputDBS": "phys03",
+      "unitsPerJob": 1,
+      "numCores": 1,
+      "maxMemoryMB": 3000,
+      "outputFiles": [
+        "dstar_tree_mc.root"
+      ],
+      "storageSite": "T3_KR_KNU"
+    },
+    {
+      "sample": "Private8MNonpromptPt4to15Y12",
+      "physics_and_resources_unchanged": true,
+      "inputDataset": "/DstarNonpromptPthat2Pt4to15Y12PrivateMC/junseok-FullChainPt4to15Y12Additional8M_20260926-8117ce608359f6260196c7541c15b96e/USER",
+      "inputDBS": "phys03",
+      "unitsPerJob": 1,
+      "numCores": 1,
+      "maxMemoryMB": 3000,
+      "outputFiles": [
+        "dstar_tree_mc.root"
+      ],
+      "storageSite": "T3_KR_KNU"
+    },
+    {
+      "sample": "Private8MPromptPt4to15Y12",
+      "physics_and_resources_unchanged": true,
+      "inputDataset": "/DstarPromptPthat2Pt4to15Y12PrivateMC/junseok-FullChainPt4to15Y12Additional8M_20260926-8117ce608359f6260196c7541c15b96e/USER",
+      "inputDBS": "phys03",
+      "unitsPerJob": 1,
+      "numCores": 1,
+      "maxMemoryMB": 3000,
+      "outputFiles": [
+        "dstar_tree_mc.root"
+      ],
+      "storageSite": "T3_KR_KNU"
+    }
+  ],
+  "psets": [
+    {
+      "channel": "nonprompt",
+      "d0_ntuple_present": false,
+      "path_modules": [
+        "d0candCountFilter",
+        "generalD0CandidatesNew",
+        "hiEvtPlaneFlatRecalc",
+        "generalDStarCandidatesNew",
+        "eventplane",
+        "hiEvtPlaneRecalc",
+        "dStarana_mc",
+        "genDstarEventPlaneMiniAOD",
+        "hltFilter",
+        "unpackedTracksAndVertices"
+      ],
+      "globalTag": "132X_mcRun3_2023_realistic_HI_v9",
+      "threads": 1,
+      "streams": 1,
+      "output": "dstar_tree_mc.root",
+      "deltaR": 0.03,
+      "maxGenDeltaPtRel": 0.5,
+      "signalOnlyGenMatching": true,
+      "doGenMatching": true,
+      "doGenNtuple": true,
+      "twoLayerDecay": true,
+      "PID": 413,
+      "model": "XGBoost_Model_OnlyNonPrompt_05Mar26_Centrality_pTerr_ptErr011_1.onnx",
+      "d0MassCut": 0.14,
+      "vertexProbCut": 0.0
+    },
+    {
+      "channel": "prompt",
+      "d0_ntuple_present": false,
+      "path_modules": [
+        "d0candCountFilter",
+        "generalD0CandidatesNew",
+        "hiEvtPlaneFlatRecalc",
+        "generalDStarCandidatesNew",
+        "eventplane",
+        "hiEvtPlaneRecalc",
+        "dStarana_mc",
+        "genDstarEventPlaneMiniAOD",
+        "hltFilter",
+        "unpackedTracksAndVertices"
+      ],
+      "globalTag": "132X_mcRun3_2023_realistic_HI_v9",
+      "threads": 1,
+      "streams": 1,
+      "output": "dstar_tree_mc.root",
+      "deltaR": 0.03,
+      "maxGenDeltaPtRel": 0.5,
+      "signalOnlyGenMatching": true,
+      "doGenMatching": true,
+      "doGenNtuple": true,
+      "twoLayerDecay": true,
+      "PID": 413,
+      "model": "XGBoost_Model_OnlyNonPrompt_05Mar26_Centrality_pTerr_ptErr011_1.onnx",
+      "d0MassCut": 0.14,
+      "vertexProbCut": 0.0
+    }
+  ],
+  "tools": {
+    "crab": "/cvmfs/cms.cern.ch/common/crab",
+    "gfal-ls": "/usr/bin/gfal-ls",
+    "gfal-rm": "/usr/bin/gfal-rm",
+    "xrdfs": "/cvmfs/cms.cern.ch/el8_amd64_gcc11/cms/cmssw/CMSSW_13_2_11/external/el8_amd64_gcc11/bin/xrdfs",
+    "voms-proxy-info": "/usr/bin/voms-proxy-info"
+  },
+  "proxy_timeleft": "181124",
+  "previous_model_test": {
+    "status": "success",
+    "test": "CRAB dry-run with scriptExe and actual packed sandbox",
+    "sample": "Private3MNonpromptPt4to15Y12",
+    "events": 11,
+    "estimated_memory_MB": 1263,
+    "model_copied_to": "job-local CMSSW_BASE/src/VertexCompositeAnalysis/VertexCompositeProducer/data",
+    "stdout": "/eos/user/j/junseok/analysis/dstar_production/private_mc_3m_5m_8m_anmc_daughtermatch_20261109_v4/logs/dryrun_v4.txt"
+  }
+}

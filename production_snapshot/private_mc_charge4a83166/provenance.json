@@ -1,0 +1,10 @@
+{
+  "kind": "Private MC full MiniAOD-to-ntuple production",
+  "source_commit": "4a83166593801e615aa9ba55952bd6de1dc31143",
+  "source_tree": "61820a6368ed2631d980685c7a73f367d94605bd",
+  "production_record": "/afs/cern.ch/user/j/junseok/analysis/production_studies/private_mc_3m_5m_8m_anmc_charge4a83166_20261110",
+  "source_files_equal_to_submitted_snapshot": true,
+  "producer_vertex_patch_included": false,
+  "submitted_tasks": 6,
+  "settings": "production_snapshot/private_mc_charge4a83166/configuration/production_manifest.json"
+}
