@@ -1220,6 +1220,7 @@ std::vector<reco::GenParticleRef> PATCompositeTreeProducer6::processGenMatching(
 
       int d0GammaCount = 0;
       int d0NonGammaCount = 0;
+      const reco::Candidate* genKaon = nullptr;
       for (size_t idau = 0; idau < d0->numberOfDaughters(); ++idau) {
         const reco::Candidate* dau = d0->daughter(idau);
         if (!dau) {
@@ -1229,6 +1230,7 @@ std::vector<reco::GenParticleRef> PATCompositeTreeProducer6::processGenMatching(
           ++d0GammaCount;
         } else {
           ++d0NonGammaCount;
+          if (std::abs(dau->pdgId()) == kPdgKaon) genKaon = dau;
         }
       }
 
@@ -1244,6 +1246,13 @@ std::vector<reco::GenParticleRef> PATCompositeTreeProducer6::processGenMatching(
           continue;
         }
         if (!hasKPiFromDaughters(d0)) {
+          continue;
+        }
+      }
+
+      if (std::abs(pid_) == 413) {
+        const auto* genSlowPion = trk.daughter(dstarNonGammaIdx[1]);
+        if (!genKaon || !genSlowPion || genKaon->charge() * genSlowPion->charge() >= 0.) {
           continue;
         }
       }
@@ -1453,6 +1462,8 @@ void PATCompositeTreeProducer6::processCandidates(const CCC* v0candidates_,
       const auto summary = summarizeD0Daughters(genD0);
       if (summary.nonGammaCount != 2 || !summary.hasKaon || !summary.hasPion ||
           summary.gammaCount > 1) { reject(8); continue; }
+      const auto* genKaon = id0 == 321 ? leaves[0] : leaves[1];
+      if (genKaon->charge() * leaves[2]->charge() >= 0.) { reject(9); continue; }
       const auto* gen = dynamic_cast<const reco::GenParticle*>(genDstar);
       const auto found = prunedIndex.find(genDstar);
       if (!gen || found == prunedIndex.end()) {
@@ -1714,7 +1725,8 @@ void PATCompositeTreeProducer6::processCandidates(const CCC* v0candidates_,
           matchGen_D0Dau2_pdgId_[it] = matchedGenPion->pdgId();
 
           const auto d0Summary = summarizeD0Daughters(matchedGenD0);
-          const bool validD0Inclusive = (d0Summary.nonGammaCount == 2 && d0Summary.hasKaon && d0Summary.hasPion);
+          const bool validD0Inclusive = (d0Summary.nonGammaCount == 2 && d0Summary.hasKaon &&
+                                         d0Summary.hasPion && d0Summary.gammaCount <= 1);
           const bool validD0StrictNoFSR = (validD0Inclusive && d0Summary.gammaCount == 0);
           matchGen_validD0chain_[it] = validD0StrictNoFSR;
           matchGEN[it] = validD0Inclusive;
@@ -1723,8 +1735,9 @@ void PATCompositeTreeProducer6::processCandidates(const CCC* v0candidates_,
             matchGen_pruned_index[it] = daughterGenIndex[it];
             matchGen_collisionId[it] = matchedGenD0->collisionId();
             matchGen_deltaR[it] = reco::deltaR(trk, *matchedGenD0);
-            matchHYDJET[it] = matchedGenD0->collisionId() != 0;
-            matchGEN[it] = !matchHYDJET[it];
+            const bool fromHYDJET = matchedGenD0->collisionId() != 0;
+            matchGEN[it] = validD0Inclusive && !fromHYDJET;
+            matchHYDJET[it] = validD0Inclusive && fromHYDJET;
             const auto* kaonMother = matchedGenKaon->mother();
             const auto* pionMother = matchedGenPion->mother();
             matchGen_D0Dau1_motherPdgId_[it] = kaonMother ? kaonMother->pdgId() : -99;
