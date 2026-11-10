@@ -1795,7 +1795,8 @@ void PATCompositeTreeProducer6::processCandidates(const CCC* v0candidates_,
 
     if (trk.hasUserFloat("VtxChi2")) vtxChi2[it] = trk.userFloat("VtxChi2");
     if (trk.hasUserFloat("VtxNdof")) ndf[it] = trk.userFloat("VtxNdof");
-    if (vtxChi2[it] > 0.f && ndf[it] > 0.f) VtxProb[it] = TMath::Prob(vtxChi2[it], ndf[it]);
+    if (std::isfinite(vtxChi2[it]) && vtxChi2[it] >= 0.f &&
+        std::isfinite(ndf[it]) && ndf[it] > 0.f) VtxProb[it] = TMath::Prob(vtxChi2[it], ndf[it]);
     if (trk.hasUserFloat("alpha3D")) {
       agl_abs[it] = trk.userFloat("alpha3D");
       agl[it] = std::cos(agl_abs[it]);
@@ -1901,7 +1902,8 @@ void PATCompositeTreeProducer6::processCandidates(const CCC* v0candidates_,
         if (d1CC->hasUserFloat("negDauDxySig")) grand_dxyos2[it] = d1CC->userFloat("negDauDxySig");
         if (d1CC->hasUserFloat("VtxChi2")) grand_vtxChi2[it] = d1CC->userFloat("VtxChi2");
         if (d1CC->hasUserFloat("VtxNdof")) grand_ndf[it] = d1CC->userFloat("VtxNdof");
-        if (grand_vtxChi2[it] > 0.f && grand_ndf[it] > 0.f) grand_VtxProb[it] = TMath::Prob(grand_vtxChi2[it], grand_ndf[it]);
+        if (std::isfinite(grand_vtxChi2[it]) && grand_vtxChi2[it] >= 0.f &&
+            std::isfinite(grand_ndf[it]) && grand_ndf[it] > 0.f) grand_VtxProb[it] = TMath::Prob(grand_vtxChi2[it], grand_ndf[it]);
         if (d1CC->hasUserFloat("alpha3D")) {
           grand_agl_abs[it] = d1CC->userFloat("alpha3D");
           grand_agl[it] = std::cos(grand_agl_abs[it]);
