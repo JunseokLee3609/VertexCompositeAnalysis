@@ -317,7 +317,6 @@ process.dStarAna_step = cms.Path(
     * process.d0candCountFilter
     * process.hiEvtPlaneRecalc
     * process.hiEvtPlaneFlatRecalc
-    * process.d0ana_newreduced  
     * process.dStarana
     * process.eventplane)
 #process.dStarAna_step = cms.Path( process.eventFilter_HM * process.generalD0CandidatesNew* process.generalDStarCandidatesNew*process.d0ana_newreduced*process.dStarana)
