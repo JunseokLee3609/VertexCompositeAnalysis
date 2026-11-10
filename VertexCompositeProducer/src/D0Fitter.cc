@@ -475,8 +475,12 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
         //   ChiSquaredProbability((double)(d0DecayVertex->chiSquared()),(double)(d0DecayVertex->degreesOfFreedom()));
         //if (d0C2Prob < 0.0001) continue;
 
-	      const float d0C2Prob = d0training::vertexProbability(d0DecayVertex->chiSquared(),d0DecayVertex->degreesOfFreedom());
-	      if (d0C2Prob < VtxChiProbCut) continue;
+        const double d0FitChi2 = d0DecayVertex->chiSquared();
+        const double d0FitNdof = d0DecayVertex->degreesOfFreedom();
+        if (!std::isfinite(d0FitChi2) || d0FitChi2 < 0.0 ||
+            !std::isfinite(d0FitNdof) || d0FitNdof <= 0.0) continue;
+        const float d0C2Prob = d0training::vertexProbability(d0FitChi2, d0FitNdof);
+        if (!std::isfinite(d0C2Prob) || d0C2Prob < VtxChiProbCut) continue;
 
         //if ( d0Cand->currentState().mass() > 2.5 || d0Cand->currentState().mass() < 1.0) continue;
 
