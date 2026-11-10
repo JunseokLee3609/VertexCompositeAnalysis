@@ -1,0 +1,18 @@
+{
+  "kind": "Official MC original production followed by the 1108 matching friend replacement",
+  "producer_source_commit": "08fd0a11cab3d7258db67d466e5eff8ad55df34d",
+  "producer_source_tag": "production/an-mc-01sep26-pat6siggen-v1",
+  "friend_source_cern": "/afs/cern.ch/user/j/junseok/analysis/production_studies/dstar_mc_20260901_restore_genmatch_ptrel_20261107/updates/20261108_candidate_best_match/upstream_official_full_20261108",
+  "friend_apply_source_gp": "/home/jun502s/DstarAna/DStarAnalysis/Fit/PbPb/Test/SpinAlignment/CommentAction/studies/gen_matching/upstream_official_full_20261108",
+  "matching_contract": "production_snapshot/official_friend_1108/configuration/contract.json",
+  "matchGEN": "PYTHIA collisionId == 0",
+  "matchHYDJET": "HYDJET collisionId != 0",
+  "dstar_direct_daughters": "D0 and slow pion only",
+  "d0_direct_daughters": "K and pion with zero or one direct photon",
+  "global_gen_uniqueness": false,
+  "producer_vertex_patch_included": false,
+  "file_count": 5114,
+  "input_manifest": "/afs/cern.ch/user/j/junseok/analysis/production_studies/dstar_mc_20260901_restore_genmatch_ptrel_20261107/updates/20261108_candidate_best_match/upstream_official_full_20261108/configuration/input_manifest.json",
+  "verified_completion": "/afs/cern.ch/user/j/junseok/analysis/production_studies/dstar_mc_20260901_restore_genmatch_ptrel_20261107/updates/20261108_candidate_best_match/upstream_official_full_20261108/final/summary.json",
+  "scope": "Friend processing changes matching information in existing Official analysis copies. It does not rerun candidate reconstruction or recalculate stored GEN arrays."
+}
