@@ -1,0 +1,15 @@
+{
+  "production": "PAT6SigGen_01Sep26_v1",
+  "scope": "All stored Dstar candidates, including original unmatched candidates, in every event of all 5114 upstream ROOTs across PR3 and NPR3.",
+  "matching": "Independent nearest final-state charged hadron per original RECO track, same charge, deltaR<0.03, abs(recoPt-genPt)/recoPt<0.5, common exact D0/Dstar ancestry.",
+  "origin": "matchGEN is PYTHIA only; matchHYDJET is HYDJET only.",
+  "GEN_reuse": "No global one-to-one restriction.",
+  "thread": "One CPU and one thread per worker; ROOT implicit MT disabled.",
+  "identity": "Same exact original-track pT-error/charge/hits lookup; original dz+xy disambiguation, unique exact xy fallback already used for the three central repairs.",
+  "optimization": "Eta-phi grid only prunes GEN candidates outside the deltaR neighborhood; retained candidates are compared in original pool order.",
+  "replacement": "Write sibling temporary ROOT, compare all original events/candidates and all nonmatching branch values plus matching results, atomically replace original path only on PASS. Do not retain the pre-replacement ROOT.",
+  "unchanged": "All nonmatching physics branches, GEN arrays, other trees and histograms; original event/candidate order.",
+  "normalization": "Existing weights and membership are not recalculated or altered.",
+  "central_comparison": "Compare all common 2921397 central candidate identities with the completed matching friend before replacement.",
+  "protected_original": "KNU root://cluster142.knu.ac.kr/store/user/junseok/DStarMC is read-only and never replaced. Only the distinct GP /home/CMS analysis copies are replaced."
+}
