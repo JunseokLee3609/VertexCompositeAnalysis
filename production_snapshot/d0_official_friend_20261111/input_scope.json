@@ -1,0 +1,28 @@
+{
+  "files": 5094,
+  "raw_bytes": 400489005396,
+  "groups": {
+    "MC_OfficialNonpromptPthat10Pt20": 906,
+    "MC_OfficialNonpromptPthat2Pt4": 755,
+    "MC_OfficialNonpromptPthat5Pt10": 896,
+    "MC_OfficialPromptPthat10Pt20": 752,
+    "MC_OfficialPromptPthat2Pt4": 934,
+    "MC_OfficialPromptPthat5Pt10": 851
+  },
+  "matching_commit": "75af18a65a5a1c24aaaf722ab9d7fb1d5f6c8592",
+  "scope": "/home/jun502s/DstarAna/DStarAnalysis/Fit/PbPb/Test/D0mesonspintest/output/campaign_26Oct31_d0_unit_weight_pt5_7_10_20_30/runtime/central_production/family_matched_mc/run_02/production_config.json",
+  "raw_to_miniaod_mapping": "/home/jun502s/DstarAna/DStarAnalysis/Fit/PbPb/Test/SpinAlignment/20261002/MC/flat/_production/KISTI_Official6_20261004/stitching/configuration/jobs.json",
+  "settings": {
+    "PID": 421,
+    "twoLayerDecay": false,
+    "signalOnlyGenMatching": false,
+    "deltaR": 0.03,
+    "maxGenDeltaPtRel": 0.5,
+    "decayInGen": true
+  },
+  "updates": [
+    "RECO matching flags and linked truth fields",
+    "GEN denominator and RECO-to-GEN indices"
+  ],
+  "preserve_raw": true
+}

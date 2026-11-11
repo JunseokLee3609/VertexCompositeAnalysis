@@ -1,0 +1,25 @@
+{
+  "matching_reference_commit": "75af18a65a5a1c24aaaf722ab9d7fb1d5f6c8592",
+  "production_tag": "production/d0-official-friend-20261111",
+  "cmssw_release": "CMSSW_13_2_11",
+  "scram_arch": "el8_amd64_gcc11",
+  "input_files": 5094,
+  "run_mode": "FWLite original-MiniAOD matching with entry-aligned D0 RECO and GEN friend",
+  "scheduler": "CERN HTCondor DAGMan",
+  "maximum_active_jobs": 100,
+  "command": [
+    "python3",
+    "code/submit.py",
+    "--indices",
+    "all",
+    "--stream-miniaod",
+    "--label",
+    "full_5094",
+    "--maxjobs",
+    "100"
+  ],
+  "execution_study": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_genmatching_friend_20261111",
+  "input_manifest": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_genmatching_friend_20261111/configuration/jobs.json",
+  "eos_production_snapshot": "/eos/user/j/junseok/analysis/matching_studies/d0_official_an_75af18a_20261111/production_snapshot",
+  "raw_inputs_modified": false
+}
