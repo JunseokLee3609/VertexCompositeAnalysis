@@ -1,0 +1,14 @@
+[
+  {
+    "group": "OfficialNonpromptPthat10Pt20",
+    "raw_path": "/home/jun502s/DstarAna/DStarAnalysis/Fit/PbPb/Test/SpinAlignment/20261002/MC/Jagged/KISTI/OfficialNonpromptPthat10Pt20/0000/d0ana_tree_step1_mc_575.root",
+    "raw_url": "root://cms-t2-se01.sdfarm.kr:1094//store/user/bputra/DStarMC/PbPb2023_DStarMC_KISTI_03Oct26_MVAminus1/OfficialNonpromptPthat10Pt20/nonpromptDStarToD0PiToKPiPi_pThat-10_pT-20_TuneCP5_5p36TeV_pythia8-evtgen/crab_PbPb2023_DStarMC_20261001_MVAminus1_bputra_OfficialNonpromptPthat10Pt20/261003_061153/0000/d0ana_tree_step1_mc_575.root",
+    "raw_bytes": 94043741,
+    "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/nonpromptDStarToD0PiToKPiPi_pThat-10_pT-20_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/2550000/c141d577-959f-4f33-b3fb-b1a5fef6da24.root",
+    "original_job": 575,
+    "failed_task": "261112_091231:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat10Pt20_v3",
+    "failed_jobid": "573",
+    "failed_phase": "v3",
+    "failure_text": "== CMSSW: Original-track identity not unique at source entry 7021, signature 12, matches 2 STORED charge=1 hits=21 err=0.031633853912353516 dz=0.80581778287887573 xy=-1.4120711088180542 RAW[2731] hits=21 err=0.031633853912353516 dz=0.80581778287887573 xy=-1.4120711088180542 pt=2.0546875 eta=1.8823816776275635 phi=2.8000900745391846 RAW[2732] hits=21 err=0.031633853912353516 dz=0.80581778287887573 xy=-1.4120711088180542 pt=2.0546875 eta=1.8823816776275635 phi=2.8000900745391846"
+  }
+]

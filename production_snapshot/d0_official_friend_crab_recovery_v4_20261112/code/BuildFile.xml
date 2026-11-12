@@ -1,0 +1,16 @@
+<library file="D0CrabFriend.cc" name="D0RematchCrabFriendPlugins">
+ <use name="FWCore/Framework"/>
+ <use name="FWCore/ParameterSet"/>
+ <use name="FWCore/ServiceRegistry"/>
+ <use name="FWCore/Utilities"/>
+ <use name="CommonTools/UtilAlgos"/>
+ <use name="DataFormats/PatCandidates"/>
+ <use name="DataFormats/HepMCCandidate"/>
+ <use name="DataFormats/TrackReco"/>
+ <use name="DataFormats/VertexReco"/>
+ <use name="DataFormats/BeamSpot"/>
+ <use name="root"/>
+ <use name="rootgraphics"/>
+ <use name="boost"/>
+ <flags EDM_PLUGIN="1"/>
+</library>

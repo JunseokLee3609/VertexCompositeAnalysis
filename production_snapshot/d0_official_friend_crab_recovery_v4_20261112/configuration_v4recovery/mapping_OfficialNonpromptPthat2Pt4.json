@@ -1,0 +1,38 @@
+[
+  {
+    "group": "OfficialNonpromptPthat2Pt4",
+    "raw_path": "/home/jun502s/DstarAna/DStarAnalysis/Fit/PbPb/Test/SpinAlignment/20261002/MC/Jagged/KISTI/OfficialNonpromptPthat2Pt4/0000/d0ana_tree_step1_mc_478.root",
+    "raw_url": "root://cms-t2-se01.sdfarm.kr:1094//store/user/bputra/DStarMC/PbPb2023_DStarMC_KISTI_03Oct26_MVAminus1/OfficialNonpromptPthat2Pt4/nonpromptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/crab_PbPb2023_DStarMC_20261001_MVAminus1_bputra_OfficialNonpromptPthat2Pt4/261003_061144/0000/d0ana_tree_step1_mc_478.root",
+    "raw_bytes": 81656373,
+    "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/nonpromptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/2820000/1454da55-9b93-43f1-be9a-ad552280fbaa.root",
+    "original_job": 477,
+    "failed_task": "261112_091236:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat2Pt4_v3",
+    "failed_jobid": "476",
+    "failed_phase": "v3",
+    "failure_text": "== CMSSW: Original-track identity not unique at source entry 4252, signature 24, matches 2 STORED charge=1 hits=21 err=0.023299206048250198 dz=-0.18229323625564575 xy=-3.3173847198486328 RAW[2797] hits=21 err=0.023299206048250198 dz=-0.18229325115680695 xy=-3.3173847198486328 pt=1.5400390625 eta=-1.8951994180679328 phi=-0.17628125846385956 RAW[2798] hits=21 err=0.023299206048250198 dz=-0.18229325115680695 xy=-3.3173847198486328 pt=1.5400390625 eta=-1.8951994180679328 phi=-0.17628125846385956"
+  },
+  {
+    "group": "OfficialNonpromptPthat2Pt4",
+    "raw_path": "/home/jun502s/DstarAna/DStarAnalysis/Fit/PbPb/Test/SpinAlignment/20261002/MC/Jagged/KISTI/OfficialNonpromptPthat2Pt4/0000/d0ana_tree_step1_mc_592.root",
+    "raw_url": "root://cms-t2-se01.sdfarm.kr:1094//store/user/bputra/DStarMC/PbPb2023_DStarMC_KISTI_03Oct26_MVAminus1/OfficialNonpromptPthat2Pt4/nonpromptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/crab_PbPb2023_DStarMC_20261001_MVAminus1_bputra_OfficialNonpromptPthat2Pt4/261003_061144/0000/d0ana_tree_step1_mc_592.root",
+    "raw_bytes": 82231021,
+    "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/nonpromptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/2820000/d7bc27d2-d1a1-4616-9b3c-32a448fbe72a.root",
+    "original_job": 591,
+    "failed_task": "261112_091236:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat2Pt4_v3",
+    "failed_jobid": "590",
+    "failed_phase": "v3",
+    "failure_text": "== CMSSW: Original-track identity not unique at source entry 2776, signature 72, matches 2 STORED charge=-1 hits=15 err=0.040813438594341278 dz=-0.27481520175933838 xy=0.46002253890037537 RAW[4045] hits=15 err=0.040813438594341278 dz=-0.27481523156166077 xy=0.46002256870269775 pt=1.8232421874999998 eta=-1.8539994955062868 phi=2.6956930160522461 RAW[4046] hits=15 err=0.040813438594341278 dz=-0.27481523156166077 xy=0.46002256870269775 pt=1.8232421874999998 eta=-1.8539994955062868 phi=2.6956930160522461"
+  },
+  {
+    "group": "OfficialNonpromptPthat2Pt4",
+    "raw_path": "/home/jun502s/DstarAna/DStarAnalysis/Fit/PbPb/Test/SpinAlignment/20261002/MC/Jagged/KISTI/OfficialNonpromptPthat2Pt4/0000/d0ana_tree_step1_mc_72.root",
+    "raw_url": "root://cms-t2-se01.sdfarm.kr:1094//store/user/bputra/DStarMC/PbPb2023_DStarMC_KISTI_03Oct26_MVAminus1/OfficialNonpromptPthat2Pt4/nonpromptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/crab_PbPb2023_DStarMC_20261001_MVAminus1_bputra_OfficialNonpromptPthat2Pt4/261003_061144/0000/d0ana_tree_step1_mc_72.root",
+    "raw_bytes": 81952549,
+    "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/nonpromptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/120000/7903d957-1fb8-4aca-9425-90e8bf603f0f.root",
+    "original_job": 71,
+    "failed_task": "261112_091048:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat2Pt4_v3pilot",
+    "failed_jobid": "1",
+    "failed_phase": "v3pilot",
+    "failure_text": "== CMSSW: Original-track identity not unique at source entry 7144, signature 70, matches 2 STORED charge=-1 hits=24 err=0.042893245816230774 dz=8.0537548065185547 xy=-0.51406526565551758 RAW[4170] hits=24 err=0.042893245816230774 dz=8.0537548065185547 xy=-0.51406526565551758 pt=2.4453125 eta=-1.8895230293273939 phi=-2.4371798038482666 RAW[4171] hits=24 err=0.042893245816230774 dz=8.0537548065185547 xy=-0.51406526565551758 pt=2.4453125 eta=-1.8895230293273939 phi=-2.4371798038482666"
+  }
+]

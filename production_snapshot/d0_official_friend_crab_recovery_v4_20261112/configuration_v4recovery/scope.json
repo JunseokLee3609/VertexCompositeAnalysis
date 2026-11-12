@@ -1,0 +1,48 @@
+{
+  "total": 74,
+  "groups": {
+    "OfficialNonpromptPthat10Pt20": 1,
+    "OfficialNonpromptPthat2Pt4": 3,
+    "OfficialNonpromptPthat5Pt10": 4,
+    "OfficialPromptPthat10Pt20": 12,
+    "OfficialPromptPthat2Pt4": 53,
+    "OfficialPromptPthat5Pt10": 1
+  },
+  "requests": {
+    "OfficialNonpromptPthat10Pt20": "D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat10Pt20_v4recovery",
+    "OfficialNonpromptPthat2Pt4": "D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat2Pt4_v4recovery",
+    "OfficialNonpromptPthat5Pt10": "D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat5Pt10_v4recovery",
+    "OfficialPromptPthat10Pt20": "D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat10Pt20_v4recovery",
+    "OfficialPromptPthat2Pt4": "D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat2Pt4_v4recovery",
+    "OfficialPromptPthat5Pt10": "D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat5Pt10_v4recovery"
+  },
+  "output_base": "/store/user/junseok/D0Rematching/Official6_PythiaGEN_CRAB_20261112_v4recovery",
+  "datasets": {
+    "OfficialNonpromptPthat10Pt20": "/nonpromptDStarToD0PiToKPiPi_pThat-10_pT-20_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+    "OfficialNonpromptPthat2Pt4": "/nonpromptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+    "OfficialNonpromptPthat5Pt10": "/nonpromptDStarToD0PiToKPiPi_pThat-5_pT-10_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+    "OfficialPromptPthat10Pt20": "/promptDStarToD0PiToKPiPi_pThat-10_pT-20_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+    "OfficialPromptPthat2Pt4": "/promptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+    "OfficialPromptPthat5Pt10": "/promptDStarToD0PiToKPiPi_pThat-5_pT-10_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM"
+  },
+  "matching_reference_commit": "75af18a65a5a1c24aaaf722ab9d7fb1d5f6c8592",
+  "native_gen_commits": {
+    "an": "e23d40aea8141705123999bd1f6f238a0fb3e5b1",
+    "refit-diag": "4600f55f9c4960ce1562c209461df26c46d17606"
+  },
+  "signalOnlyGenMatching": true,
+  "identity_policy": "Exact charge, float32 pT error and hit count. Collapse identical charge/pt/eta/phi matching inputs. Use both DCA significances within two float32 ULP only when distinct momentum choices remain. Require one distinct momentum.",
+  "failed_inputs_only": true,
+  "source_v3_tasks_preserved": true,
+  "failure_classification": {
+    "failure_files": 74,
+    "categories": {
+      "duplicate_identical_momenta": 10,
+      "unique_track_excluded_by_extra_DCA_guard": 64
+    },
+    "unresolved": [],
+    "gen_matching_momentum_inputs_unchanged_for_equivalent_tracks": true
+  },
+  "created_utc": "2026-11-12T09:46:04.369941+00:00",
+  "production_tag": "production/d0-official-friend-crab-recovery-v4-20261112"
+}

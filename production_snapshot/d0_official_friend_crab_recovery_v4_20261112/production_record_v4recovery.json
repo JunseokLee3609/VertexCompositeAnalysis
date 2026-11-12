@@ -1,0 +1,240 @@
+{
+  "time_utc": "2026-11-12T09:48:23.417402+00:00",
+  "production_tag": "production/d0-official-friend-crab-recovery-v4-20261112",
+  "scope": {
+    "total": 74,
+    "groups": {
+      "OfficialNonpromptPthat10Pt20": 1,
+      "OfficialNonpromptPthat2Pt4": 3,
+      "OfficialNonpromptPthat5Pt10": 4,
+      "OfficialPromptPthat10Pt20": 12,
+      "OfficialPromptPthat2Pt4": 53,
+      "OfficialPromptPthat5Pt10": 1
+    },
+    "requests": {
+      "OfficialNonpromptPthat10Pt20": "D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat10Pt20_v4recovery",
+      "OfficialNonpromptPthat2Pt4": "D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat2Pt4_v4recovery",
+      "OfficialNonpromptPthat5Pt10": "D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat5Pt10_v4recovery",
+      "OfficialPromptPthat10Pt20": "D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat10Pt20_v4recovery",
+      "OfficialPromptPthat2Pt4": "D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat2Pt4_v4recovery",
+      "OfficialPromptPthat5Pt10": "D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat5Pt10_v4recovery"
+    },
+    "output_base": "/store/user/junseok/D0Rematching/Official6_PythiaGEN_CRAB_20261112_v4recovery",
+    "datasets": {
+      "OfficialNonpromptPthat10Pt20": "/nonpromptDStarToD0PiToKPiPi_pThat-10_pT-20_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+      "OfficialNonpromptPthat2Pt4": "/nonpromptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+      "OfficialNonpromptPthat5Pt10": "/nonpromptDStarToD0PiToKPiPi_pThat-5_pT-10_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+      "OfficialPromptPthat10Pt20": "/promptDStarToD0PiToKPiPi_pThat-10_pT-20_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+      "OfficialPromptPthat2Pt4": "/promptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+      "OfficialPromptPthat5Pt10": "/promptDStarToD0PiToKPiPi_pThat-5_pT-10_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM"
+    },
+    "matching_reference_commit": "75af18a65a5a1c24aaaf722ab9d7fb1d5f6c8592",
+    "native_gen_commits": {
+      "an": "e23d40aea8141705123999bd1f6f238a0fb3e5b1",
+      "refit-diag": "4600f55f9c4960ce1562c209461df26c46d17606"
+    },
+    "signalOnlyGenMatching": true,
+    "identity_policy": "Exact charge, float32 pT error and hit count. Collapse identical charge/pt/eta/phi matching inputs. Use both DCA significances within two float32 ULP only when distinct momentum choices remain. Require one distinct momentum.",
+    "failed_inputs_only": true,
+    "source_v3_tasks_preserved": true,
+    "failure_classification": {
+      "failure_files": 74,
+      "categories": {
+        "duplicate_identical_momenta": 10,
+        "unique_track_excluded_by_extra_DCA_guard": 64
+      },
+      "unresolved": [],
+      "gen_matching_momentum_inputs_unchanged_for_equivalent_tracks": true
+    },
+    "created_utc": "2026-11-12T09:46:04.369941+00:00",
+    "production_tag": "production/d0-official-friend-crab-recovery-v4-20261112"
+  },
+  "tasks": [
+    {
+      "group": "OfficialNonpromptPthat10Pt20",
+      "input_files": 1,
+      "command": [
+        "crab",
+        "submit",
+        "-c",
+        "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/configuration_v4recovery/crab_OfficialNonpromptPthat10Pt20.py"
+      ],
+      "returncode": 0,
+      "task": "261112_094612:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat10Pt20_v4recovery",
+      "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/crab_projects_v4recovery/crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat10Pt20_v4recovery",
+      "signalOnlyGenMatching": true,
+      "time_utc": "2026-11-12T09:46:12.401070+00:00",
+      "log": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/submission_v4recovery/OfficialNonpromptPthat10Pt20.log"
+    },
+    {
+      "group": "OfficialNonpromptPthat2Pt4",
+      "input_files": 3,
+      "command": [
+        "crab",
+        "submit",
+        "-c",
+        "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/configuration_v4recovery/crab_OfficialNonpromptPthat2Pt4.py"
+      ],
+      "returncode": 0,
+      "task": "261112_094617:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat2Pt4_v4recovery",
+      "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/crab_projects_v4recovery/crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat2Pt4_v4recovery",
+      "signalOnlyGenMatching": true,
+      "time_utc": "2026-11-12T09:46:17.633876+00:00",
+      "log": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/submission_v4recovery/OfficialNonpromptPthat2Pt4.log"
+    },
+    {
+      "group": "OfficialNonpromptPthat5Pt10",
+      "input_files": 4,
+      "command": [
+        "crab",
+        "submit",
+        "-c",
+        "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/configuration_v4recovery/crab_OfficialNonpromptPthat5Pt10.py"
+      ],
+      "returncode": 0,
+      "task": "261112_094623:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat5Pt10_v4recovery",
+      "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/crab_projects_v4recovery/crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat5Pt10_v4recovery",
+      "signalOnlyGenMatching": true,
+      "time_utc": "2026-11-12T09:46:23.175081+00:00",
+      "log": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/submission_v4recovery/OfficialNonpromptPthat5Pt10.log"
+    },
+    {
+      "group": "OfficialPromptPthat10Pt20",
+      "input_files": 12,
+      "command": [
+        "crab",
+        "submit",
+        "-c",
+        "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/configuration_v4recovery/crab_OfficialPromptPthat10Pt20.py"
+      ],
+      "returncode": 0,
+      "task": "261112_094628:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat10Pt20_v4recovery",
+      "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/crab_projects_v4recovery/crab_D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat10Pt20_v4recovery",
+      "signalOnlyGenMatching": true,
+      "time_utc": "2026-11-12T09:46:28.755698+00:00",
+      "log": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/submission_v4recovery/OfficialPromptPthat10Pt20.log"
+    },
+    {
+      "group": "OfficialPromptPthat2Pt4",
+      "input_files": 53,
+      "command": [
+        "crab",
+        "submit",
+        "-c",
+        "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/configuration_v4recovery/crab_OfficialPromptPthat2Pt4.py"
+      ],
+      "returncode": 0,
+      "task": "261112_094634:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat2Pt4_v4recovery",
+      "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/crab_projects_v4recovery/crab_D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat2Pt4_v4recovery",
+      "signalOnlyGenMatching": true,
+      "time_utc": "2026-11-12T09:46:34.472238+00:00",
+      "log": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/submission_v4recovery/OfficialPromptPthat2Pt4.log"
+    },
+    {
+      "group": "OfficialPromptPthat5Pt10",
+      "input_files": 1,
+      "command": [
+        "crab",
+        "submit",
+        "-c",
+        "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/configuration_v4recovery/crab_OfficialPromptPthat5Pt10.py"
+      ],
+      "returncode": 0,
+      "task": "261112_094639:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat5Pt10_v4recovery",
+      "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/crab_projects_v4recovery/crab_D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat5Pt10_v4recovery",
+      "signalOnlyGenMatching": true,
+      "time_utc": "2026-11-12T09:46:39.788060+00:00",
+      "log": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/submission_v4recovery/OfficialPromptPthat5Pt10.log"
+    }
+  ],
+  "current_states": [
+    {
+      "group": "OfficialNonpromptPthat10Pt20",
+      "tm_taskname": "261112_094612:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat10Pt20_v4recovery",
+      "tm_task_status": "SUBMITTED",
+      "tm_dagman_status": "NOT_READY",
+      "tm_task_failure": "None",
+      "tm_schedd": "crab3@vocms0119.cern.ch"
+    },
+    {
+      "group": "OfficialNonpromptPthat2Pt4",
+      "tm_taskname": "261112_094617:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat2Pt4_v4recovery",
+      "tm_task_status": "SUBMITTED",
+      "tm_dagman_status": "NOT_READY",
+      "tm_task_failure": "None",
+      "tm_schedd": "crab3@vocms0155.cern.ch"
+    },
+    {
+      "group": "OfficialNonpromptPthat5Pt10",
+      "tm_taskname": "261112_094623:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat5Pt10_v4recovery",
+      "tm_task_status": "SUBMITTED",
+      "tm_dagman_status": "NOT_READY",
+      "tm_task_failure": "None",
+      "tm_schedd": "crab3@vocms0107.cern.ch"
+    },
+    {
+      "group": "OfficialPromptPthat10Pt20",
+      "tm_taskname": "261112_094628:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat10Pt20_v4recovery",
+      "tm_task_status": "SUBMITTED",
+      "tm_dagman_status": "NOT_READY",
+      "tm_task_failure": "None",
+      "tm_schedd": "crab3@vocms0199.cern.ch"
+    },
+    {
+      "group": "OfficialPromptPthat2Pt4",
+      "tm_taskname": "261112_094634:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat2Pt4_v4recovery",
+      "tm_task_status": "SUBMITTED",
+      "tm_dagman_status": "NOT_READY",
+      "tm_task_failure": "None",
+      "tm_schedd": "crab3@vocms0137.cern.ch"
+    },
+    {
+      "group": "OfficialPromptPthat5Pt10",
+      "tm_taskname": "261112_094639:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat5Pt10_v4recovery",
+      "tm_task_status": "SUBMITTED",
+      "tm_dagman_status": "NOT_READY",
+      "tm_task_failure": "None",
+      "tm_schedd": "crab3@vocms0121.cern.ch"
+    }
+  ],
+  "original_v3_status": {
+    "original_status_totals": {
+      "failed": 74,
+      "running": 379,
+      "transferring": 4661
+    },
+    "time_utc": "2026-11-12T09:44:22.341356+00:00",
+    "failed_files": 74,
+    "max_absolute_significance_differences": {
+      "abs_dz": 2.384185791015625e-07,
+      "abs_xy": 5.7220458984375e-06
+    },
+    "examples": {
+      "abs_dz": {
+        "group": "OfficialNonpromptPthat5Pt10",
+        "job": "622"
+      },
+      "abs_xy": {
+        "group": "OfficialPromptPthat2Pt4",
+        "job": "104"
+      }
+    }
+  },
+  "failure_classification": {
+    "failure_files": 74,
+    "categories": {
+      "duplicate_identical_momenta": 10,
+      "unique_track_excluded_by_extra_DCA_guard": 64
+    },
+    "unresolved": [],
+    "gen_matching_momentum_inputs_unchanged_for_equivalent_tracks": true
+  },
+  "cmssw_release": "CMSSW_13_2_11",
+  "scram_arch": "el8_amd64_gcc11",
+  "output_eos": "/eos/user/j/junseok/D0Rematching/Official6_PythiaGEN_CRAB_20261112_v4recovery",
+  "source_files_modified": false,
+  "source_v3_tasks_killed": false,
+  "reco_gen_matching_conditions_changed": false,
+  "signalOnlyGenMatching": true,
+  "completed_file_validation_before_submission": false
+}

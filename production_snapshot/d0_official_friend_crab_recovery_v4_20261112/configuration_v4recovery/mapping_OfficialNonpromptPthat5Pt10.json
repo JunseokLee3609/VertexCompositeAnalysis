@@ -1,0 +1,50 @@
+[
+  {
+    "group": "OfficialNonpromptPthat5Pt10",
+    "raw_path": "/home/jun502s/DstarAna/DStarAnalysis/Fit/PbPb/Test/SpinAlignment/20261002/MC/Jagged/KISTI/OfficialNonpromptPthat5Pt10/0000/d0ana_tree_step1_mc_252.root",
+    "raw_url": "root://cms-t2-se01.sdfarm.kr:1094//store/user/bputra/DStarMC/PbPb2023_DStarMC_KISTI_03Oct26_MVAminus1/OfficialNonpromptPthat5Pt10/nonpromptDStarToD0PiToKPiPi_pThat-5_pT-10_TuneCP5_5p36TeV_pythia8-evtgen/crab_PbPb2023_DStarMC_20261001_MVAminus1_bputra_OfficialNonpromptPthat5Pt10/261003_061149/0000/d0ana_tree_step1_mc_252.root",
+    "raw_bytes": 91333023,
+    "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/nonpromptDStarToD0PiToKPiPi_pThat-5_pT-10_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/2520000/60113fb3-a174-4610-9696-81151476bb54.root",
+    "original_job": 251,
+    "failed_task": "261112_091242:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat5Pt10_v3",
+    "failed_jobid": "250",
+    "failed_phase": "v3",
+    "failure_text": "== CMSSW: Original-track identity not unique at source entry 5857, signature 44, matches 2 STORED charge=-1 hits=22 err=0.025800023227930069 dz=6.7024564743041992 xy=-2.7313261032104492 RAW[3087] hits=22 err=0.025800023227930069 dz=6.7024564743041992 xy=-2.7313261032104492 pt=1.5576171875000002 eta=-2.0070803165435787 phi=2.2236945629119873 RAW[3088] hits=22 err=0.025800023227930069 dz=6.7024564743041992 xy=-2.7313261032104492 pt=1.5576171875000002 eta=-2.0070803165435787 phi=2.2236945629119873"
+  },
+  {
+    "group": "OfficialNonpromptPthat5Pt10",
+    "raw_path": "/home/jun502s/DstarAna/DStarAnalysis/Fit/PbPb/Test/SpinAlignment/20261002/MC/Jagged/KISTI/OfficialNonpromptPthat5Pt10/0000/d0ana_tree_step1_mc_624.root",
+    "raw_url": "root://cms-t2-se01.sdfarm.kr:1094//store/user/bputra/DStarMC/PbPb2023_DStarMC_KISTI_03Oct26_MVAminus1/OfficialNonpromptPthat5Pt10/nonpromptDStarToD0PiToKPiPi_pThat-5_pT-10_TuneCP5_5p36TeV_pythia8-evtgen/crab_PbPb2023_DStarMC_20261001_MVAminus1_bputra_OfficialNonpromptPthat5Pt10/261003_061149/0000/d0ana_tree_step1_mc_624.root",
+    "raw_bytes": 95291006,
+    "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/nonpromptDStarToD0PiToKPiPi_pThat-5_pT-10_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/2820000/fb1740eb-1f28-4ef2-ad6c-7ba1ad671403.root",
+    "original_job": 623,
+    "failed_task": "261112_091242:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat5Pt10_v3",
+    "failed_jobid": "622",
+    "failed_phase": "v3",
+    "failure_text": "== CMSSW: Original-track identity not unique at source entry 1776, signature 86, matches 2 STORED charge=1 hits=22 err=0.035342182964086533 dz=3.8699526786804199 xy=-1.7165356874465942 RAW[5055] hits=22 err=0.035342182964086533 dz=3.8699524402618408 xy=-1.7165358066558838 pt=1.9667968750000002 eta=-1.8950163125991835 phi=-2.327810525894165 RAW[5056] hits=22 err=0.035342182964086533 dz=3.8699524402618408 xy=-1.7165358066558838 pt=1.9667968750000002 eta=-1.8950163125991835 phi=-2.327810525894165"
+  },
+  {
+    "group": "OfficialNonpromptPthat5Pt10",
+    "raw_path": "/home/jun502s/DstarAna/DStarAnalysis/Fit/PbPb/Test/SpinAlignment/20261002/MC/Jagged/KISTI/OfficialNonpromptPthat5Pt10/0000/d0ana_tree_step1_mc_782.root",
+    "raw_url": "root://cms-t2-se01.sdfarm.kr:1094//store/user/bputra/DStarMC/PbPb2023_DStarMC_KISTI_03Oct26_MVAminus1/OfficialNonpromptPthat5Pt10/nonpromptDStarToD0PiToKPiPi_pThat-5_pT-10_TuneCP5_5p36TeV_pythia8-evtgen/crab_PbPb2023_DStarMC_20261001_MVAminus1_bputra_OfficialNonpromptPthat5Pt10/261003_061149/0000/d0ana_tree_step1_mc_782.root",
+    "raw_bytes": 75976234,
+    "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/nonpromptDStarToD0PiToKPiPi_pThat-5_pT-10_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/90000/8f6cd331-ec2a-4082-a20b-3c654a5bd378.root",
+    "original_job": 781,
+    "failed_task": "261112_091242:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat5Pt10_v3",
+    "failed_jobid": "780",
+    "failed_phase": "v3",
+    "failure_text": "== CMSSW: Original-track identity not unique at source entry 2608, signature 38, matches 2 STORED charge=-1 hits=21 err=0.032898951321840286 dz=1.9315204620361328 xy=-1.4074658155441284 RAW[2916] hits=21 err=0.032898951321840286 dz=1.9315203428268433 xy=-1.4074656963348389 pt=2.06640625 eta=-1.7064119577407837 phi=2.1461641788482666 RAW[2917] hits=21 err=0.032898951321840286 dz=1.9315203428268433 xy=-1.4074656963348389 pt=2.06640625 eta=-1.7064119577407837 phi=2.1461641788482666"
+  },
+  {
+    "group": "OfficialNonpromptPthat5Pt10",
+    "raw_path": "/home/jun502s/DstarAna/DStarAnalysis/Fit/PbPb/Test/SpinAlignment/20261002/MC/Jagged/KISTI/OfficialNonpromptPthat5Pt10/0000/d0ana_tree_step1_mc_808.root",
+    "raw_url": "root://cms-t2-se01.sdfarm.kr:1094//store/user/bputra/DStarMC/PbPb2023_DStarMC_KISTI_03Oct26_MVAminus1/OfficialNonpromptPthat5Pt10/nonpromptDStarToD0PiToKPiPi_pThat-5_pT-10_TuneCP5_5p36TeV_pythia8-evtgen/crab_PbPb2023_DStarMC_20261001_MVAminus1_bputra_OfficialNonpromptPthat5Pt10/261003_061149/0000/d0ana_tree_step1_mc_808.root",
+    "raw_bytes": 96028300,
+    "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/nonpromptDStarToD0PiToKPiPi_pThat-5_pT-10_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/90000/a636c921-8e85-4dc0-9f95-f20714456b4e.root",
+    "original_job": 807,
+    "failed_task": "261112_091242:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat5Pt10_v3",
+    "failed_jobid": "806",
+    "failed_phase": "v3",
+    "failure_text": "== CMSSW: Original-track identity not unique at source entry 54, signature 65, matches 2 STORED charge=-1 hits=23 err=0.035076729953289032 dz=0.46794959902763367 xy=2.8562934398651123 RAW[4064] hits=23 err=0.035076729953289032 dz=0.46794962882995605 xy=2.8562934398651123 pt=2.3398437500000004 eta=-1.8512527942657475 phi=1.943414568901062 RAW[4065] hits=23 err=0.035076729953289032 dz=0.46794962882995605 xy=2.8562934398651123 pt=2.3398437500000004 eta=-1.8512527942657475 phi=1.943414568901062"
+  }
+]
