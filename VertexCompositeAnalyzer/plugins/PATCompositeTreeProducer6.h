@@ -440,6 +440,7 @@ private:
   int status_gen[kMaxGenCand];
   int pdgId_gen[kMaxGenCand];
   int charge_gen[kMaxGenCand];
+  int collisionId_gen[kMaxGenCand];
   int idmom[kMaxGenCand];
   float y_gen[kMaxGenCand];
   int iddau1[kMaxGenCand];
