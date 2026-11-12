@@ -39,7 +39,7 @@ PATCompositeTreeProducer6::PATCompositeTreeProducer6(const edm::ParameterSet& iC
       doGenMatching_(iConfig.getUntrackedParameter<bool>("doGenMatching", true)),
       doGenNtuple_(iConfig.getUntrackedParameter<bool>("doGenNtuple", true)),
       doGenMatchingTOF_(iConfig.getUntrackedParameter<bool>("doGenMatchingTOF", false)),
-      signalOnlyGenMatching_(iConfig.getUntrackedParameter<bool>("signalOnlyGenMatching", false)),
+      signalOnlyGenMatching_(iConfig.getUntrackedParameter<bool>("signalOnlyGenMatching", true)),
       hasSwap_(iConfig.getUntrackedParameter<bool>("hasSwap", true)),
       decayInGen_(iConfig.getUntrackedParameter<bool>("decayInGen", true)),
       twoLayerDecay_(iConfig.getUntrackedParameter<bool>("twoLayerDecay", true)),
@@ -1053,6 +1053,7 @@ void PATCompositeTreeProducer6::initTree() {
     PATCompositeNtuple_->Branch("gen_status", &status_gen, "status_gen[candSize_gen]/I");
     PATCompositeNtuple_->Branch("gen_pdgId", &pdgId_gen, "pdgId_gen[candSize_gen]/I");
     PATCompositeNtuple_->Branch("gen_charge", &charge_gen, "charge_gen[candSize_gen]/I");
+    PATCompositeNtuple_->Branch("gen_collisionId", &collisionId_gen, "gen_collisionId[candSize_gen]/I");
     PATCompositeNtuple_->Branch("gen_MotherID", &idmom, "MotherID_gen[candSize_gen]/I");
 
     if (decayInGen_) {
@@ -2155,6 +2156,7 @@ void PATCompositeTreeProducer6::fillGEN(const edm::Event& iEvent, const edm::Eve
     status_gen[idx] = -99;
     pdgId_gen[idx] = -99;
     charge_gen[idx] = -99;
+    collisionId_gen[idx] = -1;
     idmom[idx] = -99;
     y_gen[idx] = kInvalidValue;
     iddau1[idx] = -99;
@@ -2213,6 +2215,7 @@ void PATCompositeTreeProducer6::fillGEN(const edm::Event& iEvent, const edm::Eve
     status_gen[igen] = theGen->status();
     pdgId_gen[igen] = theGen->pdgId();
     charge_gen[igen] = theGen->charge();
+    collisionId_gen[igen] = genRef->collisionId();
     if (theGen->numberOfMothers() > 0 && theGen->mother()) idmom[igen] = theGen->mother()->pdgId();
     if (decayInGen_) {
       if (theGen->numberOfDaughters() > 0 && theGen->daughter(0)) iddau1[igen] = theGen->daughter(0)->pdgId();

@@ -43,6 +43,7 @@ d0ana = cms.EDAnalyzer('PATCompositeTreeProducer6',
                               )
 
 d0ana_mc = cms.EDAnalyzer('PATCompositeTreeProducer6',
+  signalOnlyGenMatching = cms.untracked.bool(True),
   doRecoNtuple = cms.untracked.bool(True),
   doGenNtuple = cms.untracked.bool(True),
   doGenMatching = cms.untracked.bool(True),
