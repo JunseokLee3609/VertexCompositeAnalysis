@@ -1,0 +1,41 @@
+{
+  "total": 5114,
+  "preserved_completed": 0,
+  "remaining": 5114,
+  "groups": {
+    "OfficialNonpromptPthat10Pt20": 906,
+    "OfficialNonpromptPthat2Pt4": 775,
+    "OfficialNonpromptPthat5Pt10": 896,
+    "OfficialPromptPthat10Pt20": 752,
+    "OfficialPromptPthat2Pt4": 934,
+    "OfficialPromptPthat5Pt10": 851
+  },
+  "datasets": {
+    "OfficialNonpromptPthat10Pt20": "/nonpromptDStarToD0PiToKPiPi_pThat-10_pT-20_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+    "OfficialNonpromptPthat2Pt4": "/nonpromptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+    "OfficialNonpromptPthat5Pt10": "/nonpromptDStarToD0PiToKPiPi_pThat-5_pT-10_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+    "OfficialPromptPthat10Pt20": "/promptDStarToD0PiToKPiPi_pThat-10_pT-20_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+    "OfficialPromptPthat2Pt4": "/promptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+    "OfficialPromptPthat5Pt10": "/promptDStarToD0PiToKPiPi_pThat-5_pT-10_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM"
+  },
+  "requests": {
+    "OfficialNonpromptPthat10Pt20": "D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat10Pt20_v2",
+    "OfficialNonpromptPthat2Pt4": "D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat2Pt4_v2",
+    "OfficialNonpromptPthat5Pt10": "D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat5Pt10_v2",
+    "OfficialPromptPthat10Pt20": "D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat10Pt20_v2",
+    "OfficialPromptPthat2Pt4": "D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat2Pt4_v2",
+    "OfficialPromptPthat5Pt10": "D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat5Pt10_v2"
+  },
+  "storage_site": "T3_CH_CERNBOX",
+  "output_base": "/store/user/junseok/D0Rematching/Official6_PythiaGEN_CRAB_20261112",
+  "matching_reference_commit": "75af18a65a5a1c24aaaf722ab9d7fb1d5f6c8592",
+  "signalOnlyGenMatching": true,
+  "identity_formula": "D0Fitter_b109a27",
+  "reco_matching": "Pythia and HYDJET classified independently of GEN storage",
+  "all_old_friends_preserved_but_not_adopted": true,
+  "native_gen_commits": {
+    "an": "e23d40aea8141705123999bd1f6f238a0fb3e5b1",
+    "refit-diag": "4600f55f9c4960ce1562c209461df26c46d17606"
+  },
+  "production_tag": "production/d0-official-friend-crab-pythia-gen-20261112"
+}

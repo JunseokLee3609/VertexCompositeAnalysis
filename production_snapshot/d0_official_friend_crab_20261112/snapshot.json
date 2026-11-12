@@ -1,0 +1,43 @@
+{
+  "native_gen_commits": {
+    "an": "e23d40aea8141705123999bd1f6f238a0fb3e5b1",
+    "refit-diag": "4600f55f9c4960ce1562c209461df26c46d17606"
+  },
+  "matching_reference_commit": "75af18a65a5a1c24aaaf722ab9d7fb1d5f6c8592",
+  "production_tag": "production/d0-official-friend-crab-pythia-gen-20261112",
+  "cmssw_release": "CMSSW_13_2_11",
+  "scram_arch": "el8_amd64_gcc11",
+  "signalOnlyGenMatching": true,
+  "reco_matching_flags_preserved": true,
+  "inputs": 5114,
+  "scheduler": "CRAB",
+  "study": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112",
+  "configuration": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/configuration_v2",
+  "output_lfn": "/store/user/junseok/D0Rematching/Official6_PythiaGEN_CRAB_20261112",
+  "validation": {
+    "status": "passed",
+    "native": {
+      "d0": {
+        "events": 1500,
+        "default_pythia_gen": 1402,
+        "inclusive_gen": 1533,
+        "hydjet_gen": 131
+      },
+      "dstar": {
+        "events": 1500,
+        "default_pythia_gen": 808,
+        "inclusive_gen": 850,
+        "hydjet_gen": 42
+      }
+    },
+    "friend": {
+      "events": 1176,
+      "pythia_gen": 1118,
+      "inclusive_gen": 1247,
+      "pythia_reco_matches": 801,
+      "hydjet_reco_matches": 6,
+      "reco_flags_identical": true,
+      "previous_failure_entry": 503
+    }
+  }
+}
