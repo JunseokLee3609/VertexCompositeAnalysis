@@ -1,0 +1,62 @@
+{
+  "total": 5102,
+  "groups": {
+    "OfficialNonpromptPthat10Pt20": 904,
+    "OfficialNonpromptPthat2Pt4": 773,
+    "OfficialNonpromptPthat5Pt10": 894,
+    "OfficialPromptPthat10Pt20": 750,
+    "OfficialPromptPthat2Pt4": 932,
+    "OfficialPromptPthat5Pt10": 849
+  },
+  "requests": {
+    "OfficialNonpromptPthat10Pt20": "D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat10Pt20_v3",
+    "OfficialNonpromptPthat2Pt4": "D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat2Pt4_v3",
+    "OfficialNonpromptPthat5Pt10": "D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat5Pt10_v3",
+    "OfficialPromptPthat10Pt20": "D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat10Pt20_v3",
+    "OfficialPromptPthat2Pt4": "D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat2Pt4_v3",
+    "OfficialPromptPthat5Pt10": "D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat5Pt10_v3"
+  },
+  "output_base": "/store/user/junseok/D0Rematching/Official6_PythiaGEN_CRAB_20261112_v3/production",
+  "datasets": {
+    "OfficialNonpromptPthat10Pt20": "/nonpromptDStarToD0PiToKPiPi_pThat-10_pT-20_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+    "OfficialNonpromptPthat2Pt4": "/nonpromptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+    "OfficialNonpromptPthat5Pt10": "/nonpromptDStarToD0PiToKPiPi_pThat-5_pT-10_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+    "OfficialPromptPthat10Pt20": "/promptDStarToD0PiToKPiPi_pThat-10_pT-20_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+    "OfficialPromptPthat2Pt4": "/promptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+    "OfficialPromptPthat5Pt10": "/promptDStarToD0PiToKPiPi_pThat-5_pT-10_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM"
+  },
+  "matching_reference_commit": "75af18a65a5a1c24aaaf722ab9d7fb1d5f6c8592",
+  "native_gen_commits": {
+    "an": "e23d40aea8141705123999bd1f6f238a0fb3e5b1",
+    "refit-diag": "4600f55f9c4960ce1562c209461df26c46d17606"
+  },
+  "signalOnlyGenMatching": true,
+  "identity_policy": "exact pT error bits, charge, hit count and both DCA significances within 2 float32 ULP; require unique identity",
+  "earlier_v3_files": 12,
+  "combined_files": 5114,
+  "pilot_result_required_before_submission": false,
+  "user_instruction": "Submit remaining files immediately without waiting for Grid pilot results",
+  "local_validation": {
+    "time_utc": "2026-11-12T09:10:33.899009+00:00",
+    "status": "partial_reproduction_passed_full_file_timed_out",
+    "cases": [
+      {
+        "case": "np2_job72",
+        "last_reported_input_record": 5001,
+        "identity_error_recurred": false,
+        "full_file_finished": false,
+        "test_time_limit_seconds": 420
+      },
+      {
+        "case": "p10_job4",
+        "last_reported_input_record": 5001,
+        "identity_error_recurred": false,
+        "full_file_finished": false,
+        "test_time_limit_seconds": 420
+      }
+    ],
+    "required_next_validation": "Full-file Grid pilot on 12 inputs before bulk submission"
+  },
+  "created_utc": "2026-11-12T09:12:22.404840+00:00",
+  "production_tag": "production/d0-official-friend-crab-float32-v3-20261112"
+}

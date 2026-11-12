@@ -1,0 +1,55 @@
+--- code_v2/D0Matching.hxx
++++ code_v3/D0Matching.hxx
+@@ -14,6 +14,8 @@
+ #include <cmath>
+ #include <cstring>
+ #include <cstdint>
++#include <sstream>
++#include <iomanip>
+ #include "TFile.h"
+ #include "TTree.h"
+ #include "TTreeReader.h"
+@@ -31,6 +33,12 @@
+ using Key=std::tuple<unsigned,unsigned,unsigned>;
+ inline uint32_t bits(float v){uint32_t b;std::memcpy(&b,&v,4);return b;}
+ inline uint64_t trackKey(int ch,double err){return (uint64_t(bits(float(err)))<<32)|uint32_t(ch+8);}
++inline uint64_t floatUlpDistance(float a,float b){
++ if(a==b)return 0;
++ if(!std::isfinite(a)||!std::isfinite(b))return UINT64_MAX;
++ auto ordered=[](float v){auto u=bits(v);return (u&0x80000000U)?~u:(u|0x80000000U);};
++ uint64_t aa=ordered(a),bb=ordered(b);return aa>bb?aa-bb:bb-aa;
++}
+ inline const reco::Candidate* mother(const reco::Candidate*p){return p&&p->numberOfMothers()?p->mother(0):nullptr;}
+ inline bool hadron(int id){id=std::abs(id);return id==211||id==321||id==2212;}
+ struct Summary {int nonGamma=0,gamma=0;bool kaon=false,pion=false;};
+@@ -112,7 +120,7 @@
+   bools(gb,"gen_validD0chain",true);
+   for(std::string p:{"gen_D0","gen_D0Dau1_","gen_D0Dau2_"}){for(std::string k:{"pT","eta","phi","mass","y"})floats(gf,p+k,true);for(std::string k:{"charge","pdgId"})ints(gi,p+k,true);}
+   file->cd();TObjString(provenance.c_str()).Write("provenance");
+-  for(const char*k:{"events","candidates","old_matchGEN","new_matchGEN","new_matchHYDJET","old_signal_nonswap","new_signal_nonswap","gained_signal_nonswap","lost_signal_nonswap","new_swaps","gen_candidates","old_gen_candidates","identity_tracks","identity_xy_disambiguations","audited_track_matches"})stats[k]=0;
++  for(const char*k:{"events","candidates","old_matchGEN","new_matchGEN","new_matchHYDJET","old_signal_nonswap","new_signal_nonswap","gained_signal_nonswap","lost_signal_nonswap","new_swaps","gen_candidates","old_gen_candidates","identity_tracks","identity_xy_disambiguations","identity_roundoff_recoveries","identity_max_dz_ulp","identity_max_xy_ulp","audited_track_matches"})stats[k]=0;
+  }
+  void process(const InputEvent&input,ULong64_t eid,const std::vector<pat::PackedCandidate>&pf,const std::vector<pat::PackedCandidate>&lost,const std::vector<pat::PackedCandidate>&ele,const std::vector<reco::Vertex>&vertices,const reco::BeamSpot&bs,const std::vector<pat::PackedGenParticle>&packed,const std::vector<reco::GenParticle>&pruned,bool audit=false){
+   if(input.entry!=Long64_t(stats.at("events")))throw std::runtime_error("MiniAOD source order does not match ntuple order");
+@@ -123,7 +131,20 @@
+   for(int j=0;j<ng;++j){const auto&p=pruned[genRefs[j]];particle(gf,gi,"gen",j,&p,true);particle(gf,gi,"gen_D0",j,&p,false);gi.at("gen_status")[j]=p.status();gi.at("gen_MotherID")[j]=mother(&p)?mother(&p)->pdgId():-99;gi.at("gen_DauID1")[j]=p.numberOfDaughters()>0&&p.daughter(0)?p.daughter(0)->pdgId():-99;gi.at("gen_DauID2")[j]=p.numberOfDaughters()>1&&p.daughter(1)?p.daughter(1)->pdgId():-99;auto a=ancestor(&p);gi.at("gen_D0ancestorId_")[j]=a.first;gi.at("gen_D0ancestorFlavor_")[j]=a.second;gi.at("gen_pruned_index")[j]=genRefs[j];gi.at("gen_collisionId")[j]=p.collisionId();bool k=false,pi=false;for(unsigned d=0;d<p.numberOfDaughters();++d){auto q=p.daughter(d);if(!q)continue;int id=std::abs(q->pdgId());if(id==321&&!k){particle(gf,gi,"gen_D0Dau1",j,q,true);k=true;}if(id==211&&!pi){particle(gf,gi,"gen_D0Dau2",j,q,true);pi=true;}}gb.at("gen_validD0chain")[j]=true;}
+   auto raw=originalTracks(pf,lost,ele,vertices,bs);std::unordered_map<uint64_t,std::vector<int>>lookup;for(unsigned j=0;j<raw.size();++j)lookup[trackKey(raw[j].charge,raw[j].err)].push_back(j);
+   std::vector<int>identity;identity.reserve(input.signatures.size());
+-  for(const auto&s:input.signatures){auto q=lookup.find(trackKey(s.charge,s.err));std::vector<int>same;if(q!=lookup.end())for(int j:q->second)if(raw[j].hits==s.hits)same.push_back(j);if(same.size()>1){std::vector<int>exact;for(int j:same)if(float(raw[j].dz)==s.dz&&float(raw[j].xy)==s.xy)exact.push_back(j);if(exact.empty()){for(int j:same)if(float(raw[j].xy)==s.xy)exact.push_back(j);if(exact.size()==1)++stats["identity_xy_disambiguations"];}same.swap(exact);}if(same.size()!=1)throw std::runtime_error("Original-track identity not unique at source entry "+std::to_string(input.entry)+", signature "+std::to_string(identity.size())+", matches "+std::to_string(same.size()));identity.push_back(same[0]);}
++  for(const auto&s:input.signatures){
++   auto q=lookup.find(trackKey(s.charge,s.err));std::vector<int>same;
++   if(q!=lookup.end())for(int j:q->second)if(raw[j].hits==s.hits&&floatUlpDistance(float(raw[j].dz),s.dz)<=2&&floatUlpDistance(float(raw[j].xy),s.xy)<=2)same.push_back(j);
++   if(same.size()!=1){
++    std::ostringstream msg;msg<<std::setprecision(17)<<"Original-track identity not unique at source entry "<<input.entry<<", signature "<<identity.size()<<", matches "<<same.size()<<" STORED charge="<<s.charge<<" hits="<<s.hits<<" err="<<s.err<<" dz="<<s.dz<<" xy="<<s.xy;
++    if(q!=lookup.end())for(int j:q->second){const auto&t=raw[j];msg<<" RAW["<<j<<"] hits="<<t.hits<<" err="<<float(t.err)<<" dz="<<float(t.dz)<<" xy="<<float(t.xy)<<" pt="<<t.pt<<" eta="<<t.eta<<" phi="<<t.phi;}
++    throw std::runtime_error(msg.str());
++   }
++   int found=same[0];auto du=floatUlpDistance(float(raw[found].dz),s.dz),xu=floatUlpDistance(float(raw[found].xy),s.xy);
++   stats["identity_roundoff_recoveries"]+=du!=0||xu!=0;
++   stats["identity_max_dz_ulp"]=std::max<ULong64_t>(stats["identity_max_dz_ulp"],du);
++   stats["identity_max_xy_ulp"]=std::max<ULong64_t>(stats["identity_max_xy_ulp"],xu);
++   identity.push_back(found);
++  }
+   std::vector<GenTrack>pool;std::unordered_set<unsigned>represented;
+   for(const auto&p:packed){if(p.charge()==0)continue;auto ref=p.lastPrunedRef();if(ref.isNonnull()&&ref.isAvailable()&&ref->status()==1){represented.insert(ref.key());if(hadron(ref->pdgId()))pool.push_back({ref.get()});}else if(hadron(p.pdgId()))pool.push_back({&p});}
+   for(unsigned j=0;j<pruned.size();++j){const auto&p=pruned[j];if(p.status()==1&&p.charge()!=0&&hadron(p.pdgId())&&!represented.count(j))pool.push_back({&p});}

@@ -1,0 +1,18 @@
+[
+  {
+    "group": "OfficialPromptPthat10Pt20",
+    "raw_path": "/home/jun502s/DstarAna/DStarAnalysis/Fit/PbPb/Test/SpinAlignment/20261002/MC/Jagged/KISTI/OfficialPromptPthat10Pt20/0000/d0ana_tree_step1_mc_4.root",
+    "raw_url": "root://cms-t2-se01.sdfarm.kr:1094//store/user/bputra/DStarMC/PbPb2023_DStarMC_KISTI_03Oct26_MVAminus1/OfficialPromptPthat10Pt20/promptDStarToD0PiToKPiPi_pThat-10_pT-20_TuneCP5_5p36TeV_pythia8-evtgen/crab_PbPb2023_DStarMC_20261001_MVAminus1_bputra_OfficialPromptPthat10Pt20/261003_061140/0000/d0ana_tree_step1_mc_4.root",
+    "raw_bytes": 60294109,
+    "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/promptDStarToD0PiToKPiPi_pThat-10_pT-20_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/120000/038bfc24-9b18-42fe-9eac-55586d8b2be2.root",
+    "original_job": 6
+  },
+  {
+    "group": "OfficialPromptPthat10Pt20",
+    "raw_path": "/home/jun502s/DstarAna/DStarAnalysis/Fit/PbPb/Test/SpinAlignment/20261002/MC/Jagged/KISTI/OfficialPromptPthat10Pt20/0000/d0ana_tree_step1_mc_1.root",
+    "raw_url": "root://cms-t2-se01.sdfarm.kr:1094//store/user/bputra/DStarMC/PbPb2023_DStarMC_KISTI_03Oct26_MVAminus1/OfficialPromptPthat10Pt20/promptDStarToD0PiToKPiPi_pThat-10_pT-20_TuneCP5_5p36TeV_pythia8-evtgen/crab_PbPb2023_DStarMC_20261001_MVAminus1_bputra_OfficialPromptPthat10Pt20/261003_061140/0000/d0ana_tree_step1_mc_1.root",
+    "raw_bytes": 92680373,
+    "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/promptDStarToD0PiToKPiPi_pThat-10_pT-20_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/120000/0108e90f-d1fd-4c03-aae5-177761448cba.root",
+    "original_job": 3
+  }
+]

@@ -1,0 +1,292 @@
+{
+  "time_utc": "2026-11-12T09:14:02.241036+00:00",
+  "production_tag": "production/d0-official-friend-crab-float32-v3-20261112",
+  "scope": {
+    "total": 5102,
+    "groups": {
+      "OfficialNonpromptPthat10Pt20": 904,
+      "OfficialNonpromptPthat2Pt4": 773,
+      "OfficialNonpromptPthat5Pt10": 894,
+      "OfficialPromptPthat10Pt20": 750,
+      "OfficialPromptPthat2Pt4": 932,
+      "OfficialPromptPthat5Pt10": 849
+    },
+    "requests": {
+      "OfficialNonpromptPthat10Pt20": "D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat10Pt20_v3",
+      "OfficialNonpromptPthat2Pt4": "D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat2Pt4_v3",
+      "OfficialNonpromptPthat5Pt10": "D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat5Pt10_v3",
+      "OfficialPromptPthat10Pt20": "D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat10Pt20_v3",
+      "OfficialPromptPthat2Pt4": "D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat2Pt4_v3",
+      "OfficialPromptPthat5Pt10": "D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat5Pt10_v3"
+    },
+    "output_base": "/store/user/junseok/D0Rematching/Official6_PythiaGEN_CRAB_20261112_v3/production",
+    "datasets": {
+      "OfficialNonpromptPthat10Pt20": "/nonpromptDStarToD0PiToKPiPi_pThat-10_pT-20_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+      "OfficialNonpromptPthat2Pt4": "/nonpromptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+      "OfficialNonpromptPthat5Pt10": "/nonpromptDStarToD0PiToKPiPi_pThat-5_pT-10_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+      "OfficialPromptPthat10Pt20": "/promptDStarToD0PiToKPiPi_pThat-10_pT-20_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+      "OfficialPromptPthat2Pt4": "/promptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM",
+      "OfficialPromptPthat5Pt10": "/promptDStarToD0PiToKPiPi_pThat-5_pT-10_TuneCP5_5p36TeV_pythia8-evtgen/HINPbPbSpring23MiniAOD-132X_mcRun3_2023_realistic_HI_v9-v2/MINIAODSIM"
+    },
+    "matching_reference_commit": "75af18a65a5a1c24aaaf722ab9d7fb1d5f6c8592",
+    "native_gen_commits": {
+      "an": "e23d40aea8141705123999bd1f6f238a0fb3e5b1",
+      "refit-diag": "4600f55f9c4960ce1562c209461df26c46d17606"
+    },
+    "signalOnlyGenMatching": true,
+    "identity_policy": "exact pT error bits, charge, hit count and both DCA significances within 2 float32 ULP; require unique identity",
+    "earlier_v3_files": 12,
+    "combined_files": 5114,
+    "pilot_result_required_before_submission": false,
+    "user_instruction": "Submit remaining files immediately without waiting for Grid pilot results",
+    "local_validation": {
+      "time_utc": "2026-11-12T09:10:33.899009+00:00",
+      "status": "partial_reproduction_passed_full_file_timed_out",
+      "cases": [
+        {
+          "case": "np2_job72",
+          "last_reported_input_record": 5001,
+          "identity_error_recurred": false,
+          "full_file_finished": false,
+          "test_time_limit_seconds": 420
+        },
+        {
+          "case": "p10_job4",
+          "last_reported_input_record": 5001,
+          "identity_error_recurred": false,
+          "full_file_finished": false,
+          "test_time_limit_seconds": 420
+        }
+      ],
+      "required_next_validation": "Full-file Grid pilot on 12 inputs before bulk submission"
+    },
+    "created_utc": "2026-11-12T09:12:22.404840+00:00",
+    "production_tag": "production/d0-official-friend-crab-float32-v3-20261112"
+  },
+  "tasks": [
+    {
+      "group": "OfficialNonpromptPthat10Pt20",
+      "input_files": 904,
+      "command": [
+        "crab",
+        "submit",
+        "-c",
+        "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/configuration_v3/crab_OfficialNonpromptPthat10Pt20.py"
+      ],
+      "returncode": 0,
+      "task": "261112_091231:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat10Pt20_v3",
+      "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/crab_projects_v3/crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat10Pt20_v3",
+      "signalOnlyGenMatching": true,
+      "time_utc": "2026-11-12T09:12:31.223450+00:00",
+      "log": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/submission_v3/OfficialNonpromptPthat10Pt20.log"
+    },
+    {
+      "group": "OfficialNonpromptPthat2Pt4",
+      "input_files": 773,
+      "command": [
+        "crab",
+        "submit",
+        "-c",
+        "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/configuration_v3/crab_OfficialNonpromptPthat2Pt4.py"
+      ],
+      "returncode": 0,
+      "task": "261112_091236:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat2Pt4_v3",
+      "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/crab_projects_v3/crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat2Pt4_v3",
+      "signalOnlyGenMatching": true,
+      "time_utc": "2026-11-12T09:12:37.033895+00:00",
+      "log": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/submission_v3/OfficialNonpromptPthat2Pt4.log"
+    },
+    {
+      "group": "OfficialNonpromptPthat5Pt10",
+      "input_files": 894,
+      "command": [
+        "crab",
+        "submit",
+        "-c",
+        "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/configuration_v3/crab_OfficialNonpromptPthat5Pt10.py"
+      ],
+      "returncode": 0,
+      "task": "261112_091242:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat5Pt10_v3",
+      "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/crab_projects_v3/crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat5Pt10_v3",
+      "signalOnlyGenMatching": true,
+      "time_utc": "2026-11-12T09:12:43.126355+00:00",
+      "log": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/submission_v3/OfficialNonpromptPthat5Pt10.log"
+    },
+    {
+      "group": "OfficialPromptPthat10Pt20",
+      "input_files": 750,
+      "command": [
+        "crab",
+        "submit",
+        "-c",
+        "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/configuration_v3/crab_OfficialPromptPthat10Pt20.py"
+      ],
+      "returncode": 0,
+      "task": "261112_091249:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat10Pt20_v3",
+      "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/crab_projects_v3/crab_D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat10Pt20_v3",
+      "signalOnlyGenMatching": true,
+      "time_utc": "2026-11-12T09:12:49.333099+00:00",
+      "log": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/submission_v3/OfficialPromptPthat10Pt20.log"
+    },
+    {
+      "group": "OfficialPromptPthat2Pt4",
+      "input_files": 932,
+      "command": [
+        "crab",
+        "submit",
+        "-c",
+        "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/configuration_v3/crab_OfficialPromptPthat2Pt4.py"
+      ],
+      "returncode": 0,
+      "task": "261112_091255:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat2Pt4_v3",
+      "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/crab_projects_v3/crab_D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat2Pt4_v3",
+      "signalOnlyGenMatching": true,
+      "time_utc": "2026-11-12T09:12:55.406304+00:00",
+      "log": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/submission_v3/OfficialPromptPthat2Pt4.log"
+    },
+    {
+      "group": "OfficialPromptPthat5Pt10",
+      "input_files": 849,
+      "command": [
+        "crab",
+        "submit",
+        "-c",
+        "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/configuration_v3/crab_OfficialPromptPthat5Pt10.py"
+      ],
+      "returncode": 0,
+      "task": "261112_091301:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat5Pt10_v3",
+      "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/crab_projects_v3/crab_D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat5Pt10_v3",
+      "signalOnlyGenMatching": true,
+      "time_utc": "2026-11-12T09:13:02.074845+00:00",
+      "log": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/submission_v3/OfficialPromptPthat5Pt10.log"
+    }
+  ],
+  "earlier_v3_tasks": [
+    {
+      "group": "OfficialNonpromptPthat10Pt20",
+      "input_files": 2,
+      "command": [
+        "crab",
+        "submit",
+        "-c",
+        "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/configuration_v3pilot/crab_OfficialNonpromptPthat10Pt20.py"
+      ],
+      "returncode": 0,
+      "task": "261112_091042:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat10Pt20_v3pilot",
+      "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/crab_projects_v3pilot/crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat10Pt20_v3pilot",
+      "signalOnlyGenMatching": true,
+      "time_utc": "2026-11-12T09:10:42.946381+00:00",
+      "log": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/submission_v3pilot/OfficialNonpromptPthat10Pt20.log"
+    },
+    {
+      "group": "OfficialNonpromptPthat2Pt4",
+      "input_files": 2,
+      "command": [
+        "crab",
+        "submit",
+        "-c",
+        "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/configuration_v3pilot/crab_OfficialNonpromptPthat2Pt4.py"
+      ],
+      "returncode": 0,
+      "task": "261112_091048:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat2Pt4_v3pilot",
+      "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/crab_projects_v3pilot/crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat2Pt4_v3pilot",
+      "signalOnlyGenMatching": true,
+      "time_utc": "2026-11-12T09:10:48.539866+00:00",
+      "log": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/submission_v3pilot/OfficialNonpromptPthat2Pt4.log"
+    },
+    {
+      "group": "OfficialNonpromptPthat5Pt10",
+      "input_files": 2,
+      "command": [
+        "crab",
+        "submit",
+        "-c",
+        "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/configuration_v3pilot/crab_OfficialNonpromptPthat5Pt10.py"
+      ],
+      "returncode": 0,
+      "task": "261112_091054:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat5Pt10_v3pilot",
+      "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/crab_projects_v3pilot/crab_D0Friend_PythiaGEN_12Nov26_OfficialNonpromptPthat5Pt10_v3pilot",
+      "signalOnlyGenMatching": true,
+      "time_utc": "2026-11-12T09:10:54.517869+00:00",
+      "log": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/submission_v3pilot/OfficialNonpromptPthat5Pt10.log"
+    },
+    {
+      "group": "OfficialPromptPthat10Pt20",
+      "input_files": 2,
+      "command": [
+        "crab",
+        "submit",
+        "-c",
+        "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/configuration_v3pilot/crab_OfficialPromptPthat10Pt20.py"
+      ],
+      "returncode": 0,
+      "task": "261112_091100:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat10Pt20_v3pilot",
+      "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/crab_projects_v3pilot/crab_D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat10Pt20_v3pilot",
+      "signalOnlyGenMatching": true,
+      "time_utc": "2026-11-12T09:11:00.607729+00:00",
+      "log": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/submission_v3pilot/OfficialPromptPthat10Pt20.log"
+    },
+    {
+      "group": "OfficialPromptPthat2Pt4",
+      "input_files": 2,
+      "command": [
+        "crab",
+        "submit",
+        "-c",
+        "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/configuration_v3pilot/crab_OfficialPromptPthat2Pt4.py"
+      ],
+      "returncode": 0,
+      "task": "261112_091107:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat2Pt4_v3pilot",
+      "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/crab_projects_v3pilot/crab_D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat2Pt4_v3pilot",
+      "signalOnlyGenMatching": true,
+      "time_utc": "2026-11-12T09:11:07.821752+00:00",
+      "log": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/submission_v3pilot/OfficialPromptPthat2Pt4.log"
+    },
+    {
+      "group": "OfficialPromptPthat5Pt10",
+      "input_files": 2,
+      "command": [
+        "crab",
+        "submit",
+        "-c",
+        "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/configuration_v3pilot/crab_OfficialPromptPthat5Pt10.py"
+      ],
+      "returncode": 0,
+      "task": "261112_091113:junseok_crab_D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat5Pt10_v3pilot",
+      "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/crab_projects_v3pilot/crab_D0Friend_PythiaGEN_12Nov26_OfficialPromptPthat5Pt10_v3pilot",
+      "signalOnlyGenMatching": true,
+      "time_utc": "2026-11-12T09:11:13.771417+00:00",
+      "log": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_official_crab_rematching_20261112/submission_v3pilot/OfficialPromptPthat5Pt10.log"
+    }
+  ],
+  "total_files": 5114,
+  "cmssw_release": "CMSSW_13_2_11",
+  "scram_arch": "el8_amd64_gcc11",
+  "output_eos": "/eos/user/j/junseok/D0Rematching/Official6_PythiaGEN_CRAB_20261112_v3",
+  "source_ntuples_modified": false,
+  "reco_gen_matching_reference": "75af18a65a5a1c24aaaf722ab9d7fb1d5f6c8592",
+  "gen_policy_signalOnlyGenMatching": true,
+  "reco_hydjet_classification_preserved": true,
+  "validation": {
+    "time_utc": "2026-11-12T09:10:33.899009+00:00",
+    "status": "partial_reproduction_passed_full_file_timed_out",
+    "cases": [
+      {
+        "case": "np2_job72",
+        "last_reported_input_record": 5001,
+        "identity_error_recurred": false,
+        "full_file_finished": false,
+        "test_time_limit_seconds": 420
+      },
+      {
+        "case": "p10_job4",
+        "last_reported_input_record": 5001,
+        "identity_error_recurred": false,
+        "full_file_finished": false,
+        "test_time_limit_seconds": 420
+      }
+    ],
+    "required_next_validation": "Full-file Grid pilot on 12 inputs before bulk submission"
+  },
+  "grid_pilot_completed_before_bulk": false
+}
