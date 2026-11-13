@@ -1,0 +1,32 @@
+{
+  "OfficialNonpromptPthat10Pt20": {
+    "ready": 291,
+    "total": 906,
+    "bytes": 1167340735
+  },
+  "OfficialNonpromptPthat2Pt4": {
+    "ready": 677,
+    "total": 775,
+    "bytes": 2221731166
+  },
+  "OfficialNonpromptPthat5Pt10": {
+    "ready": 896,
+    "total": 896,
+    "bytes": 3637656425
+  },
+  "OfficialPromptPthat10Pt20": {
+    "ready": 752,
+    "total": 752,
+    "bytes": 3022293659
+  },
+  "OfficialPromptPthat2Pt4": {
+    "ready": 358,
+    "total": 934,
+    "bytes": 1145310416
+  },
+  "OfficialPromptPthat5Pt10": {
+    "ready": 1,
+    "total": 851,
+    "bytes": 4234706
+  }
+}

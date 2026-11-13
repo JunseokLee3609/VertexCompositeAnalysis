@@ -1,0 +1,158 @@
+{
+  "status": "passed",
+  "cases": [
+    {
+      "case": "OfficialNonpromptPthat10Pt20",
+      "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/nonpromptDStarToD0PiToKPiPi_pThat-10_pT-20_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/2550000/7a53b150-562a-481d-a7dc-e1e02dac0d9f.root",
+      "partial": false,
+      "started": 1794577502.7441509,
+      "status": "passed",
+      "stage": "readback",
+      "returncode": 0,
+      "seconds": 411.69636702537537
+    },
+    {
+      "case": "OfficialNonpromptPthat2Pt4",
+      "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/nonpromptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/120000/9e00bb04-5ba0-497f-a86e-3572d013ca65.root",
+      "partial": false,
+      "started": 1794577502.7357535,
+      "status": "passed",
+      "stage": "readback",
+      "returncode": 0,
+      "seconds": 314.8952667713165
+    },
+    {
+      "case": "OfficialNonpromptPthat5Pt10",
+      "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/nonpromptDStarToD0PiToKPiPi_pThat-5_pT-10_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/90000/4ad17415-1284-413a-9d2f-7e1f41b3a7dc.root",
+      "partial": false,
+      "started": 1794577502.7438188,
+      "status": "passed",
+      "stage": "readback",
+      "returncode": 0,
+      "seconds": 497.99167037010193
+    },
+    {
+      "case": "OfficialPromptPthat10Pt20",
+      "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/promptDStarToD0PiToKPiPi_pThat-10_pT-20_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/2520000/d7662401-6db5-4c47-b25f-9277c7ed27f5.root",
+      "partial": false,
+      "started": 1794577817.7259,
+      "status": "passed",
+      "stage": "readback",
+      "returncode": 0,
+      "seconds": 72.63140106201172
+    },
+    {
+      "case": "OfficialPromptPthat2Pt4",
+      "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/promptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/2550000/1e9cd384-2c3a-4170-9c06-1c84006e9556.root",
+      "partial": false,
+      "started": 1794577890.4741554,
+      "status": "passed",
+      "stage": "readback",
+      "returncode": 0,
+      "seconds": 731.9437363147736
+    },
+    {
+      "case": "OfficialPromptPthat5Pt10",
+      "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/promptDStarToD0PiToKPiPi_pThat-5_pT-10_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/2520000/bd926f69-c2c2-4601-af33-71a9c0e5ce3f.root",
+      "partial": false,
+      "started": 1794577914.5448332,
+      "status": "passed",
+      "stage": "readback",
+      "returncode": 0,
+      "seconds": 408.0446741580963
+    },
+    {
+      "case": "ANClusterEdgeFull",
+      "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/promptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/120000/003eb744-604d-4c3b-b5eb-55e14687a617.root",
+      "partial": false,
+      "started": 1794578000.790561,
+      "status": "passed",
+      "stage": "readback",
+      "returncode": 0,
+      "seconds": 480.7391128540039
+    },
+    {
+      "case": "QReplay_012",
+      "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/promptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/2520000/0128472e-2f8e-46a3-b996-575e648b4d62.root",
+      "partial": true,
+      "started": 1794578322.7056487,
+      "status": "passed",
+      "stage": "readback",
+      "returncode": 0,
+      "seconds": 55.11582636833191
+    },
+    {
+      "case": "QReplay_026",
+      "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/promptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/2820000/baf59a06-677e-4dce-8126-9ea43ddeb6b1.root",
+      "partial": true,
+      "started": 1794578377.8820648,
+      "status": "passed",
+      "stage": "readback",
+      "returncode": 0,
+      "seconds": 54.959802865982056
+    },
+    {
+      "case": "QReplay_027",
+      "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/promptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/2820000/e1197445-f4b1-444a-8668-6bff979b00a8.root",
+      "partial": true,
+      "started": 1794578432.9060209,
+      "status": "passed",
+      "stage": "readback",
+      "returncode": 0,
+      "seconds": 57.892930030822754
+    },
+    {
+      "case": "QReplay_042",
+      "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/promptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/2820000/be42ebd9-ea50-4d01-a455-3a3e383e23d6.root",
+      "partial": true,
+      "started": 1794578481.6429787,
+      "status": "passed",
+      "stage": "readback",
+      "returncode": 0,
+      "seconds": 60.23334860801697
+    },
+    {
+      "case": "QReplay_048",
+      "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/promptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/90000/86b9d484-fdb2-433b-a1e6-9f64297bca12.root",
+      "partial": true,
+      "started": 1794578490.8680637,
+      "status": "passed",
+      "stage": "readback",
+      "returncode": 0,
+      "seconds": 51.004690408706665
+    },
+    {
+      "case": "QReplay_056",
+      "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/promptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/2820000/f85f3102-7ddc-454b-9293-c600dbed70f0.root",
+      "partial": true,
+      "started": 1794578541.9606853,
+      "status": "passed",
+      "stage": "readback_with_local_AN_reference",
+      "returncode": 0,
+      "seconds": 43.60561394691467,
+      "prior_exit_failure": "eos_direct_exit_failure.json"
+    },
+    {
+      "case": "QReplay_067",
+      "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/promptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/120000/5c01d812-f690-4ac9-b97a-08ee11bd6b16.root",
+      "partial": true,
+      "started": 1794578541.961365,
+      "status": "passed",
+      "stage": "readback",
+      "returncode": 0,
+      "seconds": 43.49948072433472
+    },
+    {
+      "case": "QReplay_083",
+      "miniaod_lfn": "/store/mc/HINPbPbSpring23MiniAOD/promptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/2820000/293d79f3-fb21-4888-8b9f-d4b7907ca224.root",
+      "partial": true,
+      "started": 1794578585.5211034,
+      "status": "passed",
+      "stage": "readback",
+      "returncode": 0,
+      "seconds": 51.714892625808716
+    }
+  ],
+  "crab_test_submissions": 0,
+  "reference_staging": "AN reference prefetched locally in production"
+}

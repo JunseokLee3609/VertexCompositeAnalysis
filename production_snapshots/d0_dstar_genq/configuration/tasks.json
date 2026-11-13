@@ -1,0 +1,44 @@
+[
+  {
+    "group": "OfficialNonpromptPthat10Pt20",
+    "files": 906,
+    "request_name": "D0DstarGenQ_13Nov26_OfficialNonpromptPthat10Pt20",
+    "config": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_dstar_genq_20261113/configuration/crab_OfficialNonpromptPthat10Pt20.py",
+    "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_dstar_genq_20261113/crab_projects/crab_D0DstarGenQ_13Nov26_OfficialNonpromptPthat10Pt20"
+  },
+  {
+    "group": "OfficialNonpromptPthat2Pt4",
+    "files": 775,
+    "request_name": "D0DstarGenQ_13Nov26_OfficialNonpromptPthat2Pt4",
+    "config": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_dstar_genq_20261113/configuration/crab_OfficialNonpromptPthat2Pt4.py",
+    "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_dstar_genq_20261113/crab_projects/crab_D0DstarGenQ_13Nov26_OfficialNonpromptPthat2Pt4"
+  },
+  {
+    "group": "OfficialNonpromptPthat5Pt10",
+    "files": 896,
+    "request_name": "D0DstarGenQ_13Nov26_OfficialNonpromptPthat5Pt10",
+    "config": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_dstar_genq_20261113/configuration/crab_OfficialNonpromptPthat5Pt10.py",
+    "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_dstar_genq_20261113/crab_projects/crab_D0DstarGenQ_13Nov26_OfficialNonpromptPthat5Pt10"
+  },
+  {
+    "group": "OfficialPromptPthat10Pt20",
+    "files": 752,
+    "request_name": "D0DstarGenQ_13Nov26_OfficialPromptPthat10Pt20",
+    "config": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_dstar_genq_20261113/configuration/crab_OfficialPromptPthat10Pt20.py",
+    "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_dstar_genq_20261113/crab_projects/crab_D0DstarGenQ_13Nov26_OfficialPromptPthat10Pt20"
+  },
+  {
+    "group": "OfficialPromptPthat2Pt4",
+    "files": 934,
+    "request_name": "D0DstarGenQ_13Nov26_OfficialPromptPthat2Pt4",
+    "config": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_dstar_genq_20261113/configuration/crab_OfficialPromptPthat2Pt4.py",
+    "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_dstar_genq_20261113/crab_projects/crab_D0DstarGenQ_13Nov26_OfficialPromptPthat2Pt4"
+  },
+  {
+    "group": "OfficialPromptPthat5Pt10",
+    "files": 851,
+    "request_name": "D0DstarGenQ_13Nov26_OfficialPromptPthat5Pt10",
+    "config": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_dstar_genq_20261113/configuration/crab_OfficialPromptPthat5Pt10.py",
+    "project": "/afs/cern.ch/user/j/junseok/analysis/production_studies/d0_dstar_genq_20261113/crab_projects/crab_D0DstarGenQ_13Nov26_OfficialPromptPthat5Pt10"
+  }
+]
