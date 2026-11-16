@@ -14,7 +14,7 @@ process.maxEvents=cms.untracked.PSet(input=cms.untracked.int32(options.maxEvents
 process.source=cms.Source('PoolSource',fileNames=cms.untracked.vstring(options.inputFiles),
     duplicateCheckMode=cms.untracked.string('noDuplicateCheck'))
 process.TFileService=cms.Service('TFileService',fileName=cms.string(options.outputFile))
-process.unpackedTracksAndVertices=cms.EDProducer('D0AuditTrackAndVertexUnpacker',
+process.unpackedTracksAndVertices=cms.EDProducer('CandidateEPTrackAndVertexUnpacker',
     packedCandidates=cms.VInputTag('packedPFCandidates','lostTracks',cms.InputTag('lostTracks','eleTracks')),
     packedCandidateNormChi2Map=cms.VInputTag('packedPFCandidateTrackChi2','lostTrackChi2',cms.InputTag('')),
     primaryVertices=cms.InputTag('offlineSlimmedPrimaryVertices'),
