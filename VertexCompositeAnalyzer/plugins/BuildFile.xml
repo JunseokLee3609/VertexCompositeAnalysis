@@ -13,6 +13,7 @@
 <use name="TrackingTools/PatternTools"/>
 <use name="TrackingTools/Records"/>
 <use name="DataFormats/HepMCCandidate"/>
+<use name="DataFormats/Math"/>
 <use name="DataFormats/CaloTowers"/>
 <use name="TrackingTools/IPTools"/>
 <use name="RecoVertex/KinematicFit"/>

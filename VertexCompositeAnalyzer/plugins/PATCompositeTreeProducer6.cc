@@ -30,6 +30,9 @@ PATCompositeTreeProducer6::PATCompositeTreeProducer6(const edm::ParameterSet& iC
           iConfig.getUntrackedParameter<edm::InputTag>("GenParticleCollection", edm::InputTag("genParticles")))),
       tok_packedGenParticle_(consumes<pat::PackedGenParticleCollection>(
           iConfig.getUntrackedParameter<edm::InputTag>("PackedGenParticleCollection", edm::InputTag("packedGenParticles")))),
+      tok_genPrimaryVertex_(consumes<math::XYZPointF>(
+          iConfig.getUntrackedParameter<edm::InputTag>(
+              "GenPrimaryVertexCollection", edm::InputTag("genParticles", "xyz0")))),
       tok_offlinePV_(consumes<reco::VertexCollection>(
           iConfig.getUntrackedParameter<edm::InputTag>("VertexCollection", edm::InputTag("offlinePrimaryVertices")))),
       tok_generalTrk_(consumes<reco::TrackCollection>(
@@ -313,6 +316,8 @@ PATCompositeTreeProducer6::D0DaughterSummary PATCompositeTreeProducer6::summariz
 }
 
 void PATCompositeTreeProducer6::resetRecoGenMatch(unsigned int idx) {
+  genDca3D[idx] = kInvalidValue;
+  genDca3DValid[idx] = false;
   matchGEN[idx] = false;
   matchHYDJET[idx] = false;
   matchGen_index[idx] = -1;
@@ -729,6 +734,9 @@ void PATCompositeTreeProducer6::initTree() {
   }
 
   PATCompositeNtuple_ = fs->make<TTree>("PATCompositeNtuple", "PATCompositeNtuple");
+  if (doGenMatching_ || doGenNtuple_) {
+    PATCompositeNtuple_->Branch("genSignalPrimaryVertexValid", &genPrimaryVertexValid_, "genSignalPrimaryVertexValid/O");
+  }
   if (doRecoNtuple_) {
     if (doRunInfo_) {
       PATCompositeNtuple_->Branch("RunNb", &runNb, "RunNb/i");
@@ -845,6 +853,8 @@ void PATCompositeTreeProducer6::initTree() {
       PATCompositeNtuple_->Branch("dca2D", &dca2D, "dca2D[candSize]/F");
 
       if (doGenMatching_) {
+        PATCompositeNtuple_->Branch("genDca3D", genDca3D, "genDca3D[candSize]/F");
+        PATCompositeNtuple_->Branch("genDca3DValid", genDca3DValid, "genDca3DValid[candSize]/O");
         PATCompositeNtuple_->Branch("isSwap", &isSwap, "isSwap[candSize]/O");
         PATCompositeNtuple_->Branch("idmom_reco", &idmom_reco, "idmom_reco[candSize]/I");
         PATCompositeNtuple_->Branch("idBAnc_reco", &idBAnc_reco, "idBAnc_reco[candSize]/I");
@@ -1027,6 +1037,8 @@ void PATCompositeTreeProducer6::initTree() {
 
   if (doGenNtuple_) {
     PATCompositeNtuple_->Branch("candSize_gen", &candSize_gen, "candSize_gen/I");
+    PATCompositeNtuple_->Branch("gen_D0dca3D", gen_D0dca3D_, "gen_D0dca3D[candSize_gen]/F");
+    PATCompositeNtuple_->Branch("gen_D0dca3DValid", gen_D0dca3DValid_, "gen_D0dca3DValid[candSize_gen]/O");
     PATCompositeNtuple_->Branch("gen_mass", &mass_gen, "mass_gen[candSize_gen]/F");
     PATCompositeNtuple_->Branch("gen_pT", &pt_gen, "pT_gen[candSize_gen]/F");
     PATCompositeNtuple_->Branch("gen_eta", &eta_gen, "eta_gen[candSize_gen]/F");
@@ -1580,6 +1592,7 @@ void PATCompositeTreeProducer6::processCandidates(const CCC* v0candidates_,
                                  genDStar,
                                  genSlowPiRef,
                                  matchGen_slowPion_dR_[it]);
+          genDca3DValid[it] = computeGenD0Dca3D(*genD0Ref, genDca3D[it]);
           matchGen_D0pT_[it] = genD0Ref->pt();
           matchGen_D0eta_[it] = genD0Ref->eta();
           matchGen_D0phi_[it] = genD0Ref->phi();
@@ -1731,6 +1744,7 @@ void PATCompositeTreeProducer6::processCandidates(const CCC* v0candidates_,
           const bool validD0StrictNoFSR = (validD0Inclusive && d0Summary.gammaCount == 0);
           matchGen_validD0chain_[it] = validD0StrictNoFSR;
           matchGEN[it] = validD0Inclusive;
+          if (validD0Inclusive) genDca3DValid[it] = computeGenD0Dca3D(*matchedGenD0, genDca3D[it]);
           if (useD0DaughterTrackMatching) {
             matchGen_index[it] = matchedIgen;
             matchGen_pruned_index[it] = daughterGenIndex[it];
@@ -2116,6 +2130,8 @@ void PATCompositeTreeProducer6::fillGEN(const edm::Event& iEvent, const edm::Eve
     iddau2[idx] = -99;
 
     gen_D0pT_[idx] = kInvalidValue;
+    gen_D0dca3D_[idx] = kInvalidValue;
+    gen_D0dca3DValid_[idx] = false;
     gen_D0eta_[idx] = kInvalidValue;
     gen_D0phi_[idx] = kInvalidValue;
     gen_D0mass_[idx] = kInvalidValue;
@@ -2202,6 +2218,7 @@ void PATCompositeTreeProducer6::fillGEN(const edm::Event& iEvent, const edm::Eve
       }
 
       if (genD0) {
+        gen_D0dca3DValid_[igen] = computeGenD0Dca3D(*genD0, gen_D0dca3D_[igen]);
         gen_D0mass_[igen] = genD0->mass();
         gen_D0pT_[igen] = genD0->pt();
         gen_D0eta_[igen] = genD0->eta();
@@ -2265,6 +2282,7 @@ void PATCompositeTreeProducer6::fillGEN(const edm::Event& iEvent, const edm::Eve
                                     gen_validD0chain_[igen]);
     } else {
       const reco::Candidate* genD0 = theGen;
+      gen_D0dca3DValid_[igen] = computeGenD0Dca3D(*genD0, gen_D0dca3D_[igen]);
       gen_D0mass_[igen] = genD0->mass();
       gen_D0pT_[igen] = genD0->pt();
       gen_D0eta_[igen] = genD0->eta();
@@ -2315,9 +2333,83 @@ void PATCompositeTreeProducer6::fillGEN(const edm::Event& iEvent, const edm::Eve
     }
   }
 }
+void PATCompositeTreeProducer6::processGenPrimaryVertex(const edm::Event& iEvent) {
+  genPrimaryVertexValid_ = false;
+  if (iEvent.isRealData() || !(doGenMatching_ || doGenNtuple_)) return;
+
+  edm::Handle<math::XYZPointF> origin;
+  iEvent.getByToken(tok_genPrimaryVertex_, origin);
+  if (origin.isValid() && std::isfinite(origin->x()) &&
+      std::isfinite(origin->y()) && std::isfinite(origin->z())) {
+    genPrimaryVertex_ = *origin;
+    genPrimaryVertexValid_ = true;
+  } else if (!warnedInvalidGenPrimaryVertex_) {
+    edm::LogWarning("PAT6GenDca")
+        << "Missing or nonfinite GenPrimaryVertexCollection: PYTHIA GEN D0 DCA values remain invalid.";
+    warnedInvalidGenPrimaryVertex_ = true;
+  }
+}
+
+bool PATCompositeTreeProducer6::computeGenD0Dca3D(const reco::Candidate& d0, float& value) const {
+  value = kInvalidValue;
+  if (std::abs(d0.pdgId()) != kPdgD0) return false;
+  const auto* genD0 = dynamic_cast<const reco::GenParticle*>(&d0);
+  if (!genD0 || genD0->collisionId() < 0) return false;
+
+  math::XYZPoint origin;
+  if (genD0->collisionId() == 0) {
+    if (!genPrimaryVertexValid_) return false;
+    origin = math::XYZPoint(genPrimaryVertex_.x(), genPrimaryVertex_.y(), genPrimaryVertex_.z());
+  } else {
+    // HYDJET and PYTHIA vertices can be stored in different coordinate origins.
+    // A prompt GEN ancestor provides the HYDJET origin without removing B flight.
+    std::vector<const reco::Candidate*> pending{&d0};
+    std::unordered_set<const reco::Candidate*> seen;
+    bool found = false;
+    constexpr double vertexToleranceCm = 1.e-5;
+    while (!pending.empty()) {
+      const auto* candidate = pending.back();
+      pending.pop_back();
+      if (!candidate || !seen.insert(candidate).second) continue;
+      if (seen.size() > 1000) return false;
+      const auto* particle = dynamic_cast<const reco::GenParticle*>(candidate);
+      if (!particle || particle->collisionId() <= 0) return false;
+      if (particle->statusFlags().isPrompt()) {
+        if (!std::isfinite(particle->vx()) || !std::isfinite(particle->vy()) ||
+            !std::isfinite(particle->vz())) return false;
+        const math::XYZPoint vertex(particle->vx(), particle->vy(), particle->vz());
+        if (found && (vertex - origin).R() > vertexToleranceCm) return false;
+        origin = vertex;
+        found = true;
+        continue;
+      }
+      if (particle->numberOfMothers() == 0) return false;
+      for (size_t i = 0; i < particle->numberOfMothers(); ++i) {
+        const auto& mother = particle->motherRef(i);
+        if (mother.isNull() || !mother.isAvailable()) return false;
+        pending.push_back(mother.get());
+      }
+    }
+    if (!found) return false;
+  }
+  if (!std::isfinite(d0.vx()) || !std::isfinite(d0.vy()) || !std::isfinite(d0.vz()) ||
+      !std::isfinite(d0.px()) || !std::isfinite(d0.py()) || !std::isfinite(d0.pz())) return false;
+
+  // Neutral D0 trajectory to its GEN collision vertex, in cm, also for D* daughters.
+  const TVector3 displacement(d0.vx() - origin.x(), d0.vy() - origin.y(), d0.vz() - origin.z());
+  const TVector3 momentum(d0.px(), d0.py(), d0.pz());
+  const double p = momentum.Mag();
+  if (!(p > 0.) || !std::isfinite(p)) return false;
+  const double dca = displacement.Cross(momentum * (1. / p)).Mag();
+  if (!std::isfinite(dca) || dca > std::numeric_limits<float>::max()) return false;
+  value = static_cast<float>(dca);
+  return true;
+}
+
 void PATCompositeTreeProducer6::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
   ++nEventsProcessed_;
   processRunInfo(iEvent);
+  processGenPrimaryVertex(iEvent);
   if (doRecoNtuple_ || saveHistogram_) fillRECO(iEvent, iSetup);
   if (doGenNtuple_ || doGenMatching_) fillGEN(iEvent, iSetup);
   if (PATCompositeNtuple_ && (doRecoNtuple_ || doGenNtuple_)) PATCompositeNtuple_->Fill();
