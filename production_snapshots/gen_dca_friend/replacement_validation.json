@@ -1,0 +1,27 @@
+{
+  "ntuple": "/eos/user/j/junseok/analysis/production_studies/gen_dca_friend_20261117/validation/native120/without_dca.root",
+  "supplement": "/eos/user/j/junseok/analysis/production_studies/gen_dca_friend_20261117/validation/native120/gen_dca_friend.root",
+  "input_lfn": "/store/mc/HINPbPbSpring23MiniAOD/nonpromptDStarToD0PiToKPiPi_pThat-2_pT-4_TuneCP5_5p36TeV_pythia8-evtgen/MINIAODSIM/132X_mcRun3_2023_realistic_HI_v9-v2/120000/9e00bb04-5ba0-497f-a86e-3572d013ca65.root",
+  "trees": {
+    "d0/PATCompositeNtuple": {
+      "events": 120,
+      "reco": 1264,
+      "gen": 111,
+      "matched_reco": 35,
+      "valid_reco": 35,
+      "valid_gen": 111,
+      "native_value_comparisons": 0
+    },
+    "dstar/PATCompositeNtuple": {
+      "events": 120,
+      "reco": 210,
+      "gen": 61,
+      "matched_reco": 4,
+      "valid_reco": 4,
+      "valid_gen": 61,
+      "native_value_comparisons": 0
+    }
+  },
+  "status": "passed",
+  "all_original_and_added_values_compared": 169165
+}
