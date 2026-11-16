@@ -18,6 +18,7 @@
 #include "DataFormats/HeavyIonEvent/interface/EvtPlane.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/Math/interface/deltaR.h"
+#include "DataFormats/Math/interface/Point3D.h"
 #include "DataFormats/PatCandidates/interface/CompositeCandidate.h"
 #include "DataFormats/PatCandidates/interface/PackedGenParticle.h"
 #include "DataFormats/RecoCandidate/interface/RecoCandidate.h"
@@ -57,6 +58,8 @@ private:
   void processCentralityInfo(const edm::Event& iEvent);
   void processEventPlaneInfo(const edm::Event& iEvent);
   void processRunInfo(const edm::Event& iEvent);
+  void processGenPrimaryVertex(const edm::Event& iEvent);
+  bool computeGenD0Dca3D(const reco::Candidate& d0, float& value) const;
   void processVertexAndTrackInfo(const edm::Handle<reco::VertexCollection>& vertices,
                                  const edm::Handle<reco::TrackCollection>& tracks);
   void processCandidates(const CCC* v0candidates_,
@@ -182,6 +185,10 @@ private:
 
   edm::EDGetTokenT<reco::GenParticleCollection> tok_genParticle_;
   edm::EDGetTokenT<pat::PackedGenParticleCollection> tok_packedGenParticle_;
+  edm::EDGetTokenT<math::XYZPointF> tok_genPrimaryVertex_;
+  math::XYZPointF genPrimaryVertex_;
+  bool genPrimaryVertexValid_ = false;
+  bool warnedInvalidGenPrimaryVertex_ = false;
   edm::EDGetTokenT<reco::VertexCollection> tok_offlinePV_;
   edm::EDGetTokenT<reco::TrackCollection> tok_generalTrk_;
   edm::EDGetTokenT<CCC> tok_compositeCandidates_;
@@ -350,6 +357,8 @@ private:
   float trk3Ddca[kMaxGenCand];
   float trk3DdcaErr[kMaxGenCand];
   float dca3D[kMaxGenCand];
+  float genDca3D[kMaxGenCand];
+  bool genDca3DValid[kMaxGenCand];
   float dca3DErr[kMaxGenCand];
   float dca2D[kMaxGenCand];
   bool isSwap[kMaxGenCand];
@@ -461,6 +470,8 @@ private:
   int iddau1[kMaxGenCand];
   int iddau2[kMaxGenCand];
   float gen_D0pT_[kMaxGenCand];
+  float gen_D0dca3D_[kMaxGenCand];
+  bool gen_D0dca3DValid_[kMaxGenCand];
   float gen_D0eta_[kMaxGenCand];
   float gen_D0phi_[kMaxGenCand];
   float gen_D0mass_[kMaxGenCand];
