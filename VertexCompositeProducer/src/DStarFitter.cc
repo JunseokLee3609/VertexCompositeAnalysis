@@ -16,6 +16,7 @@
 
 //#define DEBUG
 #include "VertexCompositeAnalysis/VertexCompositeProducer/interface/DStarFitter.h"
+#include "VertexCompositeAnalysis/VertexCompositeProducer/interface/DeterministicKinematicVertexFitter.h"
 #include <cmath>
 #include "VertexCompositeAnalysis/VertexCompositeProducer/interface/FitDiagnostics.h"
 #include "CommonTools/CandUtils/interface/AddFourMomenta.h"
@@ -333,6 +334,7 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
   bFieldHandle = iSetup.getHandle(bField_esToken_);
 
   magField = bFieldHandle.product();
+  const vca::DeterministicKinematicVertexFitter vertexFitter;
 
   //needed for IP error
   AnalyticalImpactPointExtrapolator extrapolator(magField);
@@ -433,7 +435,7 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
       TrackRef pionTrackRef = theTrackRefs[trdx1];
       TransientTrack* pionTransTkPtr = 0;
       pionTransTkPtr = &theTransTracks[trdx1];
-      CC theD0 = (*theD0Handle)[didx1];
+      const CC& theD0 = (*theD0Handle)[didx1];
 
       // if (theD0.numberOfDaughters() < 2) continue;
       const reco::Candidate* dau0 = theD0.daughter(0);
@@ -586,8 +588,7 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
        d0Daus.push_back(pFactory.particle(ttk0,dau0mass,chi,ndf,dau0sigma));
        d0Daus.push_back(pFactory.particle(ttk1,dau1mass,chi,ndf,dau1sigma));
 
-	       KinematicParticleVertexFitter kpvFitter;
-	       RefCountedKinematicTree d0Tree =  kpvFitter.fit(d0Daus);
+       const auto d0Tree = vertexFitter.fit(d0Daus);
 	      if( !d0Tree->isValid() ) continue;
 	      debugFill(debugCat, kDebugD0Tree);
        #ifdef DEBUG
@@ -601,9 +602,7 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
        dStarParticles.push_back(d0Tree->currentParticle());
        dStarParticles.push_back(pFactory.particle(*pionTransTkPtr,piMassDStar,chi,ndf,piMassDStar_sigma));
 
-       KinematicParticleVertexFitter dStarFitter;
-       RefCountedKinematicTree dStarVertex;
-	       dStarVertex = dStarFitter.fit(dStarParticles);
+       const auto dStarVertex = vertexFitter.fit(dStarParticles);
 
 		       if( !dStarVertex->isValid() ) continue;
 		      debugFill(debugCat, kDebugDStarVertex);

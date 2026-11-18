@@ -15,6 +15,7 @@
 //
 
 #include "VertexCompositeAnalysis/VertexCompositeProducer/interface/D0Fitter.h"
+#include "VertexCompositeAnalysis/VertexCompositeProducer/interface/DeterministicKinematicVertexFitter.h"
 #include "VertexCompositeAnalysis/VertexCompositeProducer/interface/D0TrainingFeatures.h"
 #include "VertexCompositeAnalysis/VertexCompositeProducer/interface/FitDiagnostics.h"
 #include "CommonTools/CandUtils/interface/AddFourMomenta.h"
@@ -207,6 +208,7 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
   bFieldHandle = iSetup.getHandle(bField_esToken_);
 
   magField = bFieldHandle.product();
+  const vca::DeterministicKinematicVertexFitter vertexFitter;
 
   // Setup TMVA
 //  mvaValValueMap = auto_ptr<edm::ValueMap<float> >(new edm::ValueMap<float>);
@@ -456,9 +458,7 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
         d0Particles.push_back(pFactory.particle(*posTransTkPtr,posCandMass[i],chi,ndf,posCandMass_sigma[i]));
         d0Particles.push_back(pFactory.particle(*negTransTkPtr,negCandMass[i],chi,ndf,negCandMass_sigma[i]));
 
-        KinematicParticleVertexFitter d0Fitter;
-        RefCountedKinematicTree d0Vertex;
-        d0Vertex = d0Fitter.fit(d0Particles);
+        const auto d0Vertex = vertexFitter.fit(d0Particles);
 
         if( !d0Vertex->isValid() ) continue;
 
