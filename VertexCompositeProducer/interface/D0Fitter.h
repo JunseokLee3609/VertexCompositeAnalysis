@@ -96,6 +96,7 @@ class D0Fitter {
 
   // Switching to L. Lista's reco::Candidate infrastructure for D0 storage
   const CCC& getD0() const;
+  void takeCandidates(CCC& output) { output.swap(theD0s); }
   const std::vector<float>& getMVAVals() const; 
 
 //  auto_ptr<edm::ValueMap<float> > getMVAMap() const;

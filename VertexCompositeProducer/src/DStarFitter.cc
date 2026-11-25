@@ -16,6 +16,7 @@
 
 //#define DEBUG
 #include "VertexCompositeAnalysis/VertexCompositeProducer/interface/DStarFitter.h"
+#include "VertexCompositeAnalysis/VertexCompositeProducer/interface/DeterministicKinematicVertexFitter.h"
 #include <cmath>
 #include "CommonTools/CandUtils/interface/AddFourMomenta.h"
 
@@ -30,6 +31,7 @@
 #include "TrackingTools/PatternTools/interface/TSCBLBuilderNoMaterial.h"
 
 #include "RecoVertex/KinematicFitPrimitives/interface/MultiTrackKinematicConstraint.h"
+#include "RecoVertex/KinematicFitPrimitives/interface/VirtualKinematicParticleFactory.h"
 #include "RecoVertex/KinematicFit/interface/KinematicConstrainedVertexFitter.h"
 #include "RecoVertex/KinematicFit/interface/TwoTrackMassKinematicConstraint.h"
 #include "RecoVertex/KalmanVertexFit/interface/KalmanVertexFitter.h"
@@ -59,6 +61,7 @@
 #include "CondFormats/DataRecord/interface/GBRWrapperRcd.h"
 
 #include <limits>
+#include <optional>
 
 static const float piMassDStar = 0.13957018;
 static const float piMassDStarSquared = piMassDStar*piMassDStar;
@@ -330,10 +333,11 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
   iEvent.getByToken(token_dedx, dEdxHandle);
 
 
-  if( !theTrackHandle->size() ) return;
+  if(theTrackHandle->empty() || theD0Handle->empty()) return;
   bFieldHandle = iSetup.getHandle(bField_esToken_);
 
   magField = bFieldHandle.product();
+  const vca::DeterministicKinematicVertexFitter vertexFitter;
 
   //needed for IP error
   AnalyticalImpactPointExtrapolator extrapolator(magField);
@@ -421,7 +425,23 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
   //int   pdg_id[2] = {421, -421};
 
   // Loop over tracks and vertex good charged track pairs
-  for(unsigned int didx1 = 0; didx1 < theD0Handle->size(); didx1++) {
+  struct D0Fit {
+    KinematicState state;
+    float chiSquared;
+    float degreesOfFreedom;
+  };
+  const bool fillCombinationDiagnostics = debugCategoryCutflow_ || debugSlowPionPtScan_;
+  VirtualKinematicParticleFactory fittedParticleFactory;
+  std::vector<math::PtEtaPhiMLorentzVector> slowPionMomenta;
+  slowPionMomenta.reserve(theTransTracks.size());
+  for (const auto& transientTrack : theTransTracks) {
+    const auto& track = transientTrack.track();
+    slowPionMomenta.emplace_back(track.pt(), track.eta(), track.phi(), piMassDStar);
+  }
+
+  for (const auto& theD0 : *theD0Handle) {
+    bool attemptedD0Refit = false;
+    std::optional<D0Fit> d0Fit;
 
     for(unsigned int trdx1 = 0; trdx1 < theTrackRefs.size(); trdx1++) {
 
@@ -435,7 +455,6 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
       TrackRef pionTrackRef = theTrackRefs[trdx1];
       TransientTrack* pionTransTkPtr = 0;
       pionTransTkPtr = &theTransTracks[trdx1];
-      CC theD0 = (*theD0Handle)[didx1];
 
       // if (theD0.numberOfDaughters() < 2) continue;
       const reco::Candidate* dau0 = theD0.daughter(0);
@@ -464,7 +483,12 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	        kaonCand = dau1;
 	        pionCand = dau0;
 	      }
-		      const int debugCat = debugCategoryCutflow_ ? debugCategoryIndex(kaonCand->charge(), pionCand->charge(), slowPionCharge) : -1;
+          const int kaonCharge = kaonCand->charge();
+          const bool passesCharge = isWrongSign ? kaonCharge * slowPionCharge == 1
+                                               : (slowPionCharge > 0 ? kaonCharge <= 0 : kaonCharge >= 0);
+          // Keep the original cutflow order when filling diagnostics.
+          if (!fillCombinationDiagnostics && !passesCharge) continue;
+      const int debugCat = debugCategoryCutflow_ ? debugCategoryIndex(kaonCand->charge(), pionCand->charge(), slowPionCharge) : -1;
 		      debugFill(debugCat, kDebugSlowPionAttach);
 		      slowPiPtScanFill(slowPionPtForScan, kSlowPiPtAttach);
 	      bool duplicateSlowPion = false;
@@ -481,8 +505,7 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	      }
 	      if (rejectDuplicateSlowPion_ && duplicateSlowPion) continue;
 	      const auto& D0Vec = theD0.p4();
-	      const reco::Track& thePiTrack = pionTransTkPtr->track();
-	      math::PtEtaPhiMLorentzVector pPi(thePiTrack.pt(), thePiTrack.eta(), thePiTrack.phi(), piMassDStar);
+	      const auto& pPi = slowPionMomenta[trdx1];
 	      double theDStarcandMass = (D0Vec + pPi).M();
 	      const double rawDStarPt = (D0Vec + pPi).Pt();
 	      const Particle::LorentzVector rawDStarP4(D0Vec.px() + pPi.px(),
@@ -578,48 +601,40 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
 
        //Creating a KinematicParticleFactory
       KinematicParticleFactoryFromTransientTrack pFactory;
-      vector<RefCountedKinematicParticle> d0Daus;
+       if (!passesCharge) continue;
+       debugFill(debugCat, kDebugCharge);
+       slowPiPtScanFill(slowPionPtForScan, kSlowPiPtCharge);
 
-	       // For D*+: K- pi+ followed by slow pi+
-	       // For D*-: K+ pi- followed by slow pi-
-	       if(!isWrongSign){
-	       if (slowPionCharge > 0) { // D*+ case
-	               if (kaonCand->charge() > 0) continue;
-       } else {
-               if (kaonCand->charge() < 0) continue;
+       // Refit each D0 at most once, including failed fits.
+       if (!attemptedD0Refit) {
+         attemptedD0Refit = true;
+         const reco::TransientTrack first(*dau0->bestTrack(), magField);
+         const reco::TransientTrack second(*dau1->bestTrack(), magField);
+         const float firstMass = dau0->mass();
+         const float secondMass = dau1->mass();
+         const std::vector<RefCountedKinematicParticle> daughters{
+             pFactory.particle(first, firstMass, chi, ndf, D0MassD0_sigma),
+             pFactory.particle(second, secondMass, chi, ndf, D0MassD0_sigma)};
+         const auto d0Tree = vertexFitter.fit(daughters);
+         if (d0Tree->isValid()) {
+           d0Tree->movePointerToTheTop();
+           const auto parent = d0Tree->currentParticle();
+           d0Fit.emplace(D0Fit{parent->currentState(), parent->chiSquared(), parent->degreesOfFreedom()});
+         }
        }
-       }
-	       else{
-	        if(kaonCand->charge() * slowPionCharge != 1) continue;
-	       }
-		      debugFill(debugCat, kDebugCharge);
-		      slowPiPtScanFill(slowPionPtForScan, kSlowPiPtCharge);
-	       int a =0;
-	       reco::TransientTrack ttk0(*dau0->bestTrack(), magField);
-	       reco::TransientTrack ttk1(*dau1->bestTrack(), magField);
-       float dau0mass =  dau0->mass();
-       float dau1mass =  dau1->mass();
-       d0Daus.push_back(pFactory.particle(ttk0,dau0mass,chi,ndf,D0MassD0_sigma));
-       d0Daus.push_back(pFactory.particle(ttk1,dau1mass,chi,ndf,D0MassD0_sigma));
+       if (!d0Fit) continue;
+       debugFill(debugCat, kDebugD0Tree);
+#ifdef DEBUG
+       int a = 0;
+       cout << a++ << endl;
+#endif
 
-	       KinematicParticleVertexFitter kpvFitter;
-	       RefCountedKinematicTree d0Tree =  kpvFitter.fit(d0Daus);
-	      if( !d0Tree->isValid() ) continue;
-	      debugFill(debugCat, kDebugD0Tree);
-       #ifdef DEBUG
-      cout << a++ << endl;
-        #endif
+       // Each D* fit links its particles to a new tree. Reuse the fitted state in a fresh particle.
+       const std::vector<RefCountedKinematicParticle> dStarParticles{
+           fittedParticleFactory.particle(d0Fit->state, d0Fit->chiSquared, d0Fit->degreesOfFreedom, {}),
+           pFactory.particle(*pionTransTkPtr, piMassDStar, chi, ndf, piMassDStar_sigma)};
 
-
-       d0Tree->movePointerToTheTop();
-
-       vector<RefCountedKinematicParticle> dStarParticles;
-       dStarParticles.push_back(d0Tree->currentParticle());
-       dStarParticles.push_back(pFactory.particle(*pionTransTkPtr,piMassDStar,chi,ndf,piMassDStar_sigma));
-
-       KinematicParticleVertexFitter dStarFitter;
-       RefCountedKinematicTree dStarVertex;
-	       dStarVertex = dStarFitter.fit(dStarParticles);
+       const auto dStarVertex = vertexFitter.fit(dStarParticles);
 
 		       if( !dStarVertex->isValid() ) continue;
 		      debugFill(debugCat, kDebugDStarVertex);

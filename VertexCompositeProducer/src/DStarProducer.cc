@@ -53,19 +53,11 @@ void DStarProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
    theVees.fitAll(iEvent, iSetup);
 
-   // Create auto_ptr for each collection to be stored in the Event
-//   std::auto_ptr< reco::VertexCompositeCandidateCollection >
-//     d0Candidates( new reco::VertexCompositeCandidateCollection );
-//
-   auto d0Candidates = std::make_unique<CCC>();
-   d0Candidates->reserve( theVees.getDStar().size() );
-
-   std::copy( theVees.getDStar().begin(),
-              theVees.getDStar().end(),
-              std::back_inserter(*d0Candidates) );
+   auto dStarCandidates = std::make_unique<CCC>();
+   theVees.takeCandidates(*dStarCandidates);
 
    // Write the collections to the Event
-   iEvent.put( std::move(d0Candidates), std::string("DStar") );
+   iEvent.put( std::move(dStarCandidates), std::string("DStar") );
     
    if(useAnyMVA_) 
    {

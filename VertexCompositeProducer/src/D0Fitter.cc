@@ -15,6 +15,7 @@
 //
 
 #include "VertexCompositeAnalysis/VertexCompositeProducer/interface/D0Fitter.h"
+#include "VertexCompositeAnalysis/VertexCompositeProducer/interface/DeterministicKinematicVertexFitter.h"
 #include "CommonTools/CandUtils/interface/AddFourMomenta.h"
 
 #include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
@@ -46,6 +47,7 @@
 #include "FWCore/Framework/interface/stream/EDAnalyzer.h"
 #include "PhysicsTools/ONNXRuntime/interface/ONNXRuntime.h"
 
+#include <array>
 #include <cmath>
 
 const size_t VARSIZE = 17;
@@ -205,6 +207,7 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
   bFieldHandle = iSetup.getHandle(bField_esToken_);
 
   magField = bFieldHandle.product();
+  const vca::DeterministicKinematicVertexFitter vertexFitter;
 
   // Setup TMVA
 //  mvaValValueMap = auto_ptr<edm::ValueMap<float> >(new edm::ValueMap<float>);
@@ -288,92 +291,50 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
   // std::vector<CC*> tmpD0s;
   // cms::Ort::FloatArrays data_(1);
   // data_.reserve( 50000);
-  for(unsigned int trdx1 = 0; trdx1 < theTrackRefs.size(); trdx1++) {
+  struct TrackKinematics {
+    double pt;
+    double eta;
+    int charge;
+  };
+  std::vector<TrackKinematics> trackKinematics;
+  trackKinematics.reserve(theTrackRefs.size());
+  for (const auto& track : theTrackRefs) {
+    trackKinematics.push_back({track->pt(), track->eta(), track->charge()});
+  }
 
-    for(unsigned int trdx2 = trdx1 + 1; trdx2 < theTrackRefs.size(); trdx2++) {
+  std::function<bool(const RefCountedKinematicVertex&)> passesDecayLengthSignificance;
+  if (lVtxSigCut > 0.) {
+    passesDecayLengthSignificance = [&](const RefCountedKinematicVertex& vertex) {
+      const auto error = vertex->error();
+      const std::array<double, 6> elements{{
+          error.cxx(), error.cyx(), error.cyy(), error.czx(), error.czy(), error.czz()}};
+      const SMatrixSym3D vertexCovariance(elements.begin(), elements.end());
+      const SMatrixSym3D totalCovariance = vertexCovariance + bestvtxCov;
+      const auto point = vertex->position();
+      const GlobalVector flight(point.x() - xVtx, point.y() - yVtx, point.z() - zVtx);
+      const SVector3 displacement(flight.x(), flight.y(), flight.z());
+      const double length = flight.mag();
+      const double uncertainty = std::sqrt(ROOT::Math::Similarity(totalCovariance, displacement)) / length;
+      // Match the comparison used after building the tree, including a nonfinite significance.
+      return !(length / uncertainty < lVtxSigCut);
+    };
+  }
 
-      if( (theTrackRefs[trdx1]->pt() + theTrackRefs[trdx2]->pt()) < tkPtSumCut) continue;
-      if( abs(theTrackRefs[trdx1]->eta() - theTrackRefs[trdx2]->eta()) > tkEtaDiffCut) continue;
+  for (unsigned int trdx1 = 0; trdx1 < theTrackRefs.size(); ++trdx1) {
+    for (unsigned int trdx2 = trdx1 + 1; trdx2 < theTrackRefs.size(); ++trdx2) {
+      const auto& first = trackKinematics[trdx1];
+      const auto& second = trackKinematics[trdx2];
+      const int chargeProduct = first.charge * second.charge;
+      if (chargeProduct == 0 || (isWrongSign ? chargeProduct < 0 : chargeProduct > 0)) continue;
+      if (first.pt + second.pt < tkPtSumCut || std::abs(first.eta - second.eta) > tkEtaDiffCut) continue;
 
-      //This vector holds the pair of oppositely-charged tracks to be vertexed
-      std::vector<TransientTrack> transTracks;
-
-      TrackRef positiveTrackRef;
-      TrackRef negativeTrackRef;
-      TransientTrack* posTransTkPtr = 0;
-      TransientTrack* negTransTkPtr = 0;
-
-      // Look at the two tracks we're looping over.  If they're oppositely
-      //  charged, load them into the hypothesized positive and negative tracks
-      //  and references to be sent to the KalmanVertexFitter
-      if(!isWrongSign && theTrackRefs[trdx1]->charge() < 0. && 
-	 theTrackRefs[trdx2]->charge() > 0.) {
-	negativeTrackRef = theTrackRefs[trdx1];
-	positiveTrackRef = theTrackRefs[trdx2];
-	negTransTkPtr = &theTransTracks[trdx1];
-	posTransTkPtr = &theTransTracks[trdx2];
-      }
-      else if(!isWrongSign && theTrackRefs[trdx1]->charge() > 0. &&
-	      theTrackRefs[trdx2]->charge() < 0.) {
-	negativeTrackRef = theTrackRefs[trdx2];
-	positiveTrackRef = theTrackRefs[trdx1];
-	negTransTkPtr = &theTransTracks[trdx2];
-	posTransTkPtr = &theTransTracks[trdx1];
-      }
-      else if(isWrongSign && theTrackRefs[trdx1]->charge() > 0. &&
-              theTrackRefs[trdx2]->charge() > 0.) { 
-        negativeTrackRef = theTrackRefs[trdx2];
-        positiveTrackRef = theTrackRefs[trdx1];
-        negTransTkPtr = &theTransTracks[trdx2];
-        posTransTkPtr = &theTransTracks[trdx1];
-      }
-      else if(isWrongSign && theTrackRefs[trdx1]->charge() < 0. &&
-              theTrackRefs[trdx2]->charge() < 0.) { 
-        negativeTrackRef = theTrackRefs[trdx1];
-        positiveTrackRef = theTrackRefs[trdx2];
-        negTransTkPtr = &theTransTracks[trdx1];
-        posTransTkPtr = &theTransTracks[trdx2];
-      }
-
-      // If they're not 2 oppositely charged tracks, loop back to the
-      //  beginning and try the next pair.
-      else continue;
-
-      // Calculate DCA of two daughters
-      double dzvtx_pos = positiveTrackRef->dz(bestvtx);
-      double dxyvtx_pos = positiveTrackRef->dxy(bestvtx);
-      double dzerror_pos = sqrt(positiveTrackRef->dzError()*positiveTrackRef->dzError()+zVtxError*zVtxError);
-      double dxyerror_pos = positiveTrackRef->dxyError(bestvtx, bestvtxCov);
-      double dauLongImpactSig_pos = dzvtx_pos/dzerror_pos;
-      double dauTransImpactSig_pos = dxyvtx_pos/dxyerror_pos;
-
-      double dzvtx_neg = negativeTrackRef->dz(bestvtx);
-      double dxyvtx_neg = negativeTrackRef->dxy(bestvtx);
-      double dzerror_neg = sqrt(negativeTrackRef->dzError()*negativeTrackRef->dzError()+zVtxError*zVtxError);
-      double dxyerror_neg = negativeTrackRef->dxyError(bestvtx, bestvtxCov);
-      double dauLongImpactSig_neg = dzvtx_neg/dzerror_neg;
-      double dauTransImpactSig_neg = dxyvtx_neg/dxyerror_neg;
-
-      double nhits_pos = positiveTrackRef->numberOfValidHits();
-      double nhits_neg = negativeTrackRef->numberOfValidHits(); 
-    
-      double ptErr_pos = positiveTrackRef->ptError();
-      double ptErr_neg = negativeTrackRef->ptError();
-
-      double dedx_pos=-999.;
-      double dedx_neg=-999.;
-      // Extract dEdx
-      if(dEdxHandle.isValid()){
-        const edm::ValueMap<reco::DeDxData> dEdxTrack = *dEdxHandle.product();
-        dedx_pos = dEdxTrack[positiveTrackRef].dEdx();
-        dedx_neg = dEdxTrack[negativeTrackRef].dEdx();
-      } 
-      dedx_pos = dedx_pos;
-      dedx_neg = dedx_neg;
-
-      // Fill the vector of TransientTracks to send to KVF
-      transTracks.push_back(*posTransTkPtr);
-      transTracks.push_back(*negTransTkPtr);
+      // Preserve the daughter order for both opposite-sign and same-sign pairs.
+      const auto positiveIndex = first.charge > 0 ? trdx1 : trdx2;
+      const auto negativeIndex = first.charge > 0 ? trdx2 : trdx1;
+      const auto& positiveTrackRef = theTrackRefs[positiveIndex];
+      const auto& negativeTrackRef = theTrackRefs[negativeIndex];
+      const auto* posTransTkPtr = &theTransTracks[positiveIndex];
+      const auto* negTransTkPtr = &theTransTracks[negativeIndex];
 
       // Trajectory states to calculate DCA for the 2 tracks
       FreeTrajectoryState posState = posTransTkPtr->impactPointTSCP().theState();
@@ -383,6 +344,7 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
       // Measure distance between tracks at their closest approach
       TwoTrackMinimumDistance minDistCalculator;
+
       if (!minDistCalculator.calculate(posState, negState)) continue;
       float dca = minDistCalculator.distance();
       GlobalPoint cxPt = minDistCalculator.crossingPoint();
@@ -455,9 +417,7 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
         d0Particles.push_back(pFactory.particle(*posTransTkPtr,posCandMass[i],chi,ndf,posCandMass_sigma[i]));
         d0Particles.push_back(pFactory.particle(*negTransTkPtr,negCandMass[i],chi,ndf,negCandMass_sigma[i]));
 
-        KinematicParticleVertexFitter d0Fitter;
-        RefCountedKinematicTree d0Vertex;
-        d0Vertex = d0Fitter.fit(d0Particles);
+        const auto d0Vertex = vertexFitter.fit(d0Particles, passesDecayLengthSignificance);
 
         if( !d0Vertex->isValid() ) continue;
 
@@ -573,14 +533,25 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
         // std::cout << "By decay length and alpha " << std::sin(d0Angle3D)*lVtxMag << " +/- " << sigmaLvtxMag * std::sin(d0Angle3D) <<std::endl;
         // std::cout << "By decay length " << lVtxMag << " +/- " << sigmaLvtxMag * lVtxMag <<std::endl;
 
-        FreeTrajectoryState posStateNew = posTransTkPtr->impactPointTSCP().theState();
-        FreeTrajectoryState negStateNew = negTransTkPtr->impactPointTSCP().theState();
-        TwoTrackMinimumDistance minDistCalculator;
-        if (!minDistCalculator.calculate(posStateNew, negStateNew)) continue;
-        float dca = minDistCalculator.distance();
-        cxPt = minDistCalculator.crossingPoint();
-        GlobalError posErr = posStateNew.cartesianError().position();
-        GlobalError negErr = negStateNew.cartesianError().position();
+        // Compute the daughter impact parameters only for candidates that reach this stage.
+        double dzvtx_pos = positiveTrackRef->dz(bestvtx);
+        double dxyvtx_pos = positiveTrackRef->dxy(bestvtx);
+        double dzerror_pos = sqrt(positiveTrackRef->dzError()*positiveTrackRef->dzError()+zVtxError*zVtxError);
+        double dxyerror_pos = positiveTrackRef->dxyError(bestvtx, bestvtxCov);
+        double dauLongImpactSig_pos = dzvtx_pos/dzerror_pos;
+        double dauTransImpactSig_pos = dxyvtx_pos/dxyerror_pos;
+
+        double dzvtx_neg = negativeTrackRef->dz(bestvtx);
+        double dxyvtx_neg = negativeTrackRef->dxy(bestvtx);
+        double dzerror_neg = sqrt(negativeTrackRef->dzError()*negativeTrackRef->dzError()+zVtxError*zVtxError);
+        double dxyerror_neg = negativeTrackRef->dxyError(bestvtx, bestvtxCov);
+        double dauLongImpactSig_neg = dzvtx_neg/dzerror_neg;
+        double dauTransImpactSig_neg = dxyvtx_neg/dxyerror_neg;
+
+        const double ptErr_pos = positiveTrackRef->ptError();
+        const double ptErr_neg = negativeTrackRef->ptError();
+        GlobalError posErr = posState.cartesianError().position();
+        GlobalError negErr = negState.cartesianError().position();
 
         // DCA error propagation
         double sigma_x2 = posErr.cxx() + negErr.cxx();
@@ -766,7 +737,10 @@ void D0Fitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
           // Create ONNX input tensor
         // cout << unput_names_.size() << " " << data_.size() << endl;
+
           std::vector<float> outputs = onnxRuntime_->run(input_names_, data_, input_shapes_,output_names_)[0];
+
+
 
           float onnxVal = outputs[1]; // Adjust if your model has multiple outputs
           //     std::cout << "input data -> ";

@@ -94,6 +94,7 @@ class DStarFitter {
 
   // Switching to L. Lista's reco::Candidate infrastructure for D0 storage
   const CCC& getDStar() const;
+  void takeCandidates(CCC& output) { output.swap(theDStars); }
   const std::vector<float>& getDCAVals() const;
   const std::vector<float>& getDCAErrs() const;
   const std::vector<float>& getMVAVals() const; 

@@ -79,16 +79,8 @@ void D0Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
    theVees.fitAll(iEvent, iSetup);
 
-   // Create auto_ptr for each collection to be stored in the Event
-//   std::auto_ptr< reco::VertexCompositeCandidateCollection >
-//     d0Candidates( new reco::VertexCompositeCandidateCollection );
-//
    auto d0Candidates = std::make_unique<CCC>();
-   d0Candidates->reserve( theVees.getD0().size() );
-
-   std::copy( theVees.getD0().begin(),
-              theVees.getD0().end(),
-              std::back_inserter(*d0Candidates) );
+   theVees.takeCandidates(*d0Candidates);
 
    // Write the collections to the Event
    iEvent.put( std::move(d0Candidates), std::string("D0") );
