@@ -16,6 +16,7 @@
 
 //#define DEBUG
 #include "VertexCompositeAnalysis/VertexCompositeProducer/interface/DStarFitter.h"
+#include <cmath>
 #include "CommonTools/CandUtils/interface/AddFourMomenta.h"
 
 #include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
@@ -642,8 +643,12 @@ void DStarFitter::fitAll(const edm::Event& iEvent, const edm::EventSetup& iSetup
       cout << a++ << endl;
         #endif
 
-		     float dStarC2Prob = TMath::Prob(dStarDecayVertex->chiSquared(),dStarDecayVertex->degreesOfFreedom());
-		     if (dStarC2Prob < VtxChiProbCut) continue;
+       const double dStarFitChi2 = dStarDecayVertex->chiSquared();
+       const double dStarFitNdof = dStarDecayVertex->degreesOfFreedom();
+       if (!std::isfinite(dStarFitChi2) || dStarFitChi2 < 0.0 ||
+           !std::isfinite(dStarFitNdof) || dStarFitNdof <= 0.0) continue;
+       const float dStarC2Prob = TMath::Prob(dStarFitChi2, dStarFitNdof);
+       if (!std::isfinite(dStarC2Prob) || dStarC2Prob < VtxChiProbCut) continue;
 	      debugFill(debugCat, kDebugVtxProb);
        #ifdef DEBUG
       cout << a++ << endl;
