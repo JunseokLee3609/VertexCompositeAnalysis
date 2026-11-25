@@ -49,6 +49,7 @@ PATCompositeTreeProducer6::PATCompositeTreeProducer6(const edm::ParameterSet& iC
       isSkimMVA_(iConfig.getUntrackedParameter<bool>("isSkimMVA", false)),
       doRunInfo_(true),
       isCentrality_(false),
+      saveDeDxHarmonic2_(iConfig.getUntrackedParameter<bool>("saveDeDxHarmonic2", true)),
       debugGenMatching_(iConfig.getUntrackedParameter<bool>("debugGenMatching", false)),
       verboseDebug_(iConfig.getUntrackedParameter<bool>("verboseDebug", false)),
       debugDstarTailAncestry_(iConfig.getUntrackedParameter<bool>("debugDstarTailAncestry", false)),
@@ -94,7 +95,6 @@ PATCompositeTreeProducer6::PATCompositeTreeProducer6(const edm::ParameterSet& iC
       HFsumETMinus(kInvalidValue),
       ZDCPlus(kInvalidValue),
       ZDCMinus(kInvalidValue),
-      ephfSumW(-99.f),
       PATCompositeNtuple_(nullptr),
       candSize_gen(0),
       nEventsProcessed_(0),
@@ -134,8 +134,7 @@ PATCompositeTreeProducer6::PATCompositeTreeProducer6(const edm::ParameterSet& iC
   else mvaTag = iConfig.getUntrackedParameter<edm::InputTag>("MVACollection", edm::InputTag());
   if (!mvaTag.label().empty()) tok_mvaValues_ = consumes<MVACollection>(mvaTag);
 
-  tok_dedx1_ = consumes<edm::ValueMap<reco::DeDxData>>(edm::InputTag("dedxHarmonic2"));
-  tok_dedx2_ = consumes<edm::ValueMap<reco::DeDxData>>(edm::InputTag("dedxTruncated40"));
+  if (saveDeDxHarmonic2_) tok_harmonic2_ = consumes<edm::ValueMap<reco::DeDxData>>(edm::InputTag("dedxHarmonic2"));
 
   const auto compTag = iConfig.getUntrackedParameter<edm::InputTag>("CompositeCollection", edm::InputTag());
   if (!compTag.label().empty()) {
@@ -449,10 +448,10 @@ void PATCompositeTreeProducer6::resetCandidateOutputs(unsigned int idx) {
   pid3[idx] = -99999;
   tof1[idx] = kInvalidValue;
   tof2[idx] = kInvalidValue;
-  H2dedx1[idx] = kInvalidValue;
-  H2dedx2[idx] = kInvalidValue;
-  T4dedx1[idx] = kInvalidValue;
-  T4dedx2[idx] = kInvalidValue;
+  if (saveDeDxHarmonic2_) {
+    H2dedx1[idx] = kInvalidValue;
+    H2dedx2[idx] = kInvalidValue;
+  }
   trkChi1[idx] = kInvalidValue;
   trkChi2[idx] = kInvalidValue;
   grand_mass[idx] = kInvalidValue;
@@ -490,10 +489,10 @@ void PATCompositeTreeProducer6::resetCandidateOutputs(unsigned int idx) {
   grand_phi2[idx] = kInvalidValue;
   grand_charge1[idx] = -99;
   grand_charge2[idx] = -99;
-  grand_H2dedx1[idx] = kInvalidValue;
-  grand_H2dedx2[idx] = kInvalidValue;
-  grand_T4dedx1[idx] = kInvalidValue;
-  grand_T4dedx2[idx] = kInvalidValue;
+  if (saveDeDxHarmonic2_) {
+    grand_H2dedx1[idx] = kInvalidValue;
+    grand_H2dedx2[idx] = kInvalidValue;
+  }
   grand_trkChi1[idx] = kInvalidValue;
   grand_trkChi2[idx] = kInvalidValue;
   resetRecoGenMatch(idx);
@@ -593,16 +592,12 @@ void PATCompositeTreeProducer6::processEventPlaneInfo(const edm::Event& iEvent) 
   eptrackmQ[1] = (hasEP ? (*eventplanes)[11].q(2) : kInvalid);
 
   // sumw
-  ephfmSumW = (hasEP ? (*eventplanes)[6].sumw() : kInvalid);
-  ephfpSumW = (hasEP ? (*eventplanes)[7].sumw() : kInvalid);
-  ephfSumW = (hasEP ? (*eventplanes)[8].sumw() : kInvalid);
   ephfmSumWSub[0] = (hasEP ? (*eventplanes)[0].sumw() : kInvalid);
   ephfmSumWSub[1] = (hasEP ? (*eventplanes)[6].sumw() : kInvalid);
   ephfpSumWSub[0] = (hasEP ? (*eventplanes)[1].sumw() : kInvalid);
   ephfpSumWSub[1] = (hasEP ? (*eventplanes)[7].sumw() : kInvalid);
   ephfSumWSub[0] = (hasEP ? (*eventplanes)[2].sumw() : kInvalid);
   ephfSumWSub[1] = (hasEP ? (*eventplanes)[8].sumw() : kInvalid);
-  eptrackmidSumW = (hasEP ? (*eventplanes)[3].sumw() : kInvalid);
   eptrackmidSumWSub[0] = (hasEP ? (*eventplanes)[3].sumw() : kInvalid);
   eptrackmidSumWSub[1] = (hasEP ? (*eventplanes)[9].sumw() : kInvalid);
   eptrackpSumW[0] = (hasEP ? (*eventplanes)[4].sumw() : kInvalid);
@@ -744,30 +739,29 @@ void PATCompositeTreeProducer6::initTree() {
       PATCompositeNtuple_->Branch("EventNb", &eventNb, "EventNb/i");
     }
     PATCompositeNtuple_->Branch("Ntrkoffline", &Ntrkoffline, "Ntrkoffline/I");
-    PATCompositeNtuple_->Branch("Npixel", &Npixel, "Npixel/I");
-    PATCompositeNtuple_->Branch("HFsumETPlus", &HFsumETPlus, "HFsumETPlus/F");
-    PATCompositeNtuple_->Branch("HFsumETMinus", &HFsumETMinus, "HFsumETMinus/F");
-    PATCompositeNtuple_->Branch("ZDCPlus", &ZDCPlus, "ZDCPlus/F");
-    PATCompositeNtuple_->Branch("ZDCMinus", &ZDCMinus, "ZDCMinus/F");
     PATCompositeNtuple_->Branch("bestvtxX", &bestvx, "bestvtxX/F");
     PATCompositeNtuple_->Branch("bestvtxY", &bestvy, "bestvtxY/F");
     PATCompositeNtuple_->Branch("bestvtxZ", &bestvz, "bestvtxZ/F");
     PATCompositeNtuple_->Branch("candSize", &candSize, "candSize/I");
-    if (isCentrality_) PATCompositeNtuple_->Branch("centrality", &centrality, "centrality/I");
+    if (isCentrality_) {
+      PATCompositeNtuple_->Branch("centrality", &centrality, "centrality/I");
+      PATCompositeNtuple_->Branch("Npixel", &Npixel, "Npixel/I");
+      PATCompositeNtuple_->Branch("HFsumETPlus", &HFsumETPlus, "HFsumETPlus/F");
+      PATCompositeNtuple_->Branch("HFsumETMinus", &HFsumETMinus, "HFsumETMinus/F");
+      PATCompositeNtuple_->Branch("ZDCPlus", &ZDCPlus, "ZDCPlus/F");
+      PATCompositeNtuple_->Branch("ZDCMinus", &ZDCMinus, "ZDCMinus/F");
+    }
 
     if (isEventPlane_) {
       PATCompositeNtuple_->Branch("ephfpAngle", &ephfpAngle, "ephfpAngle[2]/F");
       PATCompositeNtuple_->Branch("ephfmAngle", &ephfmAngle, "ephfmAngle[2]/F");
       PATCompositeNtuple_->Branch("ephfpQ", &ephfpQ, "ephfpQ[2]/F");
       PATCompositeNtuple_->Branch("ephfmQ", &ephfmQ, "ephfmQ[2]/F");
-      PATCompositeNtuple_->Branch("ephfpSumW", &ephfpSumW, "ephfpSumW/F");
-      PATCompositeNtuple_->Branch("ephfmSumW", &ephfmSumW, "ephfmSumW/F");
       PATCompositeNtuple_->Branch("ephfpSumWSub", &ephfpSumWSub, "ephfpSumWSub[2]/F");
       PATCompositeNtuple_->Branch("ephfmSumWSub", &ephfmSumWSub, "ephfmSumWSub[2]/F");
       PATCompositeNtuple_->Branch("ephfmAngleoff", &ephfmAngleoff, "ephfmAngleoff[2]/F");
       PATCompositeNtuple_->Branch("ephfpAngleoff", &ephfpAngleoff, "ephfpAngleoff[2]/F");
       PATCompositeNtuple_->Branch("ephfQ", &ephfQ, "ephfQ[2]/F");
-      PATCompositeNtuple_->Branch("ephfSumW", &ephfSumW, "ephfSumW/F");
       PATCompositeNtuple_->Branch("ephfSumWSub", &ephfSumWSub, "ephfSumWSub[2]/F");
 
       PATCompositeNtuple_->Branch("ephfmAngleRaw", &ephfmAngleRaw, "ephfmAngleRaw[2]/F");
@@ -792,7 +786,6 @@ void PATCompositeTreeProducer6::initTree() {
       PATCompositeNtuple_->Branch("eptrackmidSumSin", &eptrackmidSumSin, "eptrackmidSumSin[2]/F");
       PATCompositeNtuple_->Branch("eptrackmidSumCosRaw", &eptrackmidSumCosRaw, "eptrackmidSumCosRaw[2]/F");
       PATCompositeNtuple_->Branch("eptrackmidSumSinRaw", &eptrackmidSumSinRaw, "eptrackmidSumSinRaw[2]/F");
-      PATCompositeNtuple_->Branch("eptrackmidSumW", &eptrackmidSumW, "eptrackmidSumW/F");
       PATCompositeNtuple_->Branch("eptrackmidSumWSub", &eptrackmidSumWSub, "eptrackmidSumWSub[2]/F");
       PATCompositeNtuple_->Branch("eptrackmidSumPtOrEt", &eptrackmidSumPtOrEt, "eptrackmidSumPtOrEt[2]/F");
       PATCompositeNtuple_->Branch("eptrackpAngle", &eptrackpAngle, "eptrackpAngle[2]/F");
@@ -985,7 +978,7 @@ void PATCompositeTreeProducer6::initTree() {
         PATCompositeNtuple_->Branch("EtaD2", &eta2, "EtaD2[candSize]/F");
         PATCompositeNtuple_->Branch("PhiD2", &phi2, "PhiD2[candSize]/F");
         PATCompositeNtuple_->Branch("pTerrD2", &ptErr2, "pTerrD2[candSize]/F");
-        PATCompositeNtuple_->Branch("dedxHarmonic2D2", &H2dedx2, "dedxHarmonic2D2[candSize]/F");
+        if (saveDeDxHarmonic2_) PATCompositeNtuple_->Branch("dedxHarmonic2D2", &H2dedx2, "dedxHarmonic2D2[candSize]/F");
         PATCompositeNtuple_->Branch("zDCASignificanceGrandDaugther1", &grand_dzos1, "zDCASignificanceGrandDaugther1[candSize]/F");
         PATCompositeNtuple_->Branch("zDCASignificanceGrandDaugther2", &grand_dzos2, "zDCASignificanceGrandDaugther2[candSize]/F");
         PATCompositeNtuple_->Branch("xyDCASignificanceGrandDaugther1", &grand_dxyos1, "xyDCASignificanceGrandDaugther1[candSize]/F");
@@ -1004,8 +997,8 @@ void PATCompositeTreeProducer6::initTree() {
         PATCompositeNtuple_->Branch("EtaGrandD2", &grand_eta2, "EtaGrandD2[candSize]/F");
         PATCompositeNtuple_->Branch("PhiGrandD1", &grand_phi1, "PhiGrandD1[candSize]/F");
         PATCompositeNtuple_->Branch("PhiGrandD2", &grand_phi2, "PhiGrandD2[candSize]/F");
-        PATCompositeNtuple_->Branch("dedxHarmonic2GrandD1", &grand_H2dedx1, "dedxHarmonic2GrandD1[candSize]/F");
-        PATCompositeNtuple_->Branch("dedxHarmonic2GrandD2", &grand_H2dedx2, "dedxHarmonic2GrandD2[candSize]/F");
+        if (saveDeDxHarmonic2_) PATCompositeNtuple_->Branch("dedxHarmonic2GrandD1", &grand_H2dedx1, "dedxHarmonic2GrandD1[candSize]/F");
+        if (saveDeDxHarmonic2_) PATCompositeNtuple_->Branch("dedxHarmonic2GrandD2", &grand_H2dedx2, "dedxHarmonic2GrandD2[candSize]/F");
       } else {
         PATCompositeNtuple_->Branch("zDCASignificanceDaugther1", &dzos1, "zDCASignificanceDaugther1[candSize]/F");
         PATCompositeNtuple_->Branch("xyDCASignificanceDaugther1", &dxyos1, "xyDCASignificanceDaugther1[candSize]/F");
@@ -1017,7 +1010,7 @@ void PATCompositeTreeProducer6::initTree() {
         PATCompositeNtuple_->Branch("pTerrD1", &ptErr1, "pTerrD1[candSize]/F");
         PATCompositeNtuple_->Branch("EtaD1", &eta1, "EtaD1[candSize]/F");
         PATCompositeNtuple_->Branch("PhiD1", &phi1, "PhiD1[candSize]/F");
-        PATCompositeNtuple_->Branch("dedxHarmonic2D1", &H2dedx1, "dedxHarmonic2D1[candSize]/F");
+        if (saveDeDxHarmonic2_) PATCompositeNtuple_->Branch("dedxHarmonic2D1", &H2dedx1, "dedxHarmonic2D1[candSize]/F");
         PATCompositeNtuple_->Branch("normalizedChi2Daugther1", &trkChi1, "normalizedChi2Daugther1[candSize]/F");
         PATCompositeNtuple_->Branch("zDCASignificanceDaugther2", &dzos2, "zDCASignificanceDaugther2[candSize]/F");
         PATCompositeNtuple_->Branch("xyDCASignificanceDaugther2", &dxyos2, "xyDCASignificanceDaugther2[candSize]/F");
@@ -1029,7 +1022,7 @@ void PATCompositeTreeProducer6::initTree() {
         PATCompositeNtuple_->Branch("pTerrD2", &ptErr2, "pTerrD2[candSize]/F");
         PATCompositeNtuple_->Branch("EtaD2", &eta2, "EtaD2[candSize]/F");
         PATCompositeNtuple_->Branch("PhiD2", &phi2, "PhiD2[candSize]/F");
-        PATCompositeNtuple_->Branch("dedxHarmonic2D2", &H2dedx2, "dedxHarmonic2D2[candSize]/F");
+        if (saveDeDxHarmonic2_) PATCompositeNtuple_->Branch("dedxHarmonic2D2", &H2dedx2, "dedxHarmonic2D2[candSize]/F");
         PATCompositeNtuple_->Branch("normalizedChi2Daugther2", &trkChi2, "normalizedChi2Daugther2[candSize]/F");
       }
     }
@@ -1301,8 +1294,7 @@ std::vector<reco::GenParticleRef> PATCompositeTreeProducer6::processGenMatching(
 void PATCompositeTreeProducer6::processCandidates(const CCC* v0candidates_,
                                                   const edm::Handle<MVACollection>& mvavalues,
                                                   const std::vector<reco::GenParticleRef>& genRefs,
-                                                  const edm::Handle<edm::ValueMap<reco::DeDxData>>& dEdxHandle1,
-                                                  const edm::Handle<edm::ValueMap<reco::DeDxData>>& dEdxHandle2,
+                                                  const edm::Handle<edm::ValueMap<reco::DeDxData>>& harmonic2,
                                                   const edm::Event& iEvent,
                                                   const edm::Handle<reco::VertexCollection>& vertices,
                                                   const edm::Handle<reco::GenParticleCollection>& genpars) {
@@ -1847,8 +1839,7 @@ void PATCompositeTreeProducer6::processCandidates(const CCC* v0candidates_,
       ptErr1[it] = dau1->ptError();
       nhit1[it] = dau1->numberOfValidHits();
       trkChi1[it] = dau1->normalizedChi2();
-      if (dEdxHandle1.isValid()) H2dedx1[it] = (*dEdxHandle1)[dau1].dEdx();
-      if (dEdxHandle2.isValid()) T4dedx1[it] = (*dEdxHandle2)[dau1].dEdx();
+      if (harmonic2.isValid() && harmonic2->contains(dau1.id())) H2dedx1[it] = (*harmonic2)[dau1].dEdx();
       if (!twoLayerDecay_) {
         if (trk.hasUserFloat("posDauDzSig")) dzos1[it] = trk.userFloat("posDauDzSig");
         if (trk.hasUserFloat("posDauDxySig")) dxyos1[it] = trk.userFloat("posDauDxySig");
@@ -1861,8 +1852,7 @@ void PATCompositeTreeProducer6::processCandidates(const CCC* v0candidates_,
       ptErr2[it] = dau2->ptError();
       nhit2[it] = dau2->numberOfValidHits();
       trkChi2[it] = dau2->normalizedChi2();
-      if (dEdxHandle1.isValid()) H2dedx2[it] = (*dEdxHandle1)[dau2].dEdx();
-      if (dEdxHandle2.isValid()) T4dedx2[it] = (*dEdxHandle2)[dau2].dEdx();
+      if (harmonic2.isValid() && harmonic2->contains(dau2.id())) H2dedx2[it] = (*harmonic2)[dau2].dEdx();
       if (twoLayerDecay_) {
         if (trk.hasUserFloat("slowPiDzSig")) dzos2[it] = trk.userFloat("slowPiDzSig");
         if (trk.hasUserFloat("slowPiDxySig")) dxyos2[it] = trk.userFloat("slowPiDxySig");
@@ -1884,16 +1874,14 @@ void PATCompositeTreeProducer6::processCandidates(const CCC* v0candidates_,
         grand_ptErr1[it] = gdau1->ptError();
         grand_nhit1[it] = gdau1->numberOfValidHits();
         grand_trkChi1[it] = gdau1->normalizedChi2();
-        if (dEdxHandle1.isValid()) grand_H2dedx1[it] = (*dEdxHandle1)[gdau1].dEdx();
-        if (dEdxHandle2.isValid()) grand_T4dedx1[it] = (*dEdxHandle2)[gdau1].dEdx();
+        if (harmonic2.isValid() && harmonic2->contains(gdau1.id())) grand_H2dedx1[it] = (*harmonic2)[gdau1].dEdx();
       }
       if (gdau2.isNonnull()) {
         grand_trkquality2[it] = gdau2->quality(reco::TrackBase::highPurity);
         grand_ptErr2[it] = gdau2->ptError();
         grand_nhit2[it] = gdau2->numberOfValidHits();
         grand_trkChi2[it] = gdau2->normalizedChi2();
-        if (dEdxHandle1.isValid()) grand_H2dedx2[it] = (*dEdxHandle1)[gdau2].dEdx();
-        if (dEdxHandle2.isValid()) grand_T4dedx2[it] = (*dEdxHandle2)[gdau2].dEdx();
+        if (harmonic2.isValid() && harmonic2->contains(gdau2.id())) grand_H2dedx2[it] = (*harmonic2)[gdau2].dEdx();
       }
 
       grand_mass[it] = d1->mass();
@@ -2079,11 +2067,8 @@ void PATCompositeTreeProducer6::fillRECO(const edm::Event& iEvent, const edm::Ev
   edm::Handle<reco::GenParticleCollection> genpars;
   if (doGenMatching_ || doGenMatchingTOF_) iEvent.getByToken(tok_genParticle_, genpars);
 
-  edm::Handle<edm::ValueMap<reco::DeDxData>> dEdxHandle1;
-  iEvent.getByToken(tok_dedx1_, dEdxHandle1);
-
-  edm::Handle<edm::ValueMap<reco::DeDxData>> dEdxHandle2;
-  iEvent.getByToken(tok_dedx2_, dEdxHandle2);
+  edm::Handle<edm::ValueMap<reco::DeDxData>> harmonic2;
+  if (saveDeDxHarmonic2_) iEvent.getByToken(tok_harmonic2_, harmonic2);
 
   processCentralityInfo(iEvent);
   processEventPlaneInfo(iEvent);
@@ -2092,7 +2077,7 @@ void PATCompositeTreeProducer6::fillRECO(const edm::Event& iEvent, const edm::Ev
   std::vector<reco::GenParticleRef> genRefs;
   if (doGenMatching_) genRefs = processGenMatching(genpars);
 
-  processCandidates(v0candidates.product(), mvavalues, genRefs, dEdxHandle1, dEdxHandle2, iEvent, vertices, genpars);
+  processCandidates(v0candidates.product(), mvavalues, genRefs, harmonic2, iEvent, vertices, genpars);
 }
 
 void PATCompositeTreeProducer6::fillGEN(const edm::Event& iEvent, const edm::EventSetup&) {

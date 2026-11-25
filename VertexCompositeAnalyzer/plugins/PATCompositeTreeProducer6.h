@@ -65,8 +65,7 @@ private:
   void processCandidates(const CCC* v0candidates_,
                          const edm::Handle<MVACollection>& mvavalues,
                          const std::vector<reco::GenParticleRef>& genRefs,
-                         const edm::Handle<edm::ValueMap<reco::DeDxData>>& dEdxHandle1,
-                         const edm::Handle<edm::ValueMap<reco::DeDxData>>& dEdxHandle2,
+                         const edm::Handle<edm::ValueMap<reco::DeDxData>>& harmonic2,
                          const edm::Event& iEvent,
                          const edm::Handle<reco::VertexCollection>& vertices,
                          const edm::Handle<reco::GenParticleCollection>& genpars);
@@ -193,8 +192,7 @@ private:
   edm::EDGetTokenT<reco::TrackCollection> tok_generalTrk_;
   edm::EDGetTokenT<CCC> tok_compositeCandidates_;
   edm::EDGetTokenT<MVACollection> tok_mvaValues_;
-  edm::EDGetTokenT<edm::ValueMap<reco::DeDxData>> tok_dedx1_;
-  edm::EDGetTokenT<edm::ValueMap<reco::DeDxData>> tok_dedx2_;
+  edm::EDGetTokenT<edm::ValueMap<reco::DeDxData>> tok_harmonic2_;
   edm::EDGetTokenT<reco::EvtPlaneCollection> tok_eventplaneSrc_;
   edm::EDGetTokenT<int> tok_centBinLabel_;
   edm::EDGetTokenT<reco::Centrality> tok_centSrc_;
@@ -211,6 +209,7 @@ private:
   bool isSkimMVA_;
   bool doRunInfo_;
   bool isCentrality_;
+  bool saveDeDxHarmonic2_;
   bool debugGenMatching_;
   bool verboseDebug_;
   bool debugDstarTailAncestry_;
@@ -254,8 +253,6 @@ private:
   float ephfmAngle[2];
   float ephfpQ[2];
   float ephfmQ[2];
-  float ephfpSumW;
-  float ephfmSumW;
   float ephfpSumWSub[2];
   float ephfmSumWSub[2];
   float ephfmAngleoff[2];
@@ -280,7 +277,6 @@ private:
   float eptrackmidSumSin[2];
   float eptrackmidSumCosRaw[2];
   float eptrackmidSumSinRaw[2];
-  float eptrackmidSumW;
   float eptrackmidSumWSub[2];
   float eptrackmidSumPtOrEt[2];
   float eptrackpAngle[2];
@@ -307,7 +303,6 @@ private:
   float ephfAngleoff[2];
   float ephfAngleRaw[2];
   float ephfQ[2];
-  float ephfSumW;
   float ephfSumWSub[2];
   float ephfsumCos[2];
   float ephfsumSin[2];
@@ -407,8 +402,6 @@ private:
   float tof2[kMaxGenCand];
   float H2dedx1[kMaxGenCand];
   float H2dedx2[kMaxGenCand];
-  float T4dedx1[kMaxGenCand];
-  float T4dedx2[kMaxGenCand];
   float trkChi1[kMaxGenCand];
   float trkChi2[kMaxGenCand];
 
@@ -436,8 +429,6 @@ private:
   int grand_charge2[kMaxGenCand];
   float grand_H2dedx1[kMaxGenCand];
   float grand_H2dedx2[kMaxGenCand];
-  float grand_T4dedx1[kMaxGenCand];
-  float grand_T4dedx2[kMaxGenCand];
   float grand_trkChi1[kMaxGenCand];
   float grand_trkChi2[kMaxGenCand];
 

@@ -1,4 +1,5 @@
 // system include files
+#include <array>
 #include <memory>
 #include <string>
 #include <vector>
@@ -36,6 +37,7 @@
 #include "DataFormats/HeavyIonEvent/interface/CentralityBins.h"
 #include "DataFormats/HeavyIonEvent/interface/Centrality.h"
 #include "DataFormats/HeavyIonEvent/interface/EvtPlane.h"
+#include "RecoHI/HiEvtPlaneAlgos/interface/HiEvtPlaneList.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
 #include "DataFormats/Common/interface/TriggerResults.h"
@@ -311,24 +313,30 @@ EventInfoTreeProducer::fillRECO(const edm::Event& iEvent, const edm::EventSetup&
     edm::Handle<reco::EvtPlaneCollection> eventplanes;
     iEvent.getByToken(tok_eventplaneSrc_, eventplanes);
 
-    ephfpAngle[0] = (eventplanes.isValid() ? (*eventplanes)[0].angle(2) : -99.);
-    ephfpAngle[1] = (eventplanes.isValid() ? (*eventplanes)[6].angle(2) : -99.);
-    ephfpAngle[2] = (eventplanes.isValid() ? (*eventplanes)[13].angle(2) : -99.);
+    // The legacy third slot has no corresponding plane in the PbPb 2023 collection.
+    std::array<const reco::EvtPlane*, 3> hfPlus{};
+    std::array<const reco::EvtPlane*, 3> hfMinus{};
+    if (eventplanes.isValid()) {
+      for (const auto& plane : *eventplanes) {
+        switch (plane.indx()) {
+          case hi::HFp2: hfPlus[0] = &plane; break;
+          case hi::HFm2: hfMinus[0] = &plane; break;
+          case hi::HFp3: hfPlus[1] = &plane; break;
+          case hi::HFm3: hfMinus[1] = &plane; break;
+          default: break;
+        }
+      }
+    }
 
-    ephfmAngle[0] = (eventplanes.isValid() ? (*eventplanes)[1].angle(2) : -99.);
-    ephfmAngle[1] = (eventplanes.isValid() ? (*eventplanes)[7].angle(2) : -99.);
-    ephfmAngle[2] = (eventplanes.isValid() ? (*eventplanes)[14].angle(2) : -99.);
-
-    ephfpQ[0] = (eventplanes.isValid() ? (*eventplanes)[0].q(2) : -99.);
-    ephfpQ[1] = (eventplanes.isValid() ? (*eventplanes)[6].q(2) : -99.);
-    ephfpQ[2] = (eventplanes.isValid() ? (*eventplanes)[13].q(2) : -99.);
-
-    ephfmQ[0] = (eventplanes.isValid() ? (*eventplanes)[1].q(2) : -99.);
-    ephfmQ[1] = (eventplanes.isValid() ? (*eventplanes)[7].q(2) : -99.);
-    ephfmQ[2] = (eventplanes.isValid() ? (*eventplanes)[14].q(2) : -99.);
-
-    ephfpSumW = (eventplanes.isValid() ? (*eventplanes)[6].sumw() : -99.);
-    ephfmSumW = (eventplanes.isValid() ? (*eventplanes)[7].sumw() : -99.);
+    constexpr float missing = -99.f;
+    for (std::size_t i = 0; i < hfPlus.size(); ++i) {
+      ephfpAngle[i] = hfPlus[i] ? hfPlus[i]->angle(2) : missing;
+      ephfmAngle[i] = hfMinus[i] ? hfMinus[i]->angle(2) : missing;
+      ephfpQ[i] = hfPlus[i] ? hfPlus[i]->q(2) : missing;
+      ephfmQ[i] = hfMinus[i] ? hfMinus[i]->q(2) : missing;
+    }
+    ephfpSumW = hfPlus[1] ? hfPlus[1]->sumw() : missing;
+    ephfmSumW = hfMinus[1] ? hfMinus[1]->sumw() : missing;
   }
 
   nPV = vertices->size();

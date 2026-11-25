@@ -294,6 +294,8 @@ process.d0ana_mc.MVACollection = cms.InputTag("generalD0CandidatesNew:MVAValuesD
 
 #process.d0ana_mc.VertexCompositeCollection = cms.untracked.InputTag("d0selectorNewReduced:D0")
 #process.d0ana_mc.MVACollection = cms.InputTag("d0selectorNewReduced:MVAValuesNewD0")
+process.d0ana_mc.saveDeDxHarmonic2 = cms.untracked.bool(False)
+process.dStarana_mc.saveDeDxHarmonic2 = cms.untracked.bool(False)
 process.d0ana_newreduced = process.d0ana_mc.clone()
 process.d0ana_newreduced.CompositeCollection = cms.untracked.InputTag("generalD0CandidatesNew:D0")
 # process.d0ana_newreduced.VertexCompositeCollection = cms.untracked.InputTag("generalD0CandidatesNew:D0")

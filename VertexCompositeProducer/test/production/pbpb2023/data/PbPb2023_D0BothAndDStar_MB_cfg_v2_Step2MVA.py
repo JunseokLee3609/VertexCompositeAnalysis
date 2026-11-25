@@ -242,6 +242,8 @@ process.d0ana.MVACollection = cms.untracked.InputTag("generalD0CandidatesNew:MVA
 #process.d0ana_wrongsign.MVACollection = cms.InputTag("d0selectorWS:MVAValuesNewD0")
 process.generalDStarCandidatesNew.d0Collection = cms.InputTag("generalD0CandidatesNew:D0")
 
+process.d0ana.saveDeDxHarmonic2 = cms.untracked.bool(False)
+process.dStarana.saveDeDxHarmonic2 = cms.untracked.bool(False)
 process.d0ana_newreduced = process.d0ana.clone()
 process.d0ana_newreduced.CompositeCollection = cms.untracked.InputTag("generalD0CandidatesNew:D0")
 process.dStarana.useAnyMVA = cms.untracked.bool(False)
